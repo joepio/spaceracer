@@ -3,6 +3,30 @@
 Godot 4.5.2 stable, native Windows, NVIDIA RTX 5070 Ti (driver 610.74).
 These are local development checks, not GameNight release certification.
 
+Fighter handling and smooth takeoff revision:
+
+- Independent body-axis pitch, roll and yaw with angular-rate response; releasing
+  roll holds bank. Banked lift turns the velocity, and rudders replace air strafe.
+- Magnetic unloading uses a damped hover spring, visible rise and mild wing
+  buffet. Forward input can abort takeoff. Release preserves the current pose,
+  measured world velocity and angular rate without a launch impulse.
+- The shared chase rig smooths orientation, distance and FOV across modes while
+  keeping its translation anchored to the vehicle. Landing attitude eases back
+  to the road frame; a crash holds the last airborne pose until respawn.
+- Full simulation passed: 197,009 checks, 48/48 bot finishers, no failures.
+- 43 flight checks passed, including independent axes, held bank, lift direction,
+  takeoff position/momentum continuity, warning duration, abort, camera continuity,
+  no camera translation lag, landing/crash handling and control-surface inputs.
+- Two ordinary-input pilots took off from the opening sweepers of seeds 1 and 42
+  and landed after 2.84 / 4.55 seconds, gaining 679 / 1,034 metres of road progress.
+  The pilot was updated for rudder flight and gentle descent approaches.
+- Native off-screen images reviewed warning, release and banking with the actual
+  chase rig running continuously. Muted output confirmed. The known pair of sky
+  texture cleanup errors remains at capture-harness exit; no script/shader errors.
+- Packaged synthetic GameNight lifecycle and menu input checks passed. The menu
+  test still reports its existing ObjectDB cleanup warning. Controller feel needs
+  the user's next playtest; these are development checks, not certification.
+
 Standalone repository verification:
 
 - Initialized an independent Git repository with its own MIT license, vendored

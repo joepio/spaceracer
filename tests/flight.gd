@@ -1,6 +1,7 @@
 extends SceneTree
 const Race=preload("res://src/race.gd")
 const Flight=preload("res://src/flight.gd")
+const Chase=preload("res://src/chase.gd")
 const Track=preload("res://src/track.gd")
 var failures:=0
 var checks:=0
@@ -25,16 +26,21 @@ func approach(p:Dictionary,n:Dictionary,distance:float,lateral:float=0.0)->void:
 	p.air_time=.5
 	p.air_travel=0.0
 	p.air_roll=0.0
+	p.air_rates=Vector3.ZERO
 	p.trim=0.0
 
 func guided_return(seed_value:int)->void:
 	var race:=Race.new([{"slot":0,"bot":false}],seed_value)
 	race.countdown=0
 	var p:Dictionary=race.racers[0]
-	p.distance=500.0
+	# Use the opening sweeper as a landing approach, before the magnetic loops.
+	p.distance=0.0
 	p.speed=265.0
-	for tick in range(80):
-		race.step(1.0/120,[{"throttle":1.0,"trim":-1.0}])
+	for tick in range(240):
+		var controls:Dictionary=race.bot(p)
+		controls.trim=-1.0
+		controls.brake=0.0
+		race.step(1.0/120,[controls])
 		if p.airborne: break
 	check(p.airborne,"Guided return begins with real player-input takeoff")
 	var launch_distance:float=p.distance
@@ -43,15 +49,90 @@ func guided_return(seed_value:int)->void:
 		var hit:Dictionary=race.track.project(p.air_position,p.distance,p.air_travel*1.35+100)
 		var n:Dictionary=hit.node
 		var height:float=(p.air_position-n.p).dot(n.frame.y)
-		var aim:Dictionary=race.track.sample(hit.distance+maxf(100,height*4))
-		var goal:Vector3=aim.p+aim.frame.y*1.3-p.air_position
+		var aim:Dictionary=race.track.sample(hit.distance+100)
+		var goal:Vector3=aim.frame.z*230+n.frame.y*clampf((1.3-height)*2,-45,25)+n.frame.x*clampf(hit.lateral*4,-100,100)
 		var frame:Basis=p.air_frame
 		var pitch:=clampf(-atan2(goal.dot(frame.y),goal.dot(frame.z))*2,-1,1)
-		var turn:=clampf(-atan2(goal.dot(frame.x),goal.dot(frame.z))*3,-1,1)
-		race.step(1.0/120,[{"throttle":.6,"brake":.25 if p.speed>210 else 0.0,"trim":pitch,"steer":turn,"strafe":clampf(-hit.lateral*.07,-1,1)}])
+		var yaw:=clampf(-atan2(goal.dot(frame.x),goal.dot(frame.z))*5,-1,1)
+		var roll:=clampf(-atan2(aim.frame.y.dot(frame.x),aim.frame.y.dot(frame.y))*2,-1,1)
+		race.step(1.0/120,[{"throttle":.65,"brake":.2 if p.speed>245 else 0.0,"trim":pitch,"steer":roll,"strafe":yaw}])
 	check(not p.airborne and not p.crashed and p.recovery==0 and p.distance>launch_distance+200,"A controlled full flight can return to a real seeded track")
 
+func handling_checks()->void:
+	var race:=Race.new([{"slot":0,"bot":false}],31)
+	var p:Dictionary=race.racers[0]
+	p.air_frame=Basis.IDENTITY
+	p.air_velocity=Vector3(0,0,265)
+	for tick in range(120): Flight.integrate_air(p,1.0/120,1,0,1,0)
+	check(p.air_frame.z.dot(Vector3.BACK)>.999,"Roll does not secretly yaw the nose")
+	check(p.air_roll>2.1,"Full roll has fighter authority, not a capped bank target")
+	check(p.air_velocity.x< -10,"Banked wing lift bends the flight path into the bank")
+	for tick in range(120): Flight.integrate_air(p,1.0/120,0,0,1,0)
+	var held:Basis=p.air_frame
+	for tick in range(60): Flight.integrate_air(p,1.0/120,0,0,1,0)
+	check(held.y.dot(p.air_frame.y)>.999,"Neutral stick holds bank instead of levelling automatically")
+	for axis in ["pitch","yaw"]:
+		p.air_frame=Basis.IDENTITY
+		p.air_velocity=Vector3(0,0,265)
+		p.air_rates=Vector3.ZERO
+		p.trim=-1.0 if axis=="pitch" else 0.0
+		for tick in range(60): Flight.integrate_air(p,1.0/120,0,1 if axis=="yaw" else 0,1,0)
+		check(p.air_frame.z.y>.3 if axis=="pitch" else p.air_frame.z.x<-.2,"Independent %s rotates the correct body axis"%axis)
+		check(absf(p.air_frame.determinant()-1)<.0001,"Flight frame stays orthonormal")
+
+func transition_checks()->void:
+	var race:=Race.new([{"slot":0,"bot":false}],31)
+	race.countdown=0
+	var p:Dictionary=race.racers[0]
+	p.speed=265.0
+	p.distance=500.0
+	var camera:=Camera3D.new()
+	root.add_child(camera)
+	var warning_frames:=0
+	var max_relative_step:=0.0
+	var previous_offset:=Vector3.ZERO
+	for tick in range(240):
+		var before:=Flight.pose(p,race.track.sample(p.distance),race.clock)
+		Chase.update(camera,before,p.speed,false,1.0/120,tick==0)
+		previous_offset=camera.position-before.origin
+		race.step(1.0/120,[{"throttle":1.0,"trim":-1.0}])
+		var after:=Flight.pose(p,race.track.sample(p.distance),race.clock)
+		Chase.update(camera,after,p.speed,false,1.0/120)
+		max_relative_step=maxf(max_relative_step,(camera.position-after.origin).distance_to(previous_offset))
+		if not p.airborne and p.unload>.45 and p.lift>.3: warning_frames+=1
+		if p.airborne:
+			check(p.air_position.distance_to(before.origin+p.air_velocity/120)<.001,"Takeoff preserves position and measured momentum with no kick")
+			var expected:=Flight.ground_pose(p,race.track.sample(p.distance),race.clock)
+			check(p.air_frame.z.dot(expected.basis.z)>.99999,"Takeoff preserves the visible attitude")
+			break
+	check(p.airborne,"Sustained back-stick eventually releases magnetic adhesion")
+	check(warning_frames>35,"Visible lift warning lasts long enough to react before takeoff")
+	check(max_relative_step<.7,"Chase camera offset has no takeoff discontinuity")
+	# A pilot can abort the launch during the warning by pushing forward.
+	var abort:=Race.new([{"slot":0,"bot":false}],31)
+	abort.countdown=0
+	var q:Dictionary=abort.racers[0]
+	q.speed=265.0
+	for tick in range(65): abort.step(1.0/120,[{"throttle":1.0,"trim":-1.0}])
+	check(not q.airborne and q.lift>.3,"Partial takeoff has a recoverable warning phase")
+	for tick in range(180): abort.step(1.0/120,[{"throttle":1.0,"trim":1.0}])
+	check(not q.airborne and q.lift<.03,"Forward stick settles the craft without forced launch")
+	# A moving vehicle remains framed at speed; only relative attitude is damped.
+	var pose:=Transform3D(Basis.IDENTITY,Vector3.ZERO)
+	Chase.update(camera,pose,400,false,0,true)
+	var offset:=camera.position
+	pose.origin=Vector3(0,0,400)
+	Chase.update(camera,pose,400,false,1.0/60)
+	check((camera.position-pose.origin).distance_to(offset)<.001,"Camera smoothing introduces no speed-dependent translation lag")
+	var old_rotation:=camera.basis.get_rotation_quaternion()
+	pose.basis=Basis(Vector3.BACK,PI*.9)
+	Chase.update(camera,pose,400,false,1.0/120)
+	check(old_rotation.angle_to(camera.basis.get_rotation_quaternion())<.2,"Camera smoothly follows a large attitude change")
+	camera.free()
+
 func run()->void:
+	handling_checks()
+	transition_checks()
 	check(Flight.ground_basis(Basis.IDENTITY,0,-1,0).z.y>.3,"Pull back raises +Z nose")
 	check(Flight.ground_basis(Basis.IDENTITY,0,1,0).z.y<-.15,"Push forward lowers nose")
 	var race:=Race.new([{"slot":0,"bot":false}],31)
@@ -59,7 +140,7 @@ func run()->void:
 	var p:Dictionary=race.racers[0]
 	p.distance=500.0
 	p.speed=250.0
-	for tick in range(80):
+	for tick in range(240):
 		race.step(1.0/120,[{"throttle":1.0,"trim":-1.0}])
 		if p.airborne: break
 	check(p.airborne,"Full pull-back launches at speed without needing a crest")
@@ -68,7 +149,7 @@ func run()->void:
 	for tick in range(30): race.step(1.0/120,[{"throttle":1.0}])
 	check(p.airborne and p.air_position.distance_to(Track.point(race.track.sample(takeoff),p.x,1.3))>30,"Flight travels independently in world space")
 	check(p.distance==takeoff,"Airborne time cannot award track/lap progress")
-	check(frame.z.dot(p.air_frame.z)>.98,"Neutral air attitude does not follow track curves")
+	check(frame.z.dot(p.air_frame.z)>.98,"Neutral air attitude stays independent of track curves")
 	for tick in range(20): race.step(1.0/120,[{"trim":1.0,"steer":.6,"strafe":.5}])
 	check(frame.z.dot(p.air_frame.z)<.999,"Air pitch and turn change attitude")
 	check(p.air_roll>.05,"Air steering banks the craft")

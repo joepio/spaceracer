@@ -120,4 +120,4 @@ static func animate_controls(root:Node3D,p:Dictionary)->void:
 		wing.rotation.x=clampf(-p.input_pitch*.55-p.input_steer*side*.5+p.input_brake*.6,-.85,.95)
 		wing.rotation.z=-p.input_strafe*.16
 		var rudder:Node3D=root.get_node("RudderL" if side<0 else "RudderR")
-		rudder.rotation.y=-p.input_strafe*.55-p.input_steer*.18
+		rudder.rotation.y=-p.input_strafe*.55-(0.0 if p.airborne else p.input_steer*.18)

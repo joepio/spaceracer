@@ -2,6 +2,7 @@ extends Node3D
 const Track = preload("res://src/track.gd")
 const Scenery = preload("res://src/scenery.gd")
 const Flight=preload("res://src/flight.gd")
+const Chase=preload("res://src/chase.gd")
 const Ship = preload("res://src/ship.gd")
 var scenery: RefCounted
 var ships: Array[Node3D] = []
@@ -158,10 +159,7 @@ func update_ships() -> void:
 		var p: Dictionary = race.racers[i]
 		Ship.animate_controls(ships[i],p)
 		var n: Dictionary = race.track.sample(p.distance)
-		var base: Basis = Track.basis_at(n)
-		base = Flight.ground_basis(base,p.heading,p.trim,p.slip)
-		ships[i].transform = Transform3D(base, Track.point(n, p.x, Flight.hover_height(p.trim) + p.lift + sin(race.clock * 9 + i) * .1))
-		if p.airborne: ships[i].transform=Transform3D(p.air_frame,p.air_position)
+		ships[i].transform=Flight.pose(p,n,race.clock)
 		ships[i].visible = not (p.crashed and p.recovery>0) and (p.recovery<=0 or fmod(p.recovery,.2)<.1)
 		var tint := color_for(p)
 		if ship_colors[i] != tint:
@@ -190,22 +188,7 @@ func update_ships() -> void:
 			wake.set_instance_transform(particle,Transform3D(Basis.IDENTITY.scaled(size),position))
 			wake.set_instance_color(particle,Color(.3,.8,1,(1-age)*thrust*.7))
 
-func update_camera(camera: Camera3D, index: int, _dt: float, _snap: bool = false) -> void:
+func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false) -> void:
 	var p: Dictionary = race.racers[index]
-	if p.airborne:
-		var frame:Basis=p.air_frame
-		var position:Vector3=p.air_position
-		camera.position=position-frame.z*(20+p.speed*.008)+frame.y*7
-		camera.look_at(position+frame.z*28,frame.y)
-		camera.fov=clampf(76+p.speed/32.0,76,94)
-		return
-	var n: Dictionary = race.track.sample(p.distance)
-	var base: Basis = Track.basis_at(n)
-	var focus := Track.point(n, p.x, 1.5 + p.lift*.65)
-	var target: Vector3 = focus - base.z * (17 + p.speed * .006) + base.y * 7
-	# Smoothing forward position adds speed-dependent lag (and hides the craft).
-	# The ribbon is already smooth; keep the chase distance stable at 1,000 km/h.
-	camera.position = target
-	var aim: Vector3 = focus + base.z * 24 + base.y * 1.5
-	camera.look_at(aim, base.y)
-	camera.fov = 76 + p.speed / 32.0 + (5 if p.boost > 0 else 0)
+	var n:Dictionary=race.track.sample(p.distance)
+	Chase.update(camera,Flight.pose(p,n,race.clock),p.speed,p.boost>0,dt,snap)

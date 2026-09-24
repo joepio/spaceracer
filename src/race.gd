@@ -23,7 +23,7 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3) -> void:
 		p.merge({"distance": -floorf(i / 3.0) * 13.0, "x": (i % 3 - (mini(3, roster.size()) - 1) / 2.0) * 12.0, "speed": 0.0,
 			"heading": 0.0, "slip": 0.0, "energy": 100.0, "boost": 0.0, "boost_held": false,
 			"input_steer":0.0,"input_strafe":0.0,"input_pitch":0.0,"input_brake":0.0,"air_position":Vector3.ZERO,"air_velocity":Vector3.ZERO,"air_frame":Basis.IDENTITY,
-			"air_time":0.0,"air_travel":0.0,"air_roll":0.0,"launch_charge":0.0,"launch_cooldown":0.0,"crashed":false,"trim": 0.0, "lift": 0.0, "lift_speed": 0.0, "airborne": false, "slide": 0.0, "braking": 0.0, "thrust": 0.0, "flash": 0.0, "recovery": 0.0, "lap": 1, "rank": i + 1, "finished": false,
+			"ground_velocity":Vector3.ZERO,"air_rates":Vector3.ZERO,"unload":0.0,"landing_frame":Basis.IDENTITY,"landing_blend":0.0,"air_time":0.0,"air_travel":0.0,"air_roll":0.0,"launch_cooldown":0.0,"crashed":false,"trim": 0.0, "lift": 0.0, "lift_speed": 0.0, "airborne": false, "slide": 0.0, "braking": 0.0, "thrust": 0.0, "flash": 0.0, "recovery": 0.0, "lap": 1, "rank": i + 1, "finished": false,
 			"time": INF, "best_lap": INF, "lap_start": 0.0, "drifting": false, "on_pad": false}, true)
 		racers.append(p)
 
@@ -71,13 +71,16 @@ func step(dt: float, inputs: Array) -> void:
 		if p.finished:
 			continue
 		var n: Dictionary = track.sample(p.distance)
+		var previous_pose:=Flight.ground_pose(p,n,clock-dt)
+		p.landing_blend=maxf(0,p.landing_blend-dt*3)
 		var steer := clampf(c.get("steer", 0), -1, 1)
 		var throttle := clampf(c.get("throttle", 0), 0, 1)
 		var brake:=clampf(float(c.get("brake",0.0)),0,1)
 		p.braking=brake
 		p.thrust=throttle*(1-brake) if p.recovery==0 else 0.0
 		var strafe:=clampf(float(c.get("strafe",0.0))+int(c.get("right",false))-int(c.get("left",false)),-1,1)
-		p.trim=move_toward(p.trim,clampf(float(c.get("trim",0.0)),-1,1),dt*5)
+		var pitch_input:=clampf(float(c.get("trim",0.0)),-1,1)
+		p.trim=pitch_input if p.airborne else move_toward(p.trim,pitch_input,dt*5)
 		var planted:float=maxf(0,p.trim)
 		var loose:float=maxf(0,-p.trim)
 		# LT progressively releases magnetic grip; momentum and hull heading separate.
@@ -96,9 +99,11 @@ func step(dt: float, inputs: Array) -> void:
 			p.lift = 0.0
 			p.lift_speed = 0.0
 			p.airborne = false
+			p.unload=0.0
+			p.air_rates=Vector3.ZERO
+			p.landing_blend=0.0
 			if p.recovery == 0:
 				p.crashed=false
-				p.launch_charge=0.0
 				p.launch_cooldown=1.0
 				p.energy = 65.0
 				p.x = 0.0
@@ -127,14 +132,11 @@ func step(dt: float, inputs: Array) -> void:
 		# Momentum carries outward as the road turns under a low-grip craft.
 		var forward_speed:float=p.speed*maxf(.55,cos(p.heading))
 		p.slip-=n.curve*forward_speed*forward_speed*lerpf(.25,1,p.slide)*dt
-		var grip:float=lerpf(14,2.8,p.slide)*(1+planted*.75-loose*.48)*(.18 if p.airborne else 1.0)
+		var grip:float=lerpf(14,2.8,p.slide)*(1+planted*.75-loose*.48)*(1-p.unload*.35)
 		p.slip=lerpf(p.slip,lateral,1-exp(-grip*dt))
 		var crest_force:float=maxf(0,-n.crest)*forward_speed*forward_speed
 		var hold_force:float=230*(1-loose*.82)+planted*180+brake*80
-		var full_pull:bool=loose>.90 and p.speed>165 and brake<.10
-		p.launch_charge=p.launch_charge+dt if full_pull else 0.0
-		var crest_launch:bool=loose>.35 and p.speed>260 and crest_force>hold_force+38
-		var launch:bool=p.launch_cooldown==0 and (p.launch_charge>.25 or crest_launch)
+		var launch:=Flight.unload(p,dt,crest_force,hold_force)
 		p.x += p.slip * dt
 		var edge := lateral_limit(p, n.width)
 		if absf(p.x) > edge and p.lift<2.5:
@@ -151,7 +153,13 @@ func step(dt: float, inputs: Array) -> void:
 			p.energy = minf(100, p.energy + 34 * dt)
 		p.distance += p.speed * maxf(.55, cos(p.heading)) * dt
 		update_lap(p)
-		if launch and not p.finished: Flight.launch(p,track.sample(p.distance))
+		var next_node:Dictionary=track.sample(p.distance)
+		var next_pose:=Flight.ground_pose(p,next_node,clock)
+		p.ground_velocity=(next_pose.origin-previous_pose.origin)/dt
+		var rotation:=Quaternion(previous_pose.basis.inverse()*next_pose.basis).normalized()
+		if rotation.w<0: rotation=-rotation
+		p.air_rates=(rotation.get_axis()*rotation.get_angle()/dt).limit_length(3.0)
+		if launch and not p.finished: Flight.launch(p,next_node,clock)
 		if p.energy <= 0:
 			p.recovery = 2.0
 			p.boost = 0.0

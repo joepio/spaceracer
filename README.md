@@ -52,12 +52,23 @@ LB/RB and the right stick's horizontal axis strafe without steering the nose.
 
 Right stick forward lowers the nose and adds grip/downforce at the expense of
 speed. Pulling back raises the nose; a partial pull trades grip for speed. Holding
-full back at racing speed launches into independent world-space flight, even on
-flat road. Crests can also break adhesion when downforce is low.
+full back at racing speed progressively unloads the magnetic suspension. The
+craft rises, its wings buffet gently, and a “Lifting” cue appears before release.
+Ease the stick forward during this warning to settle back down. Sustained back
+input releases into independent flight, carrying the actual track velocity and
+attitude through takeoff with no added kick. Crests can also unload adhesion.
 
-In flight, right stick forward/back pitches down/up, left stick banks and turns,
-and right stick horizontal input adds air strafe. LT acts as an air brake. Gravity,
-wing lift, angle of attack and stall loss affect velocity separately from attitude.
+In flight, right stick forward/back pitches down/up, left stick left/right rolls,
+and right stick left/right (or LB/RB) controls yaw through the rudders. These are
+independent body-axis controls: roll sets bank, with no forced levelling or hidden
+yaw. Bank and pull back to turn like a fighter. LT acts as an air brake. Angular
+rates build and stop quickly with stick input; wing lift, bank, angle of attack,
+side-slip and gravity bend the flight path rather than instantly redirecting it.
+Stalling loses lift. Control surfaces show the corresponding pitch, roll and yaw.
+
+One vehicle-relative chase camera follows road, lift-off, flight and touchdown.
+Its orientation, chase distance and field of view ease continuously; its anchor
+moves with the craft so smoothing does not leave the camera behind at high speed.
 Approach the track from above, line up with its direction and banking, and touch
 down without excessive descent speed to reconnect. Missing the road, a hard or
 misaligned impact, hitting its underside, falling below the world, or remaining

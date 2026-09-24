@@ -193,7 +193,7 @@ func run() -> void:
 	for test_race in [stable,risky]:
 		test_race.racers[0].speed=300.0
 		test_race.track.crest=-.006
-	for tick in range(24):
+	for tick in range(150):
 		stable.step(1.0/120,[{"throttle":1.0,"trim":1.0}])
 		risky.step(1.0/120,[{"throttle":1.0,"trim":-1.0}])
 	check(risky.racers[0].airborne and risky.racers[0].lift>1,"Low downforce lifts craft off a fast crest")

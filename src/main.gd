@@ -412,7 +412,7 @@ func make_menu()->void:
 	quality_button.pressed.connect(func(): quality=.8 if quality==.6 else (1.0 if quality==.8 else .6);layout_views();make_menu())
 	links.add_child(quality_button)
 	if show_menu_controls:
-		menu_label(content,"A / RT   Accelerate     B   Boost     LT   Brake / slide\nRight stick: left/right strafe, forward grip, back speed",16,Color("bacbd5"))
+		menu_label(content,"A / RT   Accelerate     B   Boost     LT   Brake / slide\nRoad: right stick strafes / trims grip; pull back to lift off\nFlight: left stick rolls; right stick pitches / yaws; LT air brake",16,Color("bacbd5"))
 		menu_label(content,"P1  WASD / Space / Q E     P2  Arrows / Ctrl / , .\nP3  IJKL / U / Y O               P4  TFGH / R / V B",14,Color("91a8b7"))
 		menu_label(content,"Back: nose up / takeoff. Forward: nose down.\nIn flight, bank and align with the road to land.",14,Color("91a8b7"))
 	for i in range(players.size()):

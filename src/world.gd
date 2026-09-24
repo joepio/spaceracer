@@ -9,6 +9,8 @@ var ships: Array[Node3D] = []
 var cameras: Array[Camera3D] = []
 var race: RefCounted
 var road_material: ShaderMaterial
+var tunnel_material:ShaderMaterial
+var tunnel_lights:Array[OmniLight3D]=[]
 var ship_colors: Array[Color] = []
 const PALETTE = [Color("53ffe0"), Color("ff617b"), Color("ffd16b"), Color("ac8cff"), Color("68baff"), Color("ff9f58"), Color("aaff78"), Color("f8aaff")]
 
@@ -34,12 +36,11 @@ func build(state: RefCounted) -> void:
 	var sky := Sky.new()
 	var sky_material := ShaderMaterial.new()
 	sky_material.shader = load("res://src/sky.gdshader")
-	var top: Color = race.track.theme[1]
-	var horizon: Color = race.track.theme[2]
+	var top:=Color("080e20")
+	var horizon:=Color("30415e")
 	sky_material.set_shader_parameter("top_color",Vector3(top.r,top.g,top.b))
 	sky_material.set_shader_parameter("horizon_color",Vector3(horizon.r,horizon.g,horizon.b))
 	var secondary:Color=race.track.theme[4]
-	sky_material.set_shader_parameter("aurora_color",Vector3(secondary.r,secondary.g,secondary.b))
 	sky.sky_material = sky_material
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -47,21 +48,23 @@ func build(state: RefCounted) -> void:
 	env.ambient_light_energy = .48
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
-	env.fog_light_color = race.track.theme[2]
-	env.fog_density = .00013
+	env.fog_light_color = Color("243750")
+	env.fog_density = .00018
 	env.fog_sky_affect = .08
 	environment.environment = env
 	add_child(environment)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-35, -35, 0)
 	sun.light_color = Color("d3e5ff")
-	sun.light_energy = 1.6
+	sun.light_energy = 1.15
 	sun.shadow_enabled = false
 	add_child(sun)
 	road_material = ShaderMaterial.new()
 	road_material.shader = load("res://src/road.gdshader")
 	road_material.set_shader_parameter("accent", Vector3(race.track.theme[3].r, race.track.theme[3].g, race.track.theme[3].b))
 	road_material.set_shader_parameter("secondary",Vector3(secondary.r,secondary.g,secondary.b))
+	tunnel_material=ShaderMaterial.new()
+	tunnel_material.shader=load("res://src/tunnel.gdshader")
 	build_track()
 	scenery=Scenery.new()
 	scenery.build(self,race)
@@ -113,6 +116,7 @@ func build_track() -> void:
 			mesh.material_override = pair[1]
 			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			add_child(mesh)
+	build_tunnel()
 	# Tunnel ribs and track-side turn chevrons are static geometry.
 	var rib := material(Color("31465d"))
 	for i in range(0, nodes.size(), 5):
@@ -121,10 +125,10 @@ func build_track() -> void:
 			var frame := Node3D.new()
 			add_child(frame)
 			frame.transform = Transform3D(Track.basis_at(n), n.p)
-			box(frame, Vector3(-n.width - 1, 9, 0), Vector3(1.7, 18, 2.2), rib)
-			box(frame, Vector3(n.width + 1, 9, 0), Vector3(1.7, 18, 2.2), rib)
-			box(frame, Vector3(0, 18, 0), Vector3(n.width * 2 + 4, 1.8, 2.2), rib)
-			box(frame, Vector3(0, 16.8, -.1), Vector3(n.width * 2, .3, 1.3), rail_material)
+			box(frame, Vector3(-n.width - 3, 11, 0), Vector3(1.7, 22, 2.2), rib)
+			box(frame, Vector3(n.width + 3, 11, 0), Vector3(1.7, 22, 2.2), rib)
+			box(frame, Vector3(0, 22, 0), Vector3(n.width * 2 + 8, 1.8, 2.2), rib)
+			box(frame, Vector3(0, 20.8, -.1), Vector3(n.width * 2 + 4, .3, 1.3), rail_material)
 		elif absf(n.curve) > .002:
 			var sign_node := Node3D.new()
 			add_child(sign_node)
@@ -133,6 +137,38 @@ func build_track() -> void:
 			for z in [-1.5,1.5]:
 				var marker:=box(sign_node,Vector3(0,0,z),Vector3(.7,.38,2),rail_material)
 				marker.rotation.x=.65*signf(n.curve)
+
+func build_tunnel()->void:
+	var surface:=SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(race.track.nodes.size()):
+		var a:Dictionary=race.track.nodes[i]
+		var b:Dictionary=race.track.nodes[(i+1)%race.track.nodes.size()]
+		if not a.tunnel or not b.tunnel: continue
+		if i%9==0:
+			var light:=OmniLight3D.new()
+			light.position=Track.point(a,0,14)
+			light.light_color=Color("29dfff") if tunnel_lights.size()%2==0 else Color("ff3788")
+			light.omni_range=65
+			light.omni_attenuation=1.5
+			light.shadow_enabled=false
+			add_child(light)
+			tunnel_lights.append(light)
+		# Wall and roof vertices follow the same banked road frames as the racers.
+		for panel in [Vector4(-1,0,-1,22),Vector4(1,22,1,0),Vector4(-1,22,1,22)]:
+			for corner in [[0,0],[1,0],[0,1],[0,1],[1,0],[1,1]]:
+				var node:Dictionary=a if corner[0]==0 else b
+				var x:float=panel.x if corner[1]==0 else panel.z
+				var h:float=panel.y if corner[1]==0 else panel.w
+				surface.set_uv(Vector2(corner[1],(i+corner[0])*race.track.step))
+				surface.add_vertex(Track.point(node,x*(node.width+3),h))
+	surface.generate_normals()
+	var tunnel:=MeshInstance3D.new()
+	tunnel.name="NeonExpresswayTunnel"
+	tunnel.mesh=surface.commit()
+	tunnel.material_override=tunnel_material
+	tunnel.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(tunnel)
 
 func wall(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,distance:float)->void:
 	for item in [[a,0,distance],[a,-1.4,distance],[b,0,distance+race.track.step],
@@ -154,6 +190,8 @@ func build_ship(tint: Color) -> Node3D:
 
 func update_ships() -> void:
 	road_material.set_shader_parameter("race_time",race.clock)
+	tunnel_material.set_shader_parameter("race_time",race.clock)
+	for i in range(tunnel_lights.size()): tunnel_lights[i].light_energy=1.4+1.2*(.5+.5*sin(race.clock*4-i*.8))
 	if scenery: scenery.animate(race.clock)
 	for i in range(race.racers.size()):
 		var p: Dictionary = race.racers[i]

@@ -1,10 +1,10 @@
 extends RefCounted
 ## Closed magnetic ribbon with continuous frames through inverted sections.
 const THEMES = [
-	["MIDNIGHT ARRAY", Color("050b26"), Color("223e85"), Color("24eacd"), Color("ff4d9e")],
-	["SOLAR REACH", Color("170b2b"), Color("713f62"), Color("ffb43e"), Color("46dfff")],
-	["PRISM TIDELANDS", Color("051631"), Color("185b83"), Color("58e5ff"), Color("ff65c6")],
-	["VIOLET ENGINE", Color("100822"), Color("513c8d"), Color("d387ff"), Color("50ffb9")],
+	["MIDNIGHT GRID", Color("050b26"), Color("223e85"), Color("24eacd"), Color("ff4d9e")],
+	["COPPER DISTRICT", Color("170b2b"), Color("713f62"), Color("ffb43e"), Color("46dfff")],
+	["PULSE CITY", Color("051631"), Color("185b83"), Color("58e5ff"), Color("ff65c6")],
+	["NEON HEIGHTS", Color("100822"), Color("513c8d"), Color("d387ff"), Color("50ffb9")],
 ]
 var nodes: Array[Dictionary] = []
 var length := 0.0

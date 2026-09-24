@@ -105,30 +105,41 @@ use the same 3D ribbon orientation. Width, banking and four color themes vary by
 seed, with tunnels, recharge lanes and boost strips. Sharper corner complexes have amber edge braking markers ahead of their apexes.
 There is no online/LAN multiplayer in this version.
 
-The visual pass adds a banded ringed planet, star and aurora skies, two-tone city
-windows, colored mesa strata, water far below the circuit, rotating reactor rings
-and ambient flying traffic. Ships have beveled hulls, swept wings, cockpit glass
-and animated tapered plasma jets, bright engine cores, and instanced exhaust
-streaks. The engine socket glow responds to throttle; plume length grows with actual
-acceleration and boost. Small additive billboards provide localized bloom-like
-halos in the Compatibility renderer, without full-screen postprocessing or lights. Road panels, metallic shading, shoulder
-chevrons and animated energy strips help communicate speed and curvature.
-Animated scenery and shader motion freeze with the GameNight pause state.
+The circuit now runs through one coherent neon city: more than 1,100 seeded
+buildings form dense streets and elevated racing canyons. Six architectural
+families include twin residential towers, stepped terraces, octagonal glass
+skyscrapers, offset office volumes, podium towers and narrow spires. Different
+window grids, warm offices, colored façades and rooftop neon break up repetition.
+Distant windows fade into the night haze to keep the racing surface readable.
 
-Six giant zoo animals overlook the circuit: golden giraffes, blue elephants with
-curled trunks, and pink flamingos on terraced islands. Colored mesh details and
-slow head movement make them visible landmarks. Placement keeps their silhouettes
-clear of the track and shifts nearby buildings away from the islands. Their bodies
-and heads each use a single colored mesh, without skeletal rigs or extra lights.
+Floating district and advertising signs drift gently above the streets. Around
+180–200 flying cars travel along reserved aerial lanes between city blocks, with
+separate hulls, canopies and bright engine trails. The enclosed expressway tunnel
+follows the banked track, with chasing cyan/magenta strips and a few shadow-free
+colored lights that illuminate the craft. The planets, mesas, reactor rings,
+water backdrop and giant animals have been removed from the active environment.
+
+Every building reserves its full envelope, including roofs and antennas, against
+a conservative swept volume around every road segment. This includes banking,
+vertical loops, crossings and camera clearance. Sign positions and full traffic
+routes also clear the road and buildings; signs reserve their floating range.
+
+Ships have beveled hulls, swept wings, cockpit glass and animated tapered plasma
+jets, bright engine cores, and instanced exhaust streaks. The engine socket glow
+responds to throttle; plume length grows with actual acceleration and boost.
+Small additive billboards provide localized bloom-like halos in the Compatibility
+renderer, without full-screen postprocessing. Road panels, metallic shading,
+shoulder chevrons and animated energy strips communicate speed and curvature.
+All city traffic, signs, tunnel lighting and effects freeze with GameNight pause.
 
 ## Graphics and performance
 
 The OpenGL Compatibility renderer is the baseline. Static track chunks are
-frustum-culled; city blocks and distant mountains use MultiMesh instances. All
-views share one world and simulation. One directional light, procedural sky and
-road/window shaders, and emissive trim avoid expensive dynamic shadow maps.
-Traffic and the city/rock layers are instanced; the small reactor meshes rotate
-without rebuilding geometry. The 3D loop geometry is generated once per race.
+frustum-culled; city architecture uses spatially grouped MultiMesh instances. All
+views share one world and simulation. One directional light, a handful of short-range shadow-free tunnel lights,
+procedural sky and road/window shaders keep lighting inexpensive. Buildings and
+traffic are instanced; only car transforms and sign offsets change each frame.
+City lots, the enclosed tunnel and 3D loop geometry are generated once per race.
 
 Performance / Balanced / High change the 3D render scale to 60% / 80% / 100%.
 High is the default and renders at native window/display resolution, including
@@ -205,6 +216,7 @@ godot --headless --path . --script res://tests/run.gd
 godot --headless --path . --script res://tests/flight.gd
 godot --headless --path . --script res://tests/menu.gd
 godot --headless --path . --script res://tests/effects.gd
+godot --headless --path . --script res://tests/city.gd
 python tests/integration.py --godot /path/to/Godot_console.exe --headless
 python tests/integration.py --godot /path/to/Godot_console.exe
 ```

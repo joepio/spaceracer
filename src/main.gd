@@ -576,8 +576,9 @@ func write_probe()->void:
 		"visible":get_window().mode!=Window.MODE_MINIMIZED and get_window().position.x> -10000,
 		"sound_enabled":sound_enabled,"muted":AudioServer.is_bus_mute(0),"clock":race.clock if race else -1,"countdown":race.countdown if race else -1,"vfx_clock":race.vfx_clock if race else -1,
 		"racers":snapshot,"views":views.size(),"session":bridge.session,
-		"scenery_rotation":world.scenery.rings[0].rotation.y if race and is_instance_valid(world) else 0.0,
-		"animal_rotation":world.scenery.animals.heads[0].node.rotation.y if race and is_instance_valid(world) else 0.0}
+		"city_time":world.scenery.animation_time if race and is_instance_valid(world) else 0.0,
+		"traffic_position":str(world.scenery.traffic.get_instance_transform(0).origin) if race and is_instance_valid(world) and world.scenery.traffic.instance_count>0 else "",
+		"tunnel_time":world.tunnel_material.get_shader_parameter("race_time") if race and is_instance_valid(world) else 0.0}
 	var file:=FileAccess.open(path,FileAccess.WRITE)
 	if file: file.store_string(JSON.stringify(state))
 

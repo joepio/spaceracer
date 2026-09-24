@@ -160,8 +160,9 @@ def main():
             time.sleep(.4)
             assert read()["clock"] == paused["clock"] and read()["muted"]
             assert read()["vfx_clock"] == paused["vfx_clock"], "Engine effects must freeze while paused"
-            assert read()["scenery_rotation"] == paused["scenery_rotation"], "Animated scenery must freeze while paused"
-            assert read()["animal_rotation"] == paused["animal_rotation"], "Wildlife must freeze while paused"
+            assert read()["city_time"] == paused["city_time"], "City signs must freeze while paused"
+            assert read()["traffic_position"] == paused["traffic_position"], "Air traffic must freeze while paused"
+            assert read()["tunnel_time"] == paused["tunnel_time"], "Tunnel lighting must freeze while paused"
             assert args.headless or not read()["visible"]
             # A live profile update must preserve progress and profile ownership.
             players[0].update(name="Azure Updated", color="#22ee99", avatar=json.dumps(dict(v=1,w=48,h=48,px=["#ff00ff"]+[None]*2303)))

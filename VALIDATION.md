@@ -3,6 +3,25 @@
 Godot 4.5.2 stable, native Windows, NVIDIA RTX 5070 Ti (driver 610.74).
 These are local development checks, not GameNight release certification.
 
+Neon city environment revision:
+
+- Replaced wildlife, planet, reactor, mesas and water with a seeded urban layout,
+  six architectural families, floating neon signs, air traffic and an enclosed
+  tunnel. Seed 31 has 1,135 buildings, 15 signs, 184 cars and four shadow-free
+  tunnel lights. City architecture is batched spatially; vehicles use three batches.
+- 15,647 city checks passed across eight seeds: deterministic generation, dense
+  building/type coverage, sign/airlane availability, independent brute-force
+  swept-road clearance, building/sign/traffic separation, and actual rendered
+  architecture bounds. The reserved ribbon includes width, banking and loops.
+- Source and packaged synthetic GameNight lifecycle passed, including frozen
+  city animation, traffic transforms and tunnel shader time. Menu tests passed.
+- Native 1920x1080 renders inspected the avenue, legible floating signage, enclosed
+  tunnel, moving light patterns, and inverted track view. Existing capture-harness
+  sky-texture cleanup messages remain; no script/shader errors were reported.
+- Short native single-view captures used 242–255 draw calls. These visual checks
+  are not a sustained four-player performance benchmark. Live solo source build
+  launched fullscreen and muted; its error log was empty at verification.
+
 Brake tap / engine startup revision:
 
 - 197,013 simulation checks passed; all 48 bots finished twelve races (longest

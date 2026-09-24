@@ -36,6 +36,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Flight failed' }
           & $godot --headless --path . --script res://tests/effects.gd
           if ($LASTEXITCODE -ne 0) { throw 'Startup and effects failed' }
+          & $godot --headless --path . --script res://tests/city.gd
+          if ($LASTEXITCODE -ne 0) { throw 'City clearance failed' }
       - name: Synthetic host lifecycle
         shell: pwsh
         run: |

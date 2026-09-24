@@ -8,6 +8,7 @@ var scenery: RefCounted
 var ships: Array[Node3D] = []
 var cameras: Array[Camera3D] = []
 var race: RefCounted
+var reflected_light:Array[Vector2]=[]
 var road_material: ShaderMaterial
 var tunnel_material:ShaderMaterial
 var tunnel_lights:Array[OmniLight3D]=[]
@@ -57,6 +58,7 @@ func build(state: RefCounted) -> void:
 	sun.rotation_degrees = Vector3(-35, -35, 0)
 	sun.light_color = Color("d3e5ff")
 	sun.light_energy = 1.15
+	sun.light_specular = .12
 	sun.shadow_enabled = false
 	add_child(sun)
 	road_material = ShaderMaterial.new()
@@ -65,9 +67,10 @@ func build(state: RefCounted) -> void:
 	road_material.set_shader_parameter("secondary",Vector3(secondary.r,secondary.g,secondary.b))
 	tunnel_material=ShaderMaterial.new()
 	tunnel_material.shader=load("res://src/tunnel.gdshader")
-	build_track()
 	scenery=Scenery.new()
 	scenery.build(self,race)
+	bake_city_lights()
+	build_track()
 	for p in race.racers:
 		var ship := build_ship(color_for(p))
 		add_child(ship)
@@ -77,6 +80,7 @@ func build(state: RefCounted) -> void:
 
 func vertex(surface: SurfaceTool, n: Dictionary, x: float, h: float, uv: Vector2) -> void:
 	surface.set_uv(uv)
+	surface.set_uv2(reflected_light[posmod(roundi(uv.y/race.track.step),reflected_light.size())])
 	var zone := 1.0 if n.zone == "repair" else (2.0 if n.zone == "boost" else 0.0)
 	surface.set_color(Color(zone / 2, 1.0 if n.loop else 0.0, 1.0 if n.get("brake_hint",false) else 0.0))
 	surface.add_vertex(Track.point(n, x, h))
@@ -213,3 +217,19 @@ func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false) 
 	var p: Dictionary = race.racers[index]
 	var n:Dictionary=race.track.sample(p.distance)
 	Chase.update(camera,Flight.pose(p,n,race.clock),p.speed,p.boost>0,dt,snap)
+
+func bake_city_lights()->void:
+	# A small static light lookup along the ribbon makes billboard color pools follow
+	# the actual city layout. No extra cameras, lights or per-fragment scene search.
+	var hues:=[.57,.075,.36,.83]
+	for node in race.track.nodes:
+		var strength:=0.0
+		var hue:=.57
+		for board in scenery.layout.billboards:
+			var delta:Vector3=node.p-board.transform.origin
+			var facing:=maxf(0.,delta.normalized().dot(board.transform.basis.z))
+			var influence:=exp(-delta.length()/155.)*facing
+			if influence>strength:
+				strength=influence
+				hue=hues[board.variant]
+		reflected_light.append(Vector2(hue,strength))

@@ -1,12 +1,12 @@
 # Ion Rush
 
 A small, original, F-Zero GX-inspired hover racer for GameNight. Godot 4.5.2;
-native 3D with 1–4 local split-screen players. No external art or online services.
+native 3D with 1–4 local split-screen players. Bundled AI-generated city textures; no online services required.
 This is a playable prototype, not an exact recreation of GX physics.
 
 ## Repository
 
-This is a self-contained Godot project: source, procedural artwork, the vendored
+This is a self-contained Godot project: source, procedural geometry and bundled artwork, the vendored
 GameNight transport, tests and packaging tools are included. It does not need a
 GameNight checkout to build or run. Development requires Godot 4.5.2; Python 3.12+
 with only its standard library runs the packaging and integration tools.
@@ -105,11 +105,12 @@ use the same 3D ribbon orientation. Width, banking and four color themes vary by
 seed, with tunnels, recharge lanes and boost strips. Sharper corner complexes have amber edge braking markers ahead of their apexes.
 There is no online/LAN multiplayer in this version.
 
-The circuit now runs through one coherent neon city: more than 1,100 seeded
-buildings form dense streets and elevated racing canyons. Six architectural
+The circuit now runs through one coherent neon city: more than 1,000 seeded
+buildings form dense streets and elevated racing canyons. Eight architectural
 families include twin residential towers, stepped terraces, octagonal glass
-skyscrapers, offset office volumes, podium towers and narrow spires. Different
-window grids, warm offices, colored façades and rooftop neon break up repetition.
+skyscrapers, offset office volumes, podium towers, narrow spires, broad offices
+and L-shaped blocks. Six roof styles add penthouses, equipment and antenna clusters.
+Different window bands, warm offices and occasional neon break up repetition.
 Distant windows fade into the night haze to keep the racing surface readable.
 
 Floating district and advertising signs drift gently above the streets. Around
@@ -128,7 +129,7 @@ Ships have beveled hulls, swept wings, cockpit glass and animated tapered plasma
 jets, bright engine cores, and instanced exhaust streaks. The engine socket glow
 responds to throttle; plume length grows with actual acceleration and boost.
 Small additive billboards provide localized bloom-like halos in the Compatibility
-renderer, without full-screen postprocessing. Road panels, metallic shading,
+renderer, without a full-screen bloom pass. Road panels, metallic shading,
 shoulder chevrons and animated energy strips communicate speed and curvature.
 All city traffic, signs, tunnel lighting and effects freeze with GameNight pause.
 
@@ -137,7 +138,7 @@ All city traffic, signs, tunnel lighting and effects freeze with GameNight pause
 The OpenGL Compatibility renderer is the baseline. Static track chunks are
 frustum-culled; city architecture uses spatially grouped MultiMesh instances. All
 views share one world and simulation. One directional light, a handful of short-range shadow-free tunnel lights,
-procedural sky and road/window shaders keep lighting inexpensive. Buildings and
+procedural sky, road shading and instanced textured facades keep lighting inexpensive. Buildings and
 traffic are instanced; only car transforms and sign offsets change each frame.
 City lots, the enclosed tunnel and 3D loop geometry are generated once per race.
 
@@ -230,3 +231,19 @@ controller ownership, frozen pause, profiles, stale input, Back gating, repeated
 Prepare/Dispose, and disconnect cleanup. These checks do not replace physical
 controller or cross-platform focus testing. Test probes are opt-in via
 `ION_PROBE_PATH` and are inactive in normal play.
+
+## City rendering
+
+The city uses a mipmapped AI-generated office facade with neutral/warm windows,
+four large advertising artworks mounted on safe building lots, and wet-road
+specular shading with inexpensive elongated rail/city light reflections with color pools from nearby billboards. The road
+highlights are an artistic approximation, not screen-space scene reflections.
+Balanced and High add a restrained five-tap peripheral speed blur to each view;
+the ship area and HUD stay crisp. Performance disables blur. Split-screen keeps
+the same total native pixel budget. Asset provenance and prompts: `assets/README.md`.
+
+Eight building families span slender 24 m towers to 195 m office blocks, with
+six rooftop styles: offset penthouses, paired blocks, stepped crowns, equipment
+huts and antenna clusters. Different facade rhythms break up the repeated grid.
+Building lots reserve the full roof and mast height and exclude one another as
+well as the complete swept track corridor.

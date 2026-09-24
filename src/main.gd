@@ -139,6 +139,9 @@ func new_race() -> void:
 		holder.add_child(viewport)
 		var image := TextureRect.new()
 		image.texture = viewport.get_texture()
+		var blur:=ShaderMaterial.new()
+		blur.shader=load("res://src/speed_blur.gdshader")
+		image.material=blur
 		image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		image.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -154,7 +157,7 @@ func new_race() -> void:
 		hud.show_map = indices.size() == 1
 		hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		holder.add_child(hud)
-		views.append({"holder":holder,"viewport":viewport,"camera":camera,"hud":hud,"index":index})
+		views.append({"holder":holder,"viewport":viewport,"camera":camera,"hud":hud,"index":index,"blur":blur})
 		world.update_camera(camera,index,0,true)
 	layout_views()
 
@@ -220,6 +223,8 @@ func _process(dt: float) -> void:
 		world.update_ships()
 		for view in views: world.update_camera(view.camera,view.index,dt)
 	for view in views:
+		var blur_amount:=smoothstep(110.,340.,float(race.racers[view.index].speed))*.035
+		view.blur.set_shader_parameter("amount",blur_amount if quality>=.8 and running and race.countdown<=0 else 0.)
 		view.hud.visible=not in_menu
 		view.hud.queue_redraw()
 	update_audio()

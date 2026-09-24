@@ -3,6 +3,8 @@ render_mode cull_disabled;
 uniform vec3 accent = vec3(.25,1.0,.85);
 uniform vec3 secondary = vec3(1.,.2,.6);
 uniform float race_time=0.;
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
 void fragment() {
     float lateral=abs(UV.x);
     vec3 sector=mix(accent,secondary,COLOR.g);
@@ -35,9 +37,25 @@ void fragment() {
         light+=vec3(1.,.36,.025)*(.15+arrow*.9);
     }
     float start=(1.-step(9.,UV.y))*step(.5,fract(UV.x*12.+floor(UV.y/3.)*.5));
+    // Cheap wet-surface light response: elongated, broken reflected rail and city
+    // highlights. No scene copies or reflection cameras per split-screen player.
+    float grain=noise(vec2(UV.x*140.,UV.y*.52));
+    float puddle=noise(vec2(UV.x*9.,UV.y*.023));
+    float grazing=pow(1.-max(dot(normalize(NORMAL),normalize(VIEW)),0.),2.);
+    float rail_pool=exp(-pow((lateral-.86)*7.,2.));
+    float streak=pow(noise(vec2(UV.x*68.,UV.y*.028)),3.);
+    float patches=pow(noise(vec2(UV.x*7.+12.,UV.y*.015)),2.);
+    vec3 reflection=mix(accent,secondary,smoothstep(-.35,.35,UV.x));
+    reflection*=rail_pool*(.18+.7*streak);
+    reflection+=mix(vec3(1.,.69,.35),vec3(.4,.65,1.),step(.55,patches))*streak*patches*.5;
+    vec3 ad_color=clamp(abs(fract(vec3(UV2.x)+vec3(0.,.6667,.3333))*6.-3.)-1.,0.,1.);
+    float city_pool=pow(noise(vec2(UV.x*25.,UV.y*.019+7.)),2.);
+    reflection+=mix(vec3(.65),ad_color,.8)*UV2.y*city_pool*3.5;
+    reflection*=mix(.45,1.2,grain)*(.25+grazing*.9)*smoothstep(.2,.65,puddle);
+    base*=.60;
     ALBEDO=base+light*.2+vec3(start*.65)+vec3(rivet*.2);
-    EMISSION=light*.65;
-    METALLIC=.28;
-    SPECULAR=.18;
-    ROUGHNESS=.5;
+    EMISSION=light*.65+reflection;
+    METALLIC=.72;
+    SPECULAR=.45;
+    ROUGHNESS=mix(.18,.36,grain);
 }

@@ -37,6 +37,9 @@ static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int)->MultiMes
 	return data
 
 func part(kind:int,position:Vector3,size:Vector3,color:Color)->void:
+	if kind==3:
+		kind=0
+		color.a=0.0 # solid rooftop equipment shares the architecture draw batch
 	var key:=Vector3i(floori(position.x/640),kind,floori(position.z/640))
 	if not groups.has(key): groups[key]=[]
 	groups[key].append({"transform":Transform3D(Basis.IDENTITY.scaled(size),position),"color":color})
@@ -55,7 +58,6 @@ func build(parent:Node3D,race:RefCounted)->void:
 		match b.kind:
 			0: # slab with a rooftop communications mast
 				part(0,c+Vector3.UP*h*.54,Vector3(w*.78,h*.92,d*.82),tint)
-				part(0,c+Vector3.UP*(h+16),Vector3(3,32,3),tint)
 			1: # paired residential towers on a common podium
 				for side in [-1,1]: part(0,c+Vector3(side*w*.255,h*.55,0),Vector3(w*.36,h*.9,d*.72),tint)
 			2: # three stepped terraces
@@ -73,11 +75,17 @@ func build(parent:Node3D,race:RefCounted)->void:
 				part(0,c+Vector3.UP*h*.23,Vector3(w,h*.46,d),tint)
 				part(0,c+Vector3.UP*h*.65,Vector3(w*.42,h*.7,d*.55),tint)
 				part(2,c+Vector3(w*.22,h*.64,0),Vector3(2,h*.65,3),tint)
-		part(2,c+Vector3.UP*(h-3),Vector3(w*.6,2,d*.65),tint)
+			6: # broad office block with a strongly offset square upper volume
+				part(0,c+Vector3.UP*h*.32,Vector3(w,h*.64,d),tint)
+				part(0,c+Vector3(w*.21,h*.82,-d*.12),Vector3(w*.48,h*.36,d*.65),tint)
+			7: # L-shaped tower: two wings with a lower cross-wing
+				part(0,c+Vector3(-w*.29,h*.5,0),Vector3(w*.42,h,d),tint)
+				part(0,c+Vector3(w*.2,h*.32,d*.29),Vector3(w*.58,h*.64,d*.42),tint)
+		build_roof(b)
+
 	var architecture:=ShaderMaterial.new()
 	architecture.shader=load("res://src/city.gdshader")
-	architecture.set_shader_parameter("accent",Vector3(accent.r,accent.g,accent.b))
-	architecture.set_shader_parameter("secondary",Vector3(secondary.r,secondary.g,secondary.b))
+	architecture.set_shader_parameter("facade",load("res://assets/office-facade.png"))
 	var glow:=ShaderMaterial.new()
 	glow.shader=load("res://src/city_neon.gdshader")
 	var cylinder:=CylinderMesh.new()
@@ -103,6 +111,7 @@ func build(parent:Node3D,race:RefCounted)->void:
 	ground.material_override=streets
 	parent.add_child(ground)
 	build_signs(parent)
+	build_billboards(parent)
 	var paint:=mat(Color("657892"))
 	paint.vertex_color_use_as_albedo=true
 	traffic=batch(parent,BoxMesh.new(),paint,layout.routes.size()*2)
@@ -150,3 +159,86 @@ func animate(time:float)->void:
 		traffic.set_instance_color(i,Color("829cc0").lerp(Color("c35494"),float(i%5)/5))
 		cabins.set_instance_transform(i,Transform3D(basis.scaled(Vector3(3.4,1.0,4)),position+Vector3.UP*1.1))
 		lamps.set_instance_transform(i,Transform3D(basis.scaled(Vector3(3.8,.35,8)),position-basis.z*7))
+
+func build_billboards(parent:Node3D)->void:
+	var materials:Array[ShaderMaterial]=[]
+	for variant in range(4):
+		var material:=ShaderMaterial.new()
+		material.shader=load("res://src/billboard.gdshader")
+		material.set_shader_parameter("artwork",load("res://assets/city-billboards.png"))
+		material.set_shader_parameter("panel",float(variant))
+		materials.append(material)
+	var titles:=["NOVA", "FLUX MOTORS", "LIVING CITY", "ION"]
+	var copy:=["BETTER TOMORROWS", "BEYOND THE ROAD", "ROOM TO GROW", "FEEL THE ENERGY"]
+	for item in layout.billboards:
+		var mount:=Node3D.new()
+		parent.add_child(mount)
+		mount.transform=item.transform
+		var frame:=MeshInstance3D.new()
+		var box:=BoxMesh.new()
+		box.size=Vector3(item.size.x+1.2,item.size.y+1.2,.5)
+		frame.mesh=box
+		frame.material_override=mat(Color("101b2c"))
+		mount.add_child(frame)
+		var screen:=MeshInstance3D.new()
+		var quad:=QuadMesh.new()
+		quad.size=item.size
+		screen.mesh=quad
+		screen.position.z=.3
+		screen.material_override=materials[item.variant]
+		mount.add_child(screen)
+		for line in range(2):
+			var label:=Label3D.new()
+			label.text=titles[item.variant] if line==0 else copy[item.variant]
+			label.font_size=72 if line==0 else 30
+			label.pixel_size=item.size.x/700.
+			label.position=Vector3(0,-item.size.y*(.31 if line==0 else .40),.4)
+			label.modulate=Color("dbf4ff")
+			label.outline_size=0
+			mount.add_child(label)
+
+func build_roof(b:Dictionary)->void:
+	var w:float=b.width
+	var d:float=b.depth
+	var h:float=b.height
+	var c:Vector3=b.center+Vector3.UP*h
+	if b.kind==0: w*=.78;d*=.82
+	if b.kind==3: c.y+=h*.04;w*=.55;d*=.55
+	if b.kind==7: c.x-=w*.29;w*=.42
+	if b.kind==6: c.x+=w*.21;c.z-=d*.12;w*=.48;d*=.65
+	if b.kind==2: w*=.54;d*=.54
+	if b.kind==5: w*=.42;d*=.55
+	if b.kind==1: c.x-=w*.255;w*=.36;d*=.72
+	if b.kind==4: c.y-=h*.01;c.x+=w*.12;w*=.72;d*=.82
+	var tint:Color=b.color
+	var top:float=b.roof_height
+	match b.roof:
+		0: # simple roof with asymmetric utility housings
+			part(3,c+Vector3(w*.17,4,-d*.18),Vector3(w*.26,8,d*.22),tint)
+		1: # a large square penthouse, visibly offset from the main shaft
+			part(0,c+Vector3(w*.11,top*.5,d*.08),Vector3(w*.65,top,d*.64),tint)
+			c.y+=top
+		2: # two rooftop volumes at different heights
+			part(0,c+Vector3(-w*.21,top*.5,0),Vector3(w*.34,top,d*.62),tint)
+			part(3,c+Vector3(w*.21,top*.27,d*.15),Vector3(w*.32,top*.54,d*.36),tint)
+		3: # a small technical hut below the antenna cluster
+			part(3,c+Vector3.UP*8,Vector3(w*.55,16,d*.48),tint)
+			c.y+=16
+		4: # stacked setback crown
+			part(0,c+Vector3.UP*top*.35,Vector3(w*.74,top*.7,d*.74),tint)
+			part(3,c+Vector3.UP*top*.84,Vector3(w*.38,top*.28,d*.38),tint)
+			c.y+=top*.98
+		5: # flat roof, tall radio mast
+			part(3,c+Vector3.UP*4,Vector3(w*.4,8,d*.4),tint)
+	# Some roofs are dark; others get a thin architectural strip, not a glowing lid.
+	if b.roof in [1,4]:
+		part(2,c+Vector3(0,1,d*.32),Vector3(w*.65,1.2,1.4),tint)
+	if b.roof>=3:
+		var mast:float=b.antenna
+		part(3,c+Vector3.UP*mast*.5,Vector3(1.8,mast,1.8),tint)
+		part(2,c+Vector3.UP*(mast+1),Vector3(2.6,2.6,2.6),Color(.9,.25,.15))
+		for level in [0.45,0.72]:
+			part(3,c+Vector3.UP*mast*level,Vector3(minf(w*.6,16),1.2,1.2),tint)
+		if b.roof==3:
+			for side in [-1,1]:
+				part(3,c+Vector3(side*w*.22,mast*.32,0),Vector3(1.2,mast*.64,1.2),tint)

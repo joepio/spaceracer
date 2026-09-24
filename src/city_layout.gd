@@ -26,6 +26,7 @@ func _init(track:RefCounted)->void:
 		bounds=bounds.grow(2.5)
 		if not clear(bounds): continue
 		signs.append({"transform":Transform3D(frame,position),"bounds":bounds})
+	place_landmarks(track)
 	var rng:=RandomNumberGenerator.new()
 	rng.seed=track.seed_value+170
 	for x in range(-18,19):
@@ -107,3 +108,27 @@ func place_billboards(track:RefCounted)->void:
 		var bounds:AABB=transform_value*AABB(Vector3(-width*.5-.6,-height*.5-.6,-.25),Vector3(width+1.2,height+1.2,.7))
 		if not building.bounds.encloses(bounds) or not clear(bounds): continue
 		billboards.append({"transform":transform_value,"size":Vector2(width,height),"variant":index%4,"building":index,"bounds":bounds})
+
+func place_landmarks(track:RefCounted)->void:
+	# Stage a small opening district before filling random city lots. It follows
+	# each seeded ribbon, and each full building still passes the corridor audit.
+	for i in range(4):
+		var n:Dictionary=track.sample(track.length*(.018+i*.027))
+		var side:float=1. if i%2==0 else -1.
+		var direction:Vector3=Vector3(n.frame.x.x,0,n.frame.x.z).normalized()*side
+		for offset in [100.,140.,180.]:
+			var center:Vector3=n.p+direction*(n.width+offset)
+			center.y=FLOOR
+			var w:=94.+i*5.
+			var d:=78.+i*3.
+			var h:=maxf(450.+i*65.,n.p.y-FLOOR+260.)
+			var bounds:=AABB(center-Vector3(w*.5,0,d*.5),Vector3(w,h+180,d))
+			if not clear(bounds) or occupied(bounds.grow(8)): continue
+			var overlap:=false
+			for sign_value in signs:
+				if bounds.intersects(sign_value.bounds): overlap=true;break
+			if overlap: continue
+			buildings.append({"center":center,"width":w,"depth":d,"height":h,
+				"kind":0,"roof":4,"roof_height":44.,"antenna":62.,
+				"color":Color(.14+i*.19,.25+i*.14,.55),"bounds":bounds,"landmark":true})
+			break

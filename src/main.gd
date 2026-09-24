@@ -164,6 +164,7 @@ func new_race() -> void:
 func layout_views() -> void:
 	var dimensions := get_viewport().get_visible_rect().size
 	var count := views.size()
+	if is_instance_valid(world): world.set_quality(quality,count)
 	for i in range(count):
 		var columns := 2 if count>2 else 1
 		var rows := 2 if count>1 else 1
@@ -472,8 +473,7 @@ func prepare(session:String,seats:Array,players:Array)->void:
 	# Draw at real display dimensions before Ready. Park off-screen while warming.
 	if not headless:
 		get_window().mode=Window.MODE_WINDOWED
-		await RenderingServer.frame_post_draw
-		await RenderingServer.frame_post_draw
+		for warmup in range(60): await RenderingServer.frame_post_draw
 	if bridge.session!=session: return
 	quiet_window()
 	bridge.ready_for_session(session)

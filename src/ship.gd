@@ -11,13 +11,13 @@ static func metal(color:Color,roughness:float=.3)->StandardMaterial3D:
 static func loft(parent:Node3D,name_value:String,sections:Array,material:Material,offset:Vector3=Vector3.ZERO)->MeshInstance3D:
 	var surface:=SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var cross_section:=[Vector2(-1,0),Vector2(-.65,.72),Vector2(.65,.72),Vector2(1,0),Vector2(.65,-.5),Vector2(-.65,-.5)]
+	var cross_section:=[Vector2(-1,-.05),Vector2(-.96,.10),Vector2(-.71,.67),Vector2(-.60,.72),Vector2(.60,.72),Vector2(.71,.67),Vector2(.96,.10),Vector2(1,-.05),Vector2(.65,-.5),Vector2(-.65,-.5)]
 	for i in range(sections.size()-1):
-		for j in range(6):
-			for cell in [[i,j],[i+1,j],[i,(j+1)%6],[i,(j+1)%6],[i+1,j],[i+1,(j+1)%6]]:
+		for j in range(cross_section.size()):
+			for cell in [[i,j],[i+1,j],[i,(j+1)%cross_section.size()],[i,(j+1)%cross_section.size()],[i+1,j],[i+1,(j+1)%cross_section.size()]]:
 				var section:Vector3=sections[cell[0]] # z, half width, height
 				var corner:Vector2=cross_section[cell[1]]
-				surface.set_uv(Vector2(float(cell[1])/6,section.x*.2))
+				surface.set_uv(Vector2(float(cell[1])/cross_section.size(),section.x*.2))
 				surface.add_vertex(Vector3(corner.x*section.y,corner.y*section.z,section.x))
 	surface.generate_normals()
 	var mesh:=MeshInstance3D.new()
@@ -59,6 +59,19 @@ static func build(tint:Color)->Node3D:
 		strip.emission=tint
 		strip.emission_energy_multiplier=.7
 		loft(root,"Light%d"%side,[Vector3(-2.8,.10,.10),Vector3(1.5,.10,.10),Vector3(2.2,.025,.02)],strip,Vector3(side*2.45,.4,0))
+		# Machined nozzle rims make the bright exhaust socket part of the hull.
+		var collar:=MeshInstance3D.new()
+		collar.name="Nozzle%d"%side
+		var ring:=TorusMesh.new()
+		ring.inner_radius=.38
+		ring.outer_radius=.62
+		ring.rings=16
+		ring.ring_segments=8
+		collar.mesh=ring
+		collar.material_override=metal(Color("8193a6"),.2)
+		collar.position=Vector3(side*2.45,-.12,-3.68)
+		collar.rotation.x=PI*.5
+		root.add_child(collar)
 		var plume:=MeshInstance3D.new()
 		plume.name="ExhaustL" if side<0 else "ExhaustR"
 		var jet:=SurfaceTool.new()

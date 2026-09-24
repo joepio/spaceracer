@@ -7,5 +7,6 @@ void fragment(){
 	float line=max(step(58.8,cell.x),step(58.8,cell.y));
 	ALBEDO=mix(vec3(.025,.03,.05),vec3(.012,.018,.028),road);
 	EMISSION=vec3(.10,.15,.20)*line*.08*exp(-length(VERTEX)*.0007);
-	ROUGHNESS=.45;
+	if(!OUTPUT_IS_SRGB){ALBEDO*=.20;EMISSION*=.3;}
+	ROUGHNESS=.8;
 }

@@ -49,6 +49,27 @@ func run()->void:
 			check(not collision and not city.occupied(item.bounds),"Signs and traffic routes clear road and buildings")
 		check(not city.clear(AABB(track.nodes[0].p-Vector3.ONE,Vector3.ONE*2)),"Road itself cannot become a city lot")
 		print("CITY seed=",seed_value," buildings=",city.buildings.size()," signs=",city.signs.size()," airlanes=",city.routes.size()," billboards=",city.billboards.size())
+	# Independently sample the driving surface against each new fixture envelope.
+	# Dense lateral and longitudinal samples catch poles over either racing edge.
+	for seed_value in [1,31,145]:
+		var track:=Track.new(seed_value)
+		var stage:=Node3D.new()
+		root.add_child(stage)
+		var district=load("res://src/showpiece.gd").new()
+		district.build(stage,track)
+		check(not district.fixtures.is_empty(),"Opening has visible streetlight fixtures")
+		for fixture in district.fixtures:
+			var clear_surface:=true
+			for i in range(track.nodes.size()):
+				var a:Dictionary=track.nodes[i]
+				var b:Dictionary=track.nodes[(i+1)%track.nodes.size()]
+				for step_index in range(9):
+					var along:=float(step_index)/8.
+					for across in [-1.,-.75,-.5,-.25,0.,.25,.5,.75,1.]:
+						var point:Vector3=Track.point(a,a.width*across,0).lerp(Track.point(b,b.width*across,0),along)
+						if fixture.bounds.grow(.5).has_point(point): clear_surface=false
+			check(clear_surface,"Streetlight poles clear sampled racing surface, including crossings")
+		stage.free()
 	# Audit actual generated mesh bounds as well as reserved building envelopes.
 	var race=load("res://src/race.gd").new([{"slot":0}],31)
 	var scenery=load("res://src/scenery.gd").new()

@@ -132,14 +132,29 @@ Each craft also has one short-range dynamic exhaust light. Throttle and boost
 illuminate its hull, the road and nearby racers, including during countdown; the
 light follows free flight and turns off during recovery. Lights are shared across
 views and use no shadow maps.
-Small additive billboards provide localized bloom-like halos in the Compatibility
-renderer, without a full-screen bloom pass. Road panels, metallic shading,
+HDR bloom complements the localized engine halos in Forward+. The OpenGL fallback
+retains the local halos. Road panels, metallic shading,
 shoulder chevrons and animated energy strips communicate speed and curvature.
 All city traffic, signs, tunnel lighting and effects freeze with GameNight pause.
 
 ## Graphics and performance
 
-The OpenGL Compatibility renderer is the baseline. Static track chunks are
+Forward+ is the default renderer, with screen-space reflections, restrained HDR
+bloom and ambient occlusion. A Vulkan-capable GPU is recommended. For the lighter
+OpenGL fallback, launch `IonRush.exe --rendering-method gl_compatibility`.
+
+The opening district stages four large advertising towers beside the seeded
+track, with mechanical floors, metal mullions and visible streetlights. Three
+static reflection probes capture the city once per race and are shared across
+all views. Ship paint uses clearcoat, fine panel seams and narrow hull bevels;
+machined nozzle rims surround the exhaust sockets. The four landmark screens
+also use inexpensive geometric reflections on the wet road: their real planes
+and artwork are sampled along each pixel’s reflected view ray. These reflections
+follow bends and camera motion; they approximate visibility rather than tracing
+intervening buildings. Screen-space reflections add the racers and local lights.
+The remainder of the circuit keeps the lighter procedural city treatment.
+
+Static track chunks are
 frustum-culled; city architecture uses spatially grouped MultiMesh instances. All
 views share one world and simulation. A faint, non-specular night fill, a handful of short-range shadow-free tunnel lights,
 procedural sky, road shading and instanced textured facades keep lighting inexpensive. Buildings and
@@ -148,7 +163,9 @@ City lots, the enclosed tunnel and 3D loop geometry are generated once per race.
 
 Performance / Balanced / High change the 3D render scale to 60% / 80% / 100%.
 High is the default and renders at native window/display resolution, including
-fullscreen. Balanced and High use 2x MSAA. HUD stays at window resolution.
+fullscreen. Balanced and High use 2x MSAA, bloom and screen-space reflections; High also uses
+ambient occlusion. Reflection ray steps drop from 48 to 32 in split-screen.
+Performance disables these screen-space effects. HUD stays at window resolution.
 Split-screen divides a fixed total pixel budget between cameras. The UI
 logical canvas is 1600×900; the actual 3D target follows output pixels, capped at 120 fps. This favors clear silhouettes and
 readable track edges at high speed; it is intentionally stylized rather than

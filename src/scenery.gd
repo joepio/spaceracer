@@ -23,7 +23,7 @@ static func mat(color:Color,emission:float=0.0)->StandardMaterial3D:
 		m.emission_energy_multiplier=emission
 	return m
 
-static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int)->MultiMesh:
+static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int,layer:int=1)->MultiMesh:
 	var data:=MultiMesh.new()
 	data.transform_format=MultiMesh.TRANSFORM_3D
 	data.use_colors=true
@@ -31,6 +31,7 @@ static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int)->MultiMes
 	data.instance_count=count
 	var renderer:=MultiMeshInstance3D.new()
 	renderer.multimesh=data
+	renderer.layers=layer
 	renderer.material_override=material
 	renderer.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(renderer)
@@ -82,6 +83,13 @@ func build(parent:Node3D,race:RefCounted)->void:
 				part(0,c+Vector3(-w*.29,h*.5,0),Vector3(w*.42,h,d),tint)
 				part(0,c+Vector3(w*.2,h*.32,d*.29),Vector3(w*.58,h*.64,d*.42),tint)
 		build_roof(b)
+		if b.get("landmark",false):
+			# Thin metal mullions and service floors give foreground towers depth.
+			for side in [-1,1]:
+				for z in [-1,1]:
+					part(3,c+Vector3(side*w*.39,h*.54,z*d*.41),Vector3(1.2,h*.92,1.2),tint)
+			for floor_index in range(1,7):
+				part(3,c+Vector3.UP*h*floor_index/7.,Vector3(w*.79,2.5,d*.83),tint)
 
 	var architecture:=ShaderMaterial.new()
 	architecture.shader=load("res://src/city.gdshader")
@@ -114,9 +122,9 @@ func build(parent:Node3D,race:RefCounted)->void:
 	build_billboards(parent)
 	var paint:=mat(Color("657892"))
 	paint.vertex_color_use_as_albedo=true
-	traffic=batch(parent,BoxMesh.new(),paint,layout.routes.size()*2)
-	cabins=batch(parent,BoxMesh.new(),mat(Color("121d34")),traffic.instance_count)
-	lamps=batch(parent,BoxMesh.new(),mat(Color("8eeaff"),2),traffic.instance_count)
+	traffic=batch(parent,BoxMesh.new(),paint,layout.routes.size()*2,2)
+	cabins=batch(parent,BoxMesh.new(),mat(Color("121d34")),traffic.instance_count,2)
+	lamps=batch(parent,BoxMesh.new(),mat(Color("8eeaff"),2),traffic.instance_count,2)
 	animate(0)
 
 func build_signs(parent:Node3D)->void:
@@ -187,6 +195,16 @@ func build_billboards(parent:Node3D)->void:
 		screen.position.z=.3
 		screen.material_override=materials[item.variant]
 		mount.add_child(screen)
+		if layout.buildings[item.building].get("landmark",false):
+			var light:=OmniLight3D.new()
+			light.position=Vector3(0,-item.size.y*.22,12.)
+			light.light_color=[Color("9caaff"),Color("7fcfff"),Color("b9db95"),Color("f7a8ca")][item.variant]
+			light.light_energy=2.8
+			light.omni_range=210.
+			light.omni_attenuation=1.8
+			light.light_specular=.6
+			light.shadow_enabled=false
+			mount.add_child(light)
 		for line in range(2):
 			var label:=Label3D.new()
 			label.text=titles[item.variant] if line==0 else copy[item.variant]

@@ -1,13 +1,18 @@
 shader_type spatial;
 render_mode cull_disabled;
-uniform vec3 tint=vec3(.2,1.,.8);
+uniform vec3 tint : source_color =vec3(.2,1.,.8);
+varying vec3 local_position;
+void vertex(){local_position=VERTEX;}
 void fragment(){
-	float panel=step(.95,fract(UV.y*3.));
-	float inset=step(.47,UV.x)*step(UV.x,.53);
-	float rim=pow(1.-max(dot(NORMAL,VIEW),0.),3.);
-	ALBEDO=mix(tint*.65,tint,pow(max(dot(NORMAL,normalize(vec3(.2,.7,.4))),0.),.5))*(1.-panel*.22);
-	ALBEDO=mix(ALBEDO,vec3(.025,.035,.06),inset*.8);
-	METALLIC=.62;
-	ROUGHNESS=.28;
-	EMISSION=tint*rim*.22;
+    float seam=1.-smoothstep(.002,.007,abs(fract((local_position.z+1.)*.7)-.5));
+    float spine=1.-smoothstep(.20,.28,abs(local_position.x));
+    float service=step(.67,abs(local_position.x))*step(.82,fract(local_position.z*1.8));
+    vec3 paint=mix(tint*.65,tint*.95,smoothstep(-.2,.7,local_position.y));
+    paint=mix(paint,vec3(.028,.040,.060),spine*.35+service*.14);
+    ALBEDO=paint*(1.-seam*.65);
+    METALLIC=mix(.38,.65,spine);
+    ROUGHNESS=mix(.23,.32,seam);
+    SPECULAR=.6;
+    CLEARCOAT=.8;
+    CLEARCOAT_ROUGHNESS=.2;
 }

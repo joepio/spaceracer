@@ -3,11 +3,15 @@ const Track = preload("res://src/track.gd")
 const Scenery = preload("res://src/scenery.gd")
 const Flight=preload("res://src/flight.gd")
 const Chase=preload("res://src/chase.gd")
+const Showpiece=preload("res://src/showpiece.gd")
+var showpiece:RefCounted
 const Ship = preload("res://src/ship.gd")
 var scenery: RefCounted
 var ships: Array[Node3D] = []
 var cameras: Array[Camera3D] = []
 var race: RefCounted
+var scene_environment:Environment
+var advanced_renderer:=false
 var road_material: ShaderMaterial
 var tunnel_material:ShaderMaterial
 var tunnel_lights:Array[OmniLight3D]=[]
@@ -32,12 +36,17 @@ func build(state: RefCounted) -> void:
 	race = state
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
+	scene_environment=env
+	advanced_renderer=RenderingServer.get_current_rendering_method()=="forward_plus"
 	env.background_mode = Environment.BG_SKY
 	var sky := Sky.new()
 	var sky_material := ShaderMaterial.new()
 	sky_material.shader = load("res://src/sky.gdshader")
 	var top:=Color("060a12")
 	var horizon:=Color("0c121c")
+	if advanced_renderer:
+		top=top.srgb_to_linear()
+		horizon=horizon.srgb_to_linear()
 	sky_material.set_shader_parameter("top_color",Vector3(top.r,top.g,top.b))
 	sky_material.set_shader_parameter("horizon_color",Vector3(horizon.r,horizon.g,horizon.b))
 	sky.sky_material = sky_material
@@ -47,10 +56,20 @@ func build(state: RefCounted) -> void:
 	env.ambient_light_energy = .48
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
-	env.fog_light_color = Color("0c121c")
+	env.fog_light_color = Color("21334b")
 	env.fog_light_energy = .65
-	env.fog_density = .00028
+	env.fog_density = .00045
 	env.fog_sky_affect = 0.0
+	if advanced_renderer:
+		env.ssr_enabled=true
+		env.ssr_max_steps=48
+		env.ssr_depth_tolerance=.4
+		env.ssao_enabled=true
+		env.ssao_radius=2.
+		env.ssao_intensity=1.1
+		env.glow_enabled=true
+		env.glow_intensity=.55
+		env.glow_hdr_threshold=1.2
 	environment.environment = env
 	add_child(environment)
 	var night_fill := DirectionalLight3D.new()
@@ -66,9 +85,29 @@ func build(state: RefCounted) -> void:
 	tunnel_material.shader=load("res://src/tunnel.gdshader")
 	scenery=Scenery.new()
 	scenery.build(self,race)
+	var centers:=PackedVector3Array()
+	var axes:=PackedVector3Array()
+	var up:=PackedVector3Array()
+	var data:=PackedVector3Array()
+	for item in scenery.layout.billboards:
+		if not scenery.layout.buildings[item.building].get("landmark",false): continue
+		centers.append(item.transform.origin+item.transform.basis.z*.3)
+		axes.append(item.transform.basis.x)
+		up.append(item.transform.basis.y)
+		data.append(Vector3(item.size.x,item.size.y,item.variant))
+	road_material.set_shader_parameter("sign_count",centers.size())
+	centers.resize(4);axes.resize(4);up.resize(4);data.resize(4)
+	road_material.set_shader_parameter("sign_centers",centers)
+	road_material.set_shader_parameter("sign_right",axes)
+	road_material.set_shader_parameter("sign_up",up)
+	road_material.set_shader_parameter("sign_data",data)
+	road_material.set_shader_parameter("billboard_art",load("res://assets/city-billboards.png"))
 	build_track()
+	showpiece=Showpiece.new()
+	showpiece.build(self,race.track)
 	for p in race.racers:
 		var ship := build_ship(color_for(p))
+		set_dynamic_layer(ship)
 		add_child(ship)
 		ships.append(ship)
 		ship_colors.append(color_for(p))
@@ -113,6 +152,7 @@ func build_track() -> void:
 			var mesh := MeshInstance3D.new()
 			mesh.mesh = pair[0].commit()
 			mesh.material_override = pair[1]
+			mesh.layers = 4 # Road excluded from static city captures; cameras still see it.
 			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			add_child(mesh)
 	build_tunnel()
@@ -212,3 +252,14 @@ func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false) 
 	var p: Dictionary = race.racers[index]
 	var n:Dictionary=race.track.sample(p.distance)
 	Chase.update(camera,Flight.pose(p,n,race.clock),p.speed,p.boost>0,dt,snap)
+
+static func set_dynamic_layer(node:Node)->void:
+	if node is VisualInstance3D: node.layers=2
+	for child in node.get_children(): set_dynamic_layer(child)
+
+func set_quality(value:float,view_count:int)->void:
+	if not advanced_renderer: return
+	scene_environment.ssr_enabled=value>=.8
+	scene_environment.ssr_max_steps=32 if view_count>1 or value<1. else 48
+	scene_environment.ssao_enabled=value>=1.
+	scene_environment.glow_enabled=value>=.8

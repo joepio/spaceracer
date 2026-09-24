@@ -169,24 +169,7 @@ func update_ships() -> void:
 				light.albedo_color=tint
 				light.emission=tint
 			ship_colors[i] = tint
-		var burning:bool=(p.boost>0 or p.on_pad) and p.thrust>0
-		var thrust:float=0.0 if p.recovery>0 or p.finished else maxf(.08,p.thrust)
-		var length:=lerpf(.75,5.5,thrust)+(5.5 if burning else 0.0)
-		for name_value in ["ExhaustL", "ExhaustR"]:
-			var exhaust:MeshInstance3D=ships[i].get_node(name_value)
-			exhaust.scale=Vector3(.8 if burning else .6,.65 if burning else .45,length)
-			exhaust.material_override.set_shader_parameter("race_time",race.clock+i*.71)
-			exhaust.material_override.set_shader_parameter("power",thrust)
-			exhaust.material_override.set_shader_parameter("boost_amount",1.0 if burning else 0.0)
-		var wake:MultiMesh=ships[i].get_node("EngineWake").multimesh
-		for particle in range(20):
-			var age:=fposmod(race.clock*(2.2 if burning else 1.6)+particle*.173+i*.31,1.0)
-			var side:=1 if particle%2==0 else -1
-			var phase:=particle*2.4
-			var position:=Vector3(side*2.45+sin(phase)*age*.6,-.12+cos(phase)*age*.4,-3.8-age*length*1.55)
-			var size:=Vector3(.035,.035,.3+age*.7)*(thrust if race.countdown<=0 else 0.0)
-			wake.set_instance_transform(particle,Transform3D(Basis.IDENTITY.scaled(size),position))
-			wake.set_instance_color(particle,Color(.3,.8,1,(1-age)*thrust*.7))
+		Ship.animate_effects(ships[i],p,race.vfx_clock,race.countdown)
 
 func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false) -> void:
 	var p: Dictionary = race.racers[index]

@@ -70,7 +70,7 @@ func _draw() -> void:
 	if show_map: minimap(Vector2(61,h-48),44)
 	if race.countdown>0:
 		centered(str(ceili(race.countdown)),w,h*.46,52)
-		centered("Hold A / RT or W to accelerate",w,h*.46+30,12,Color("bacbd5"))
+		centered("A / RT / W starts engines — full power at GO",w,h*.46+30,12,Color("bacbd5"))
 	elif race.clock<.7:
 		centered("Go",w,h*.42,40,tint)
 	elif p.recovery>0:

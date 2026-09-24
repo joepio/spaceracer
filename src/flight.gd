@@ -21,7 +21,13 @@ static func ground_pose(p:Dictionary,n:Dictionary,clock:float)->Transform3D:
 static func pose(p:Dictionary,n:Dictionary,clock:float)->Transform3D:
 	if p.airborne or (p.crashed and p.recovery>0):
 		return Transform3D(p.air_frame,p.air_position)
-	return ground_pose(p,n,clock)
+	var result:=ground_pose(p,n,clock)
+	# Cosmetic only: grid warmup cannot change launch speed or physical grip.
+	var left:=smoothstep(0,.7,p.startup)
+	var right:=smoothstep(.25,1,p.startup)
+	result.origin-=n.frame.y*(1-(left+right)*.5)*.8
+	result.basis=result.basis*Basis(Vector3.BACK,(left-right)*.12)
+	return result
 
 static func unload(p:Dictionary,dt:float,crest_force:float,hold_force:float)->bool:
 	var loose:float=maxf(0,-p.trim)

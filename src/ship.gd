@@ -80,7 +80,37 @@ static func build(tint:Color)->Node3D:
 		plume.position=Vector3(side*2.45,-.12,-3.65)
 		plume.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(plume)
+		var reverse:=MeshInstance3D.new()
+		reverse.name="Reverse%d"%side
+		reverse.mesh=plume.mesh
+		reverse.material_override=plasma.duplicate()
+		reverse.material_override.set_shader_parameter("braking",1.0)
+		reverse.position=Vector3(side*2.45,-.05,2.2)
+		reverse.rotation.y=PI
+		reverse.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(reverse)
+		var airbrake:=Node3D.new()
+		airbrake.name="Airbrake%d"%side
+		airbrake.position=Vector3(side*2.45,.42,-.4)
+		root.add_child(airbrake)
+		loft(airbrake,"Door",[Vector3(-1.8,.5,.12),Vector3(-1.5,.64,.12),Vector3(0,.55,.12)],alloy)
+		var warning:=metal(Color("ff6b32"))
+		warning.emission_enabled=true
+		warning.emission=Color("ff4218")
+		loft(airbrake,"BrakeLight",[Vector3(-1.72,.48,.04),Vector3(-1.58,.52,.04)],warning,Vector3(0,.1,0))
+		var halo:=MeshInstance3D.new()
+		halo.name="EngineHalo%d"%side
+		var quad:=QuadMesh.new()
+		quad.size=Vector2(3.2,3.2)
+		halo.mesh=quad
+		halo.position=plume.position+Vector3(0,0,-.15)
+		halo.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var halo_material:=ShaderMaterial.new()
+		halo_material.shader=load("res://src/engine_glow.gdshader")
+		halo.material_override=halo_material
+		root.add_child(halo)
 		var core:=MeshInstance3D.new()
+		core.name="EngineCore%d"%side
 		var bulb:=SphereMesh.new()
 		bulb.radius=.3
 		bulb.height=.6
@@ -119,5 +149,39 @@ static func animate_controls(root:Node3D,p:Dictionary)->void:
 		# Pull-back raises trailing edges; differential deflection banks into steering.
 		wing.rotation.x=clampf(-p.input_pitch*.55-p.input_steer*side*.5+p.input_brake*.6,-.85,.95)
 		wing.rotation.z=-p.input_strafe*.16
+		root.get_node("Airbrake%d"%side).rotation.x=p.brake_vfx*1.15
 		var rudder:Node3D=root.get_node("RudderL" if side<0 else "RudderR")
 		rudder.rotation.y=-p.input_strafe*.55-(0.0 if p.airborne else p.input_steer*.18)
+
+static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)->void:
+	var alive:bool=p.recovery<=0 and not p.finished
+	var power:float=p.engine_power if alive else 0.0
+	var burning:bool=(p.boost>0 or p.on_pad) and p.thrust>0 and alive
+	var drive:float=smoothstep(0,125,p.acceleration) if countdown<=0 else 0.0
+	var length:=.65+power*1.4+drive*power*4.0+(5.5 if burning else 0.0)
+	for side in [-1,1]:
+		var exhaust:MeshInstance3D=root.get_node("ExhaustL" if side<0 else "ExhaustR")
+		exhaust.scale=Vector3(.8 if burning else .6,.65 if burning else .45,length)
+		exhaust.material_override.set_shader_parameter("race_time",time+p.slot*.71)
+		exhaust.material_override.set_shader_parameter("power",power)
+		exhaust.material_override.set_shader_parameter("boost_amount",1.0 if burning else 0.0)
+		var core:MeshInstance3D=root.get_node("EngineCore%d"%side)
+		core.material_override.albedo_color=Color("152d42").lerp(Color("eeffff"),power)
+		core.scale=Vector3(1,.7,.5)*(.75+power*.5)
+		var halo:MeshInstance3D=root.get_node("EngineHalo%d"%side)
+		halo.scale=Vector3.ONE*(.6+power*.65+(.15 if burning else 0.0))
+		halo.material_override.set_shader_parameter("power",power)
+		var reverse:MeshInstance3D=root.get_node("Reverse%d"%side)
+		reverse.visible=p.brake_vfx>.01 and alive
+		reverse.scale=Vector3(.45,.35,.2+p.brake_vfx*2.8)
+		reverse.material_override.set_shader_parameter("power",p.brake_vfx*.9)
+		reverse.material_override.set_shader_parameter("race_time",time)
+	var wake:MultiMesh=root.get_node("EngineWake").multimesh
+	for particle in range(20):
+		var age:=fposmod(time*(2.2 if burning else 1.6)+particle*.173+p.slot*.31,1.0)
+		var side:=1 if particle%2==0 else -1
+		var phase:=particle*2.4
+		var position:=Vector3(side*2.45+sin(phase)*age*.6,-.12+cos(phase)*age*.4,-3.8-age*length*1.55)
+		var size:=Vector3(.035,.035,.3+age*.7)*(power if countdown<=0 else 0.0)
+		wake.set_instance_transform(particle,Transform3D(Basis.IDENTITY.scaled(size),position))
+		wake.set_instance_color(particle,Color(.3,.8,1,(1-age)*power*.7))

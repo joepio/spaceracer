@@ -11,6 +11,7 @@ var track: RefCounted
 var racers: Array[Dictionary] = []
 var countdown := 3.0
 var clock := 0.0
+var vfx_clock := 0.0
 var laps := 3
 var over := false
 var finish_deadline := INF
@@ -22,7 +23,7 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3) -> void:
 		var p: Dictionary = roster[i].duplicate(true)
 		p.merge({"distance": -floorf(i / 3.0) * 13.0, "x": (i % 3 - (mini(3, roster.size()) - 1) / 2.0) * 12.0, "speed": 0.0,
 			"heading": 0.0, "slip": 0.0, "energy": 100.0, "boost": 0.0, "boost_held": false,
-			"input_steer":0.0,"input_strafe":0.0,"input_pitch":0.0,"input_brake":0.0,"air_position":Vector3.ZERO,"air_velocity":Vector3.ZERO,"air_frame":Basis.IDENTITY,
+			"input_throttle":0.0,"engine_power":0.0,"startup":0.0,"ignited":false,"brake_vfx":0.0,"slide_hold":0.0,"acceleration":0.0,"input_steer":0.0,"input_strafe":0.0,"input_pitch":0.0,"input_brake":0.0,"air_position":Vector3.ZERO,"air_velocity":Vector3.ZERO,"air_frame":Basis.IDENTITY,
 			"ground_velocity":Vector3.ZERO,"air_rates":Vector3.ZERO,"unload":0.0,"landing_frame":Basis.IDENTITY,"landing_blend":0.0,"air_time":0.0,"air_travel":0.0,"air_roll":0.0,"launch_cooldown":0.0,"crashed":false,"trim": 0.0, "lift": 0.0, "lift_speed": 0.0, "airborne": false, "slide": 0.0, "braking": 0.0, "thrust": 0.0, "flash": 0.0, "recovery": 0.0, "lap": 1, "rank": i + 1, "finished": false,
 			"time": INF, "best_lap": INF, "lap_start": 0.0, "drifting": false, "on_pad": false}, true)
 		racers.append(p)
@@ -42,19 +43,28 @@ func bot(p: Dictionary) -> Dictionary:
 	if absf(n.curve)>.006 and p.speed>145: brake=maxf(brake,.48)
 	var target:float=-n.width*.63 if n.zone=="repair" and p.energy<85 else sin(p.slot*2)*4
 	var slide:float=p.slide
-	var grip:=lerpf(14,2.8,slide)
+	var grip:=lerpf(14,1.8,slide)
 	var inertia:=lerpf(.25,1,slide)
 	var desired_lateral:=clampf((target-p.x)*2.4,-45,45)
 	var desired_heading:=asin(clampf((desired_lateral+n.curve*p.speed*p.speed*inertia/grip)/maxf(p.speed,60),-.75,.75))
-	var turn:=clampf((n.curve*p.speed+desired_heading*lerpf(3.5,1.2,slide)+(desired_heading-p.heading)*3.8+(desired_lateral-p.slip)*.012)/lerpf(1.65,3.8,slide),-1,1)
+	var turn:=clampf((n.curve*p.speed+desired_heading*lerpf(3.5,.8,slide)+(desired_heading-p.heading)*3.8+(desired_lateral-p.slip)*.012)/lerpf(1.65,3.8,slide),-1,1)
 	return {"steer":turn,"throttle":1.0,"brake":brake,"left":false,"right":false,
 		"boost":p.lap>1 and p.energy>40 and peak<.0025 and p.boost==0 and brake<.05}
 
 func step(dt: float, inputs: Array) -> void:
 	if over:
 		return
+	vfx_clock+=dt
 	for i in range(racers.size()):
 		var input:Dictionary=inputs[i]
+		var pilot:Dictionary=racers[i]
+		pilot.input_throttle=clampf(float(input.get("throttle",0.0)),0,1)
+		var brake_input:=clampf(float(input.get("brake",0.0)),0,1)
+		pilot.thrust=pilot.input_throttle*(1-brake_input) if pilot.recovery==0 and not pilot.finished else 0.0
+		pilot.engine_power=lerpf(pilot.engine_power,pilot.thrust,1-exp(-dt*16))
+		pilot.brake_vfx=move_toward(pilot.brake_vfx,brake_input,dt*(18 if brake_input>pilot.brake_vfx else 3))
+		if pilot.input_throttle>.05: pilot.ignited=true
+		if pilot.ignited: pilot.startup=move_toward(pilot.startup,1.0,dt*(.8 if countdown>0 else 5.0))
 		racers[i].input_steer=clampf(input.get("steer",0.0),-1,1)
 		racers[i].input_pitch=clampf(input.get("trim",0.0),-1,1)
 		racers[i].input_strafe=clampf(float(input.get("strafe",0.0))+int(input.get("right",false))-int(input.get("left",false)),-1,1)
@@ -83,9 +93,19 @@ func step(dt: float, inputs: Array) -> void:
 		p.trim=pitch_input if p.airborne else move_toward(p.trim,pitch_input,dt*5)
 		var planted:float=maxf(0,p.trim)
 		var loose:float=maxf(0,-p.trim)
-		# LT progressively releases magnetic grip; momentum and hull heading separate.
-		var slide_target:=brake*smoothstep(45,140,p.speed)*(1-planted*.55)
-		p.slide=move_toward(p.slide,slide_target,dt*(5.0 if slide_target>p.slide else 2.4))
+		# A short brake pulse breaks adhesion quickly; recovery is deliberately slower.
+		var slide_target:=sqrt(brake)*smoothstep(45,140,p.speed)*(1-planted*.55)
+		if slide_target>p.slide:
+			p.slide=move_toward(p.slide,slide_target,dt*14)
+			p.slide_hold=.18
+		elif brake>.08:
+			p.slide=move_toward(p.slide,slide_target,dt*4)
+			p.slide_hold=.18
+		else:
+			p.slide_hold=maxf(0,p.slide_hold-dt)
+			if p.slide_hold==0 or planted>.2:
+				var countersteer:=.6 if steer*p.heading<-.015 else 0.0
+				p.slide=move_toward(p.slide,0.0,dt*(.65+planted*2.8+countersteer))
 		p.drifting=p.slide>.18
 		if c.get("boost", false) and not p.boost_held and p.lap > 1 and p.energy > 22 and p.recovery == 0 and brake<.05 and not p.airborne:
 			p.energy -= 22
@@ -112,7 +132,9 @@ func step(dt: float, inputs: Array) -> void:
 				p.speed = 90.0
 			continue
 		if p.airborne:
+			var previous_speed:float=p.speed
 			Flight.step(p,track,dt,steer,strafe,throttle,brake)
+			p.acceleration=maxf(0,(p.speed-previous_speed)/dt)
 			if not p.airborne and p.recovery==0: update_lap(p)
 			continue
 		p.on_pad = n.zone == "boost" and absf(p.x) < n.width * .35 and brake<.05 and p.lift<1
@@ -125,14 +147,15 @@ func step(dt: float, inputs: Array) -> void:
 			acceleration -= 38
 		acceleration -= 240*brake+planted*p.speed*.12
 		acceleration -= absf(steer) * p.speed * lerpf(.045,.08,p.slide) + n.slope * 28
+		p.acceleration=maxf(0,acceleration)
 		p.speed = clampf(p.speed + acceleration * dt, 0, 440)
 		var yaw:=steer*lerpf(1.65,3.8,p.slide)*(.35+.65*minf(p.speed/120,1))*(.45 if p.airborne else 1.0)
-		p.heading=clampf(p.heading+(yaw-n.curve*p.speed-p.heading*lerpf(3.5,1.2,p.slide))*dt,-1.05,1.05)
+		p.heading=clampf(p.heading+(yaw-n.curve*p.speed-p.heading*lerpf(3.5,.8,p.slide))*dt,-1.05,1.05)
 		var lateral:float=sin(p.heading)*p.speed+strafe*46*(.35 if p.airborne else 1.0)
 		# Momentum carries outward as the road turns under a low-grip craft.
 		var forward_speed:float=p.speed*maxf(.55,cos(p.heading))
 		p.slip-=n.curve*forward_speed*forward_speed*lerpf(.25,1,p.slide)*dt
-		var grip:float=lerpf(14,2.8,p.slide)*(1+planted*.75-loose*.48)*(1-p.unload*.35)
+		var grip:float=lerpf(14,1.8,p.slide)*(1+planted*.75-loose*.48)*(1-p.unload*.35)
 		p.slip=lerpf(p.slip,lateral,1-exp(-grip*dt))
 		var crest_force:float=maxf(0,-n.crest)*forward_speed*forward_speed
 		var hold_force:float=230*(1-loose*.82)+planted*180+brake*80

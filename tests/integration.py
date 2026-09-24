@@ -159,6 +159,7 @@ def main():
             paused = wait(read, lambda s: s["phase"] == "paused")
             time.sleep(.4)
             assert read()["clock"] == paused["clock"] and read()["muted"]
+            assert read()["vfx_clock"] == paused["vfx_clock"], "Engine effects must freeze while paused"
             assert read()["scenery_rotation"] == paused["scenery_rotation"], "Animated scenery must freeze while paused"
             assert read()["animal_rotation"] == paused["animal_rotation"], "Wildlife must freeze while paused"
             assert args.headless or not read()["visible"]

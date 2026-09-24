@@ -47,7 +47,11 @@ controller does not reassign the remaining players. Keyboard controls also work.
 Simulation runs at 120 Hz. LT is an analog brake: squeezing it slows the craft,
 reduces magnetic grip and increases yaw authority. The hull turns ahead of its
 momentum, so the craft slides outward. Brake before a sharp corner, turn into it,
-then release LT and countersteer to catch the slide. Grip returns progressively.
+then release LT and countersteer to catch the slide. A short brake tap breaks
+adhesion quickly and leaves a slide after release; the nose responds faster than
+the lateral momentum. Grip returns slowly, with forward trim and countersteering
+helping catch the slide. Dorsal airbrakes open and orange forward-facing reverse
+jets fire with brake pressure; a brief visual decay keeps short taps readable.
 LB/RB and the right stick's horizontal axis strafe without steering the nose.
 
 Right stick forward lowers the nose and adds grip/downforce at the expense of
@@ -78,6 +82,11 @@ Progress is awarded when landing, so simply flying past the finish does not win.
 Hinged wing elevons and twin tail rudders respond directly to pitch, steering,
 strafing and braking, including during the starting countdown. Input deflection
 is immediate; the hull and momentum retain their physical response time.
+During the countdown, craft rest level near the deck until RT / A (or keyboard
+throttle) starts their engines. One side rises first, then the other, settling into
+hover. Engine sockets brighten and develop soft blue-white halos with throttle,
+even while the starting grid remains locked. This startup is cosmetic: pressing
+throttle exactly at GO has the same acceleration as warming up beforehand.
 Sound is temporarily disabled for playtesting, including managed pause/resume.
 
 Cruising speed is roughly 950 km/h; boost reaches roughly 1,400 km/h. Boost
@@ -100,7 +109,9 @@ The visual pass adds a banded ringed planet, star and aurora skies, two-tone cit
 windows, colored mesa strata, water far below the circuit, rotating reactor rings
 and ambient flying traffic. Ships have beveled hulls, swept wings, cockpit glass
 and animated tapered plasma jets, bright engine cores, and instanced exhaust
-streaks. Exhaust responds to throttle and grows during boost. Road panels, metallic shading, shoulder
+streaks. The engine socket glow responds to throttle; plume length grows with actual
+acceleration and boost. Small additive billboards provide localized bloom-like
+halos in the Compatibility renderer, without full-screen postprocessing or lights. Road panels, metallic shading, shoulder
 chevrons and animated energy strips help communicate speed and curvature.
 Animated scenery and shader motion freeze with the GameNight pause state.
 
@@ -193,6 +204,7 @@ godot --headless --path . --editor --import --quit
 godot --headless --path . --script res://tests/run.gd
 godot --headless --path . --script res://tests/flight.gd
 godot --headless --path . --script res://tests/menu.gd
+godot --headless --path . --script res://tests/effects.gd
 python tests/integration.py --godot /path/to/Godot_console.exe --headless
 python tests/integration.py --godot /path/to/Godot_console.exe
 ```

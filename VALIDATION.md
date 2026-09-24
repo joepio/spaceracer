@@ -3,6 +3,25 @@
 Godot 4.5.2 stable, native Windows, NVIDIA RTX 5070 Ti (driver 610.74).
 These are local development checks, not GameNight release certification.
 
+Brake tap / engine startup revision:
+
+- 197,013 simulation checks passed; all 48 bots finished twelve races (longest
+  115.15 s). Added a 67 ms brake-tap regression, persistent momentum after release,
+  and eventual grip recovery. Existing slide-catch and analog pressure checks pass.
+- All 43 flight tests and menu input checks passed. Fourteen new startup/effects
+  checks cover level parked pose, staged rise, pre-GO throttle/socket/halo response,
+  identical launch acceleration for early and late throttle, acceleration-dependent
+  jet length, opening airbrakes and correctly directed reverse jets.
+- Source and packaged GameNight lifecycle checks passed; effects time is now
+  explicitly checked to remain frozen while paused.
+- Native renders inspected idle, staggered ignition, charged sockets, dorsal
+  airbrakes and reverse plumes. A packaged 1920x1080 four-player capture verifies
+  per-camera glow billboards and countdown text. This was visual QA, not a new
+  sustained performance benchmark. Halos add one small additive quad per engine;
+  they do not require full-screen bloom passes or dynamic lights.
+- Existing capture-harness sky-texture cleanup warnings and menu ObjectDB warning
+  remain. No new script or shader errors appeared. Sound remains muted.
+
 Fighter handling and smooth takeoff revision:
 
 - Independent body-axis pitch, roll and yaw with angular-rate response; releasing

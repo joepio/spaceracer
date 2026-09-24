@@ -574,7 +574,7 @@ func write_probe()->void:
 			snapshot.append(copy)
 	var state:Dictionary={"phase":bridge.phase,"running":running,
 		"visible":get_window().mode!=Window.MODE_MINIMIZED and get_window().position.x> -10000,
-		"sound_enabled":sound_enabled,"muted":AudioServer.is_bus_mute(0),"clock":race.clock if race else -1,"countdown":race.countdown if race else -1,
+		"sound_enabled":sound_enabled,"muted":AudioServer.is_bus_mute(0),"clock":race.clock if race else -1,"countdown":race.countdown if race else -1,"vfx_clock":race.vfx_clock if race else -1,
 		"racers":snapshot,"views":views.size(),"session":bridge.session,
 		"scenery_rotation":world.scenery.rings[0].rotation.y if race and is_instance_valid(world) else 0.0,
 		"animal_rotation":world.scenery.animals.heads[0].node.rotation.y if race and is_instance_valid(world) else 0.0}

@@ -22,12 +22,14 @@ func run()->void:
 	var ship:=Ship.build(Color.CYAN)
 	root.add_child(ship)
 	Ship.animate_effects(ship,p,0,warm.countdown)
+	check(not ship.get_node("EngineLight").visible,"Cold engine emits no dynamic illumination")
 	var idle_color:Color=ship.get_node("EngineCore-1").material_override.albedo_color
 	for tick in range(45):
 		warm.step(1.0/120,[{"throttle":1.0}])
 		cold.step(1.0/120,[{}])
 	Ship.animate_effects(ship,p,warm.vfx_clock,warm.countdown)
 	var rising:=Flight.pose(p,n,0)
+	check(ship.get_node("EngineLight").visible and ship.get_node("EngineLight").light_energy>2.5,"Throttle illuminates the surroundings during countdown")
 	check(p.speed==0 and p.distance==0 and warm.clock==0,"Revving during countdown cannot move the racer")
 	check(p.engine_power>.99 and p.thrust==1,"Throttle powers the engine before GO")
 	check(ship.get_node("EngineCore-1").material_override.albedo_color.r>idle_color.r+.7,"Engine socket becomes white-hot with throttle")
@@ -56,6 +58,18 @@ func run()->void:
 	check(ship.get_node("Reverse-1").visible and ship.get_node("Reverse-1").scale.z>2,"Brake fires forward-facing reverse thrusters")
 	check(ship.get_node("Reverse-1").basis.z.z<0,"Reverse jets point opposite the main exhaust")
 	check(warm.vfx_clock>warm.clock,"Effects animate throughout the frozen countdown")
+	p.engine_power=1.0
+	p.thrust=1.0
+	p.boost=0.0
+	p.on_pad=false
+	Ship.animate_effects(ship,p,warm.vfx_clock,0)
+	var cruise_energy:float=ship.get_node("EngineLight").light_energy
+	p.boost=1.0
+	Ship.animate_effects(ship,p,warm.vfx_clock,0)
+	check(ship.get_node("EngineLight").light_energy>cruise_energy*1.5,"Boost increases dynamic exhaust illumination")
+	p.recovery=1.0
+	Ship.animate_effects(ship,p,warm.vfx_clock,0)
+	check(not ship.get_node("EngineLight").visible and ship.get_node("EngineLight").light_energy==0,"Crashed craft cannot leave an orphan light pool")
 	ship.free()
 	print("EFFECT_TESTS %d checks, %d failures"%[checks,failures])
 	quit(1 if failures else 0)

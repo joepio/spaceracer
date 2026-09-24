@@ -124,6 +124,18 @@ static func build(tint:Color)->Node3D:
 		core.position=plume.position
 		core.scale=Vector3(1,.7,.5)
 		root.add_child(core)
+	# One short-range light represents both exhaust sockets. It illuminates this
+	# hull, the track and other racers through the shared 3D world in every view.
+	var engine_light:=OmniLight3D.new()
+	engine_light.name="EngineLight"
+	engine_light.position=Vector3(0,.55,-4.2)
+	engine_light.light_color=Color("75cfff")
+	engine_light.light_energy=0.0
+	engine_light.omni_range=19.0
+	engine_light.omni_attenuation=1.6
+	engine_light.light_specular=.8
+	engine_light.shadow_enabled=false
+	root.add_child(engine_light)
 	var wake:=MultiMeshInstance3D.new()
 	wake.name="EngineWake"
 	var particles:=MultiMesh.new()
@@ -158,6 +170,11 @@ static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)
 	var power:float=p.engine_power if alive else 0.0
 	var burning:bool=(p.boost>0 or p.on_pad) and p.thrust>0 and alive
 	var drive:float=smoothstep(0,125,p.acceleration) if countdown<=0 else 0.0
+	var engine_light:OmniLight3D=root.get_node("EngineLight")
+	engine_light.visible=alive and power>.015
+	engine_light.light_energy=power*(2.6+(1.8 if burning else 0.0))
+	engine_light.light_color=Color("a1dfff") if burning else Color("75cfff")
+	engine_light.omni_range=22.0 if burning else 19.0
 	var length:=.65+power*1.4+drive*power*4.0+(5.5 if burning else 0.0)
 	for side in [-1,1]:
 		var exhaust:MeshInstance3D=root.get_node("ExhaustL" if side<0 else "ExhaustR")

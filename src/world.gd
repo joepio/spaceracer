@@ -8,7 +8,6 @@ var scenery: RefCounted
 var ships: Array[Node3D] = []
 var cameras: Array[Camera3D] = []
 var race: RefCounted
-var reflected_light:Array[Vector2]=[]
 var road_material: ShaderMaterial
 var tunnel_material:ShaderMaterial
 var tunnel_lights:Array[OmniLight3D]=[]
@@ -37,39 +36,36 @@ func build(state: RefCounted) -> void:
 	var sky := Sky.new()
 	var sky_material := ShaderMaterial.new()
 	sky_material.shader = load("res://src/sky.gdshader")
-	var top:=Color("080e20")
-	var horizon:=Color("30415e")
+	var top:=Color("060a12")
+	var horizon:=Color("0c121c")
 	sky_material.set_shader_parameter("top_color",Vector3(top.r,top.g,top.b))
 	sky_material.set_shader_parameter("horizon_color",Vector3(horizon.r,horizon.g,horizon.b))
-	var secondary:Color=race.track.theme[4]
 	sky.sky_material = sky_material
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("a8c8e8")
+	env.ambient_light_color = Color("b7c2d2")
 	env.ambient_light_energy = .48
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
-	env.fog_light_color = Color("243750")
-	env.fog_density = .00018
-	env.fog_sky_affect = .08
+	env.fog_light_color = Color("0c121c")
+	env.fog_light_energy = .65
+	env.fog_density = .00028
+	env.fog_sky_affect = 0.0
 	environment.environment = env
 	add_child(environment)
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-35, -35, 0)
-	sun.light_color = Color("d3e5ff")
-	sun.light_energy = 1.15
-	sun.light_specular = .12
-	sun.shadow_enabled = false
-	add_child(sun)
+	var night_fill := DirectionalLight3D.new()
+	night_fill.rotation_degrees = Vector3(-35, -35, 0)
+	night_fill.light_color = Color("d3e5ff")
+	night_fill.light_energy = .18
+	night_fill.light_specular = 0.0
+	night_fill.shadow_enabled = false
+	add_child(night_fill)
 	road_material = ShaderMaterial.new()
 	road_material.shader = load("res://src/road.gdshader")
-	road_material.set_shader_parameter("accent", Vector3(race.track.theme[3].r, race.track.theme[3].g, race.track.theme[3].b))
-	road_material.set_shader_parameter("secondary",Vector3(secondary.r,secondary.g,secondary.b))
 	tunnel_material=ShaderMaterial.new()
 	tunnel_material.shader=load("res://src/tunnel.gdshader")
 	scenery=Scenery.new()
 	scenery.build(self,race)
-	bake_city_lights()
 	build_track()
 	for p in race.racers:
 		var ship := build_ship(color_for(p))
@@ -80,7 +76,6 @@ func build(state: RefCounted) -> void:
 
 func vertex(surface: SurfaceTool, n: Dictionary, x: float, h: float, uv: Vector2) -> void:
 	surface.set_uv(uv)
-	surface.set_uv2(reflected_light[posmod(roundi(uv.y/race.track.step),reflected_light.size())])
 	var zone := 1.0 if n.zone == "repair" else (2.0 if n.zone == "boost" else 0.0)
 	surface.set_color(Color(zone / 2, 1.0 if n.loop else 0.0, 1.0 if n.get("brake_hint",false) else 0.0))
 	surface.add_vertex(Track.point(n, x, h))
@@ -217,19 +212,3 @@ func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false) 
 	var p: Dictionary = race.racers[index]
 	var n:Dictionary=race.track.sample(p.distance)
 	Chase.update(camera,Flight.pose(p,n,race.clock),p.speed,p.boost>0,dt,snap)
-
-func bake_city_lights()->void:
-	# A small static light lookup along the ribbon makes billboard color pools follow
-	# the actual city layout. No extra cameras, lights or per-fragment scene search.
-	var hues:=[.57,.075,.36,.83]
-	for node in race.track.nodes:
-		var strength:=0.0
-		var hue:=.57
-		for board in scenery.layout.billboards:
-			var delta:Vector3=node.p-board.transform.origin
-			var facing:=maxf(0.,delta.normalized().dot(board.transform.basis.z))
-			var influence:=exp(-delta.length()/155.)*facing
-			if influence>strength:
-				strength=influence
-				hue=hues[board.variant]
-		reflected_light.append(Vector2(hue,strength))

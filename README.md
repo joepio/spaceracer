@@ -128,6 +128,10 @@ routes also clear the road and buildings; signs reserve their floating range.
 Ships have beveled hulls, swept wings, cockpit glass and animated tapered plasma
 jets, bright engine cores, and instanced exhaust streaks. The engine socket glow
 responds to throttle; plume length grows with actual acceleration and boost.
+Each craft also has one short-range dynamic exhaust light. Throttle and boost
+illuminate its hull, the road and nearby racers, including during countdown; the
+light follows free flight and turns off during recovery. Lights are shared across
+views and use no shadow maps.
 Small additive billboards provide localized bloom-like halos in the Compatibility
 renderer, without a full-screen bloom pass. Road panels, metallic shading,
 shoulder chevrons and animated energy strips communicate speed and curvature.
@@ -137,7 +141,7 @@ All city traffic, signs, tunnel lighting and effects freeze with GameNight pause
 
 The OpenGL Compatibility renderer is the baseline. Static track chunks are
 frustum-culled; city architecture uses spatially grouped MultiMesh instances. All
-views share one world and simulation. One directional light, a handful of short-range shadow-free tunnel lights,
+views share one world and simulation. A faint, non-specular night fill, a handful of short-range shadow-free tunnel lights,
 procedural sky, road shading and instanced textured facades keep lighting inexpensive. Buildings and
 traffic are instanced; only car transforms and sign offsets change each frame.
 City lots, the enclosed tunnel and 3D loop geometry are generated once per race.
@@ -236,7 +240,8 @@ controller or cross-platform focus testing. Test probes are opt-in via
 
 The city uses a mipmapped AI-generated office facade with neutral/warm windows,
 four large advertising artworks mounted on safe building lots, and wet-road
-specular shading with inexpensive elongated rail/city light reflections with color pools from nearby billboards. The road
+restrained rail reflections on charcoal asphalt, soft ambient lighting and a dark,
+continuous horizon. Repair and boost zones use small inset markings. The road
 highlights are an artistic approximation, not screen-space scene reflections.
 Balanced and High add a restrained five-tap peripheral speed blur to each view;
 the ship area and HUD stay crisp. Performance disables blur. Split-screen keeps

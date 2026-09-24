@@ -1,10 +1,9 @@
 shader_type sky;
-uniform vec3 top_color=vec3(.015,.025,.07);
-uniform vec3 horizon_color=vec3(.1,.2,.3);
+uniform vec3 top_color=vec3(.0024,.004,.008);
+uniform vec3 horizon_color=vec3(.0075,.013,.024);
 void sky(){
-	vec3 d=normalize(EYEDIR);
-	float azimuth=atan(d.x,d.z);
-	float clouds=.5+.5*sin(azimuth*3.+d.y*18.+sin(azimuth*7.)*.7);
-	float haze=exp(-abs(d.y)*5.);
-	COLOR=mix(top_color*.6,horizon_color*.36,haze)+vec3(.035,.05,.085)*clouds*haze;
+    // A broad, dim night gradient; no sinusoidal horizon band or luminous clouds.
+    float elevation=clamp(normalize(EYEDIR).y,0.,1.);
+    float horizon=pow(1.-elevation,3.);
+    COLOR=mix(top_color,horizon_color,horizon);
 }

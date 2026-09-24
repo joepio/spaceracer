@@ -32,6 +32,10 @@ def main():
     shutil.copy2(source / "README.md", output / "README.md")
     shutil.copy2(source / "LICENSE", output / "LICENSE")
     shutil.copytree(source / "third_party", output / "licenses")
+    generated_art = output / "licenses" / "generated-art"
+    generated_art.mkdir()
+    for name in ("README.md", "generation-prompts.json"):
+        shutil.copy2(source / "assets" / name, generated_art / name)
     (output / "shelf.json").write_text(json.dumps([{
         "id": "ion-rush", "title": "Ion Rush", "min_players": 1, "max_players": 4, "players": "1–4",
         "launch": {"command": str(output / "IonRush.exe"), "args": ["--position", "-20000,-20000"], "cwd": str(output)},

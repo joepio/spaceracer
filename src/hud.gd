@@ -1,0 +1,144 @@
+extends Control
+const World = preload("res://src/world.gd")
+var race: RefCounted
+var player_index := 0
+var font: Font = ThemeDB.fallback_font
+var avatar_key: String = ""
+var avatar: Texture2D
+var show_map := true
+var draw_scale := 1.0
+var top_fade:GradientTexture2D
+var bottom_fade:GradientTexture2D
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var gradient:=Gradient.new()
+	gradient.offsets=PackedFloat32Array([0,.4,1])
+	gradient.colors=PackedColorArray([Color(.01,.02,.04,.34),Color(.01,.02,.04,.12),Color(.01,.02,.04,0)])
+	top_fade=GradientTexture2D.new()
+	top_fade.gradient=gradient
+	top_fade.width=1
+	top_fade.height=64
+	top_fade.fill_from=Vector2.ZERO
+	top_fade.fill_to=Vector2(0,1)
+	bottom_fade=top_fade.duplicate()
+	bottom_fade.fill_from=Vector2(0,1)
+	bottom_fade.fill_to=Vector2.ZERO
+
+func label(value: String, at: Vector2, size_value: int = 18, color: Color = Color("e1eef6")) -> void:
+	# Rasterize text at output size instead of enlarging small font glyphs.
+	draw_set_transform(Vector2.ZERO)
+	draw_string(font, at*draw_scale, value, HORIZONTAL_ALIGNMENT_LEFT, -1, ceili(size_value*draw_scale), color)
+	draw_set_transform(Vector2.ZERO,0,Vector2.ONE*draw_scale)
+
+func _draw() -> void:
+	if race == null or player_index >= race.racers.size(): return
+	var p: Dictionary = race.racers[player_index]
+	draw_scale=minf(size.x/800,size.y/450)
+	draw_set_transform(Vector2.ZERO,0,Vector2.ONE*draw_scale)
+	var w:=size.x/draw_scale
+	var h:=size.y/draw_scale
+	var tint:=World.color_for(p)
+	if race.over:
+		results(w,h,tint)
+		return
+	# Soft edge contrast keeps the road open; no floating instrument panels.
+	draw_texture_rect(top_fade,Rect2(0,0,w,64),false)
+	draw_texture_rect(bottom_fade,Rect2(0,h-64,w,64),false)
+	portrait(p,Vector2(28,30),10)
+	label(str(p.get("name","Pilot")).left(18),Vector2(47,28),12)
+	label("LAP %d / %d"%[mini(p.lap,race.laps),race.laps],Vector2(47,44),10,Color("98aebb"))
+	right_label(str(p.rank),Vector2(w-47,40),30)
+	right_label("/ %d"%race.racers.size(),Vector2(w-20,38),13,Color("a0b2bf"))
+	right_label("%02d:%05.2f"%[int(race.clock)/60,fmod(race.clock,60)],Vector2(w-20,58),11,Color("a0b2bf"))
+	right_label(str(roundi(p.speed*3.6)),Vector2(w-60,h-35),32)
+	right_label("km/h",Vector2(w-20,h-37),11,Color("a0b2bf"))
+	var energy_color:=Color("ff6e84") if p.energy<25 else tint
+	draw_rect(Rect2(w-176,h-25,156,3),Color(1,1,1,.13))
+	draw_rect(Rect2(w-176,h-25,156*p.energy/100,3),energy_color)
+	for i in range(1,5):
+		draw_rect(Rect2(w-176+156*(i*22.0/100),h-25,1,3),Color(.015,.03,.05,.75))
+	var status:="Boost on lap 2" if p.lap<2 else "Boost ready"
+	if p.boost>0 or p.on_pad: status="Boosting"
+	elif p.energy<=22 and p.lap>1: status="Recharge"
+	if p.airborne: status="Flight: pitch / bank / land"
+	elif p.drifting: status="Sliding"
+	elif p.trim>.2: status="Grip"
+	elif p.trim<-.2: status="Low grip / high speed"
+	label(status,Vector2(w-176,h-10),9,energy_color if p.lap>1 else Color("8b9eac"))
+	if show_map: minimap(Vector2(61,h-48),44)
+	if race.countdown>0:
+		centered(str(ceili(race.countdown)),w,h*.46,52)
+		centered("Hold A / RT or W to accelerate",w,h*.46+30,12,Color("bacbd5"))
+	elif race.clock<.7:
+		centered("Go",w,h*.42,40,tint)
+	elif p.recovery>0:
+		centered("Respawning" if p.crashed else "Recovering",w,h*.39,20,Color("ff9cad"))
+	elif p.finished:
+		centered("Finished  \u00b7  %d / %d"%[p.rank,race.racers.size()],w,h*.36,22)
+	elif p.lap==2 and race.clock-p.lap_start<2:
+		centered("Boost unlocked",w,84,13,tint)
+	if p.flash>0:
+		draw_rect(Rect2(0,0,w,h),Color(1,.2,.25,p.flash*.5),false,3)
+
+func right_label(value:String,at:Vector2,size_value:int,color:Color=Color("e1eef6"))->void:
+	label(value,at-Vector2(font.get_string_size(value,HORIZONTAL_ALIGNMENT_LEFT,-1,size_value).x,0),size_value,color)
+
+func results(w:float,h:float,tint:Color)->void:
+	draw_rect(Rect2(0,0,w,h),Color(.01,.02,.04,.72))
+	var left:=w*.5-135
+	centered("Race complete",w,h*.23,25)
+	var row:=h*.23+38
+	for item in race.standings():
+		label(str(item.rank),Vector2(left,row),13,World.color_for(item))
+		label(str(item.get("name","Pilot")).left(19),Vector2(left+28,row),13)
+		right_label("%.2fs"%item.time if item.finished else "DNF",Vector2(left+270,row),12,Color("a0b2bf"))
+		draw_line(Vector2(left,row+10),Vector2(left+270,row+10),Color(1,1,1,.08),1)
+		row+=28
+	centered("Next circuit shortly",w,row+20,11,tint)
+
+func centered(value: String,w:float,y:float,size_value:int,color:Color=Color("dbe7f1"))->void:
+	label(value,Vector2((w-font.get_string_size(value,HORIZONTAL_ALIGNMENT_LEFT,-1,size_value).x)/2,y),size_value,color)
+
+func minimap(center:Vector2,radius:float)->void:
+	var points := PackedVector2Array()
+	for i in range(0,race.track.nodes.size(),4):
+		var p:Vector3=race.track.nodes[i].p
+		points.append(center+Vector2(p.x,p.z)*radius/1800)
+	points.append(points[0])
+	draw_polyline(points,Color(.7,.85,.95,.25),1.3,true)
+	for p in race.racers:
+		var n:Dictionary=race.track.sample(p.distance)
+		draw_circle(center+Vector2(p.air_position.x if p.airborne else n.p.x,p.air_position.z if p.airborne else n.p.z)*radius/1800,2.8 if p==race.racers[player_index] else 1.6,World.color_for(p))
+
+func portrait(p:Dictionary,center:Vector2,radius:float)->void:
+	draw_circle(center,radius+2,World.color_for(p))
+	draw_circle(center,radius,Color.from_string(str(p.get("skin_color","")),Color("f5e9be")))
+	var payload:Variant=p.get("avatar",{})
+	var key:=JSON.stringify(payload)
+	if key!=avatar_key:
+		avatar_key=key
+		avatar=null
+		if payload is String:
+			var parser:=JSON.new()
+			payload=parser.data if parser.parse(payload)==OK else null
+		if payload is Dictionary:
+			var aw:=int(payload.get("w",0))
+			var ah:=int(payload.get("h",0))
+			var pixels:Variant=payload.get("px",[])
+			if aw in [16,32,48] and ah in [16,32,48] and pixels is Array and pixels.size()==aw*ah:
+				var image:=Image.create(aw,ah,false,Image.FORMAT_RGBA8)
+				for i in range(pixels.size()):
+					if pixels[i] is String:
+						image.set_pixel(i%aw,i/aw,Color.from_string(pixels[i],Color.TRANSPARENT))
+				avatar=ImageTexture.create_from_image(image)
+	if avatar:
+		var factor:=radius/12
+		var origin:=Vector2(24,28)
+		if avatar.get_width()==32: origin=Vector2(10,13)
+		elif avatar.get_width()==16: origin=Vector2(2,5)
+		draw_texture_rect(avatar,Rect2(center-origin*factor,avatar.get_size()*factor),false)
+	else:
+		draw_circle(center+Vector2(-4,-2),1.5,Color("1a2033"))
+		draw_circle(center+Vector2(4,-2),1.5,Color("1a2033"))
+		draw_line(center+Vector2(-3,5),center+Vector2(4,5),Color("1a2033"),1)

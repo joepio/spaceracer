@@ -141,6 +141,7 @@ func build_track() -> void:
 			var a: Dictionary = nodes[i]
 			var b: Dictionary = nodes[(i + 1) % nodes.size()]
 			var distance:float=i*race.track.step
+			if a.get("air_gap",false): continue
 			if maxf(a.split_gap,b.split_gap)>.0001:
 				# Two separate decks around a real opening, tapering back to one road.
 				for side in [-1.,1.]:
@@ -172,6 +173,7 @@ func build_track() -> void:
 			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 			add_child(mesh)
 	build_tunnel()
+	build_jump_markers()
 	# Tunnel ribs and track-side turn chevrons are static geometry.
 	var rib := material(Color("31465d"))
 	for i in range(0, nodes.size(), 5):
@@ -192,6 +194,26 @@ func build_track() -> void:
 			for z in [-1.5,1.5]:
 				var marker:=box(sign_node,Vector3(0,0,z),Vector3(.7,.38,2),rail_material)
 				marker.rotation.x=.65*signf(n.curve)
+
+func build_jump_markers()->void:
+	var amber:=material(Color("ffc46b"),2.)
+	var cyan:=material(Color("78e6ed"),2.)
+	var metal:=material(Color("273747"))
+	for jump in race.track.jumps:
+		# Surface-mounted runway bars and edge beacons, no floating text signs.
+		for marker in [[jump.takeoff-90.,amber],[jump.takeoff-55.,amber],[jump.takeoff-20.,amber],[jump.landing,cyan],[jump.landing+35.,cyan],[jump.landing+70.,cyan]]:
+			var n:Dictionary=race.track.sample(marker[0])
+			var frame:=Node3D.new()
+			add_child(frame)
+			frame.transform=Transform3D(n.frame,n.p)
+			for side in [-1.,1.]:
+				box(frame,Vector3(side*(n.width-1.),3.,0.),Vector3(.7,6.,.7),metal)
+				box(frame,Vector3(side*(n.width-1.),5.5,0.),Vector3(.9,1.2,.9),marker[1])
+				box(frame,Vector3(side*n.width*.65,.09,0.),Vector3(n.width*.55,.16,1.),marker[1])
+		for distance in [jump.takeoff,jump.landing]:
+			var n:Dictionary=race.track.sample(distance)
+			var cap:=box(self,n.p-n.frame.y*.7,Vector3(n.width*2.,1.4,.35),metal)
+			cap.basis=n.frame
 
 func fork_strip(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,height:float,distance:float)->void:
 	var left_a:float=-a.width if side<0 else a.split_gap

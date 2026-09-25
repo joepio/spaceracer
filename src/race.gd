@@ -16,8 +16,8 @@ var laps := 3
 var over := false
 var finish_deadline := INF
 
-func _init(roster: Array, track_seed: int, lap_count: int = 3) -> void:
-	track = Track.new(track_seed)
+func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String="normal") -> void:
+	track = Track.new(track_seed,difficulty)
 	laps = lap_count
 	for i in range(roster.size()):
 		var p: Dictionary = roster[i].duplicate(true)
@@ -29,6 +29,7 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3) -> void:
 		racers.append(p)
 
 func bot(p: Dictionary) -> Dictionary:
+	if p.airborne: return air_bot(p)
 	var n:Dictionary=track.sample(p.distance)
 	var peak:=absf(n.curve)
 	var safe_speed:=TOP_SPEED
@@ -52,8 +53,36 @@ func bot(p: Dictionary) -> Dictionary:
 	var desired_lateral:=clampf((target-p.x)*2.4,-45,45)
 	var desired_heading:=asin(clampf((desired_lateral+n.curve*p.speed*p.speed*inertia/grip)/maxf(p.speed,60),-.75,.75))
 	var turn:=clampf((n.curve*p.speed+desired_heading*lerpf(3.5,.8,slide)+(desired_heading-p.heading)*3.8+(desired_lateral-p.slip)*.012)/lerpf(1.65,3.8,slide),-1,1)
+	# Keep momentum and a centred approach before a mandatory jump.
+	var jump:Dictionary=track.jump_at(p.distance,180.)
+	if not jump.is_empty() and fposmod(p.distance,track.length)<jump.takeoff: brake=0.
 	return {"steer":turn,"throttle":1.0,"brake":brake,"left":false,"right":false,
-		"boost":p.lap>1 and p.energy>40 and peak<.0025 and p.boost==0 and brake<.05}
+		"boost":p.lap>1 and p.energy>40 and peak<.0025 and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
+
+func air_bot(p:Dictionary)->Dictionary:
+	var hit:Dictionary=track.project(p.air_position,p.distance,p.air_travel*1.35+100.)
+	var n:Dictionary=hit.node
+	var ahead:=100.
+	var jump:Dictionary=track.jump_at(p.distance,20.)
+	var destination:float=hit.distance+ahead
+	if not jump.is_empty():
+		var landing:float=floorf(p.distance/track.length)*track.length+jump.landing+40.
+		destination=maxf(destination,landing)
+	var aim:Dictionary=track.sample(destination)
+	var frame:Basis=p.air_frame
+	var height:float=(p.air_position-n.p).dot(n.frame.y)
+	var goal:Vector3=aim.frame.z*230.
+	var clearance:=3. if n.get("air_gap",false) and track.difficulty=="hard" else 1.3
+	goal+=n.frame.y*clampf((clearance-height)*3.,-90.,25.)
+	goal+=n.frame.x*clampf(hit.lateral*4.,-100.,100.)
+	# Flare ahead of rising decks: nose alignment alone does not cancel descent.
+	var approach_rate:float=p.air_velocity.dot(aim.frame.y)
+	if height<maxf(30.,-approach_rate*.8):
+		goal+=aim.frame.y*clampf((-35.-approach_rate)*3.,0.,130.)
+	return {"throttle":.65,"brake":clampf((p.speed-215.)/90.,0.,.4),
+		"trim":clampf(-atan2(goal.dot(frame.y),goal.dot(frame.z))*2.,-1.,1.),
+		"strafe":clampf(-atan2(goal.dot(frame.x),goal.dot(frame.z))*5.,-1.,1.),
+		"steer":clampf(-atan2(aim.frame.y.dot(frame.x),aim.frame.y.dot(frame.y))*2.,-1.,1.)}
 
 func step(dt: float, inputs: Array) -> void:
 	if over:
@@ -132,6 +161,7 @@ func step(dt: float, inputs: Array) -> void:
 				p.energy = 65.0
 				p.x = 0.0
 				p.route=0.
+				if track.has_method("safe_respawn"): p.distance=track.safe_respawn(p.distance)
 				var respawn_node:Dictionary=track.sample(p.distance)
 				if float(respawn_node.get("split_gap",0.))>.01:
 					p.x=(1. if p.slot%2==0 else -1.)*(respawn_node.split_gap+(respawn_node.width-respawn_node.split_gap)*.5)
@@ -193,7 +223,7 @@ func step(dt: float, inputs: Array) -> void:
 		if rotation.w<0: rotation=-rotation
 		p.air_rates=(rotation.get_axis()*rotation.get_angle()/dt).limit_length(3.0)
 		var over_edge:bool=not next_node.get("rails",true) and not Track.closed_tube(next_node) and absf(p.x)>next_node.width
-		if (launch or over_edge) and not p.finished: Flight.launch(p,next_node,clock)
+		if (launch or over_edge or next_node.get("air_gap",false)) and not p.finished: Flight.launch(p,next_node,clock)
 		if p.energy <= 0:
 			p.recovery = 2.0
 			p.boost = 0.0

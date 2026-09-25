@@ -39,7 +39,7 @@ func run()->void:
 	game.human_count=players
 	game.next_seed=seed_value
 	game.start_local()
-	if landmark in ["loop","tunnel","open","halfpipe","tube","split"]:
+	if landmark in ["loop","tunnel","open","halfpipe","tube","split","jump","flight"]:
 		var indices:Array=[]
 		for i in range(game.race.track.nodes.size()):
 			var node:Dictionary=game.race.track.nodes[i]
@@ -47,6 +47,9 @@ func run()->void:
 			if matches: indices.append(i)
 			elif not indices.is_empty(): break
 		if not indices.is_empty(): fraction=float(indices[indices.size()/2])/game.race.track.nodes.size()
+		if landmark in ["jump","flight"]:
+			for jump in game.race.track.jumps:
+				if jump.kind==landmark: fraction=(jump.takeoff-90.)/game.race.track.length
 	game.running=false
 	game.race.countdown=0
 	game.race.clock=20.
@@ -111,6 +114,7 @@ func run()->void:
 	raw.store_string("\n".join(rows));raw.close()
 	var result:={"moving":moving,"quality":quality,"seed":seed_value,"fraction":fraction,"views":players,"resolution":root.size,"samples":samples,"ablation":ablation,"wall_ms":stats(frame_ms),"gpu_ms":stats(gpu_ms),"render_cpu_ms":stats(cpu_ms),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"video_mem_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.,"device":RenderingServer.get_video_adapter_name(),"camera":str(game.views[0].camera.global_transform)}
 	result.sample_start_utc=sample_start
+	result.difficulty=game.race.track.difficulty
 	result.sample_end_utc=sample_end
 	result.shadow_lights=(game.world.showpiece.lights+game.world.scenery.local_lights).filter(func(light):return light.shadow_enabled).size()
 	result.viewport_sizes=game.views.map(func(view):return str(view.viewport.size))

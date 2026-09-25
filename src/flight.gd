@@ -111,10 +111,14 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 	p.air_travel+=previous.distance_to(position)
 	# Distance/race progress stays at launch until an actual legal track landing.
 	var nearest:Dictionary=track.project(position,p.distance,p.air_travel*1.35+100)
+	var previous_hit:Dictionary=track.project(previous,p.distance,p.air_travel*1.35+100)
 	var n:Dictionary=nearest.node
 	var surface:=Track.surface_frame(n,nearest.lateral)
 	var surface_position:=Track.point(n,nearest.lateral)
-	var before:float=(previous-surface_position).dot(surface.y)-HOVER
+	# Compare each endpoint against the surface beneath it. Reusing today's
+	# plane for yesterday's position can miss a rising landing ramp entirely.
+	var previous_surface:=Track.surface_frame(previous_hit.node,previous_hit.lateral)
+	var before:float=(previous-Track.point(previous_hit.node,previous_hit.lateral)).dot(previous_surface.y)-HOVER
 	var after:float=(position-surface_position).dot(surface.y)-HOVER
 	p.lift=after
 	p.lift_speed=velocity.dot(surface.y)
@@ -123,14 +127,21 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 		var nose_alignment:float=frame.z.dot(surface.z)
 		var upright:float=frame.y.dot(surface.y)
 		var approach:float=velocity.dot(surface.z)
-		if nose_alignment>.65 and upright>.65 and p.lift_speed> -75 and approach>65:
+		var landing_pad:bool=n.get("feature","") in ["jump","flight"]
+		# Purpose-built landing decks have stronger magnetic capture. A hard
+		# touchdown still costs speed/energy; steep or misaligned impacts crash.
+		var descent_limit:=100. if landing_pad else 75.
+		if nose_alignment>.65 and upright>.65 and p.lift_speed> -descent_limit and approach>65:
+			var impact:=clampf((-p.lift_speed-45.)/55.,0.,1.) if landing_pad else 0.
 			p.airborne=false
 			p.distance=nearest.distance
 			p.x=nearest.lateral
 			p.route=signf(p.x) if float(n.get("split_gap",0.))>.01 else 0.
 			p.heading=clampf(atan2(-frame.z.dot(surface.x),frame.z.dot(surface.z)),-.7,.7)
 			p.slip=clampf(-velocity.dot(surface.x),-70,70)
-			p.speed=clampf(approach/maxf(.55,cos(p.heading)),65,440)
+			p.speed=clampf(approach/maxf(.55,cos(p.heading)),65,440)*(1.-impact*.18)
+			p.energy=maxf(0.,p.energy-impact*6.)
+			p.flash=maxf(p.flash,impact*.15)
 			p.lift=maxf(0,after)
 			p.lift_speed=0.0
 			p.unload=0.0
@@ -141,5 +152,7 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 			crash(p)
 	elif p.air_time>.10 and inside and before< -2 and after>=-2:
 		crash(p) # Hitting the underside cannot attach to the road.
+	elif p.air_time>.10 and inside and after< -2 and previous_hit.node.get("air_gap",false):
+		crash(p) # A low approach hits the exposed landing lip; never flies through it.
 	elif p.air_time>10 or position.y< -270 or position.distance_to(n.p)>850:
 		crash(p)

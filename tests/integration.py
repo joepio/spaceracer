@@ -118,6 +118,7 @@ def main():
             assert next(m for m in hello if m["type"] == "hello")["token"] == "ion-test-token"
             host.send("welcome", protocol_version=1, party={})
             host.send("setting_changed", key="laps", value=1)
+            host.send("setting_changed", key="difficulty", value="easy")
             seats = [dict(index=i, occupant=dict(kind="local", player_id=f"p{i}"), controller=token)
                      for i, token in [(0, "ordinal:7"), (2, "ordinal:2")]]
             players = [dict(id="p0", name="Azure", color="#00aaff", skin_color="#8a6644"),
@@ -132,6 +133,10 @@ def main():
             assert state["muted"] and not state["running"] and state["views"] == 2
             assert args.headless or not state["visible"]
             assert state["clock"] == 0 and state["countdown"] == 3
+            assert state["difficulty"] == "easy"
+            host.send("setting_changed", key="difficulty", value="hard")
+            wait(read, lambda s: s["next_difficulty"] == "hard")
+            assert read()["difficulty"] == "easy", "Difficulty changes apply next race"
             frames = [dict(controller="ordinal:2", axes=[32767,0,0,0,0,32767], buttons=0),
                       dict(controller="ordinal:7", axes=[-32767,0,0,0,0,32767], buttons=0)]
 
@@ -186,6 +191,7 @@ def main():
             wait(read, lambda s: s["phase"] == "idle" and s["racers"] == [])
             host.send("prepare", game="ion-rush", session="ion-session-two", seats=seats, players=players)
             wait(read, lambda s: s["phase"] == "ready" and s["session"] == "ion-session-two")
+            assert read()["difficulty"] == "hard"
             host.close()
             child.wait(timeout=8)
             assert child.returncode == 0

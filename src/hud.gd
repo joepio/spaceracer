@@ -68,7 +68,10 @@ func _draw() -> void:
 	elif p.trim<-.2: status="Low grip / high speed"
 	label(status,Vector2(w-176,h-10),9,energy_color if p.lap>1 else Color("8b9eac"))
 	if show_map: minimap(Vector2(61,h-48),44)
-	label("SEED %05d"%race.track.seed_value,Vector2(20,h-8),8,Color("98aebb"))
+	label("%05d · %s"%[race.track.seed_value,race.track.difficulty.to_upper()],Vector2(20,h-8),8,Color("98aebb"))
+	var jump:Dictionary=race.track.jump_at(p.distance,170.)
+	if not jump.is_empty() and not p.airborne and p.recovery==0 and race.countdown==0 and fposmod(p.distance,race.track.length)<jump.takeoff:
+		centered("JUMP %dm · KEEP SPEED"%roundi(jump.takeoff-fposmod(p.distance,race.track.length)),w,83,12,Color("ffc46b"))
 	if race.countdown>0:
 		centered(str(ceili(race.countdown)),w,h*.46,52)
 		centered("A / RT / W starts engines — full power at GO",w,h*.46+30,12,Color("bacbd5"))
@@ -97,7 +100,7 @@ func results(w:float,h:float,tint:Color)->void:
 		right_label("%.2fs"%item.time if item.finished else "DNF",Vector2(left+270,row),12,Color("a0b2bf"))
 		draw_line(Vector2(left,row+10),Vector2(left+270,row+10),Color(1,1,1,.08),1)
 		row+=28
-	centered("SEED %05d   ·   Next circuit shortly"%race.track.seed_value,w,row+20,11,tint)
+	centered("%05d · %s   ·   Next circuit shortly"%[race.track.seed_value,race.track.difficulty.to_upper()],w,row+20,11,tint)
 
 func centered(value: String,w:float,y:float,size_value:int,color:Color=Color("dbe7f1"))->void:
 	label(value,Vector2((w-font.get_string_size(value,HORIZONTAL_ALIGNMENT_LEFT,-1,size_value).x)/2,y),size_value,color)

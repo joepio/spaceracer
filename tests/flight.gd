@@ -30,7 +30,8 @@ func approach(p:Dictionary,n:Dictionary,distance:float,lateral:float=0.0)->void:
 	p.trim=0.0
 
 func guided_return(seed_value:int)->void:
-	var race:=Race.new([{"slot":0,"bot":false}],seed_value)
+	# Isolate manual takeoff/return from compulsory jump sections tested separately.
+	var race:=Race.new([{"slot":0,"bot":false}],seed_value,3,"easy")
 	race.countdown=0
 	var p:Dictionary=race.racers[0]
 	# Use the opening sweeper as a landing approach, before the magnetic loops.

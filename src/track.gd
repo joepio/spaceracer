@@ -24,6 +24,9 @@ var corner_a_width:float
 var corner_b_width:float
 var corner_shift:float
 var features:Array[Dictionary]=[]
+const DIFFICULTIES := ["easy","normal","hard"]
+var difficulty := "normal"
+var jumps:Array[Dictionary]=[]
 
 func base_position(u: float) -> Vector3:
 	var a := u * TAU
@@ -39,6 +42,22 @@ static func smooth_phase(t: float) -> float:
 
 func raw_position(u: float) -> Vector3:
 	var p := base_position(u)
+	for jump in jumps:
+		if u<=jump.start or u>=jump.end: continue
+		var t:float=(u-jump.start)/(jump.end-jump.start)
+		var line:=base_position(jump.start).lerp(base_position(jump.end),t)
+		# Straighten the flight corridor, with tangent-continuous approach/exit.
+		var blend:=smooth_phase(clampf(minf(t,1.-t)/.22,0.,1.))
+		var altitude:=p.y
+		p=p.lerp(line,blend)
+		p.y=altitude
+		var lip:float=jump.lip
+		var land:float=jump.land
+		var height:float
+		if t<lip: height=jump.rise*smooth_phase(t/lip)
+		elif t<land: height=lerpf(jump.rise,jump.drop,smooth_phase((t-lip)/(land-lip)))
+		else: height=jump.drop*(1.-smooth_phase((t-land)/(1.-land)))
+		p.y+=height
 	for loop in loops:
 		if u <= loop.start or u >= loop.end: continue
 		var q: float = (u-loop.start)/(loop.end-loop.start)
@@ -49,8 +68,9 @@ func raw_position(u: float) -> Vector3:
 		p += loop.right * 160 * sin(theta) * pow(sin(PI*q),2)
 	return p
 
-func _init(track_seed: int = 1) -> void:
+func _init(track_seed: int = 1, challenge:String="normal") -> void:
 	seed_value = track_seed
+	difficulty=challenge if challenge in DIFFICULTIES else "normal"
 	var rng := RandomNumberGenerator.new()
 	rng.seed = track_seed
 	theme = THEMES[rng.randi_range(0,3)]
@@ -64,6 +84,9 @@ func _init(track_seed: int = 1) -> void:
 	corner_a_width=rng.randf_range(.15,.16)
 	corner_b_width=rng.randf_range(.18,.195)
 	corner_shift=rng.randf_range(-.055,.055)
+	if difficulty=="easy":
+		corner_a_width*=1.35
+		corner_b_width*=1.35
 	layout = ["SKYLINE DIVE","ORBITAL SWITCHBACK","DOUBLE HELIX"][posmod(track_seed,3)]
 	var starts: Array[float] = [.16]
 	if posmod(track_seed,3)==2: starts.append(.68)
@@ -73,6 +96,15 @@ func _init(track_seed: int = 1) -> void:
 		f.y=0
 		f=f.normalized()
 		loops.append({"start":start,"end":start+.105,"radius":rng.randf_range(185,225),"forward":f,"right":f.cross(Vector3.UP)})
+	if difficulty!="easy":
+		var jump_rng:=RandomNumberGenerator.new()
+		jump_rng.seed=track_seed+62041
+		var shift:=jump_rng.randf_range(-.002,.002)
+		jumps.append({"kind":"jump","start":.070+shift,"end":.152+shift,
+			"lip":.38,"land":.56 if difficulty=="normal" else .68,
+			"rise":12. if difficulty=="normal" else 25.,"drop":0.})
+		if difficulty=="hard":
+			jumps.append({"kind":"flight","start":.927,"end":.994,"lip":.27,"land":.68,"rise":28.,"drop":0.})
 	var raw: Array[Vector3] = []
 	var distances: Array[float] = [0.0]
 	const RESOLUTION := 4096
@@ -102,6 +134,7 @@ func _init(track_seed: int = 1) -> void:
 		nodes.append({"p":raw[j].lerp(raw[j+1],f),"u":u,"width":23+6*pow(sin(u*TAU*3+phase),2),
 			"bank":0.0,"zone":zone,"tunnel":u>.33 and u<.38,"loop":loop_section,"section":section,
 			"right_hint":hint.normalized().cross(Vector3.UP)})
+		if difficulty=="easy": nodes[-1].width+=9.
 	for i in range(count):
 		var delta:Vector3=nodes[(i+1)%count].p-nodes[posmod(i-1,count)].p
 		nodes[i].forward=delta.normalized()
@@ -137,6 +170,7 @@ func build_features()->void:
 			"size":rng.randf_range(.90,1.10)})
 	for n in nodes:
 		n.shape_angle=0.
+		n.air_gap=false
 		n.split_gap=0.
 		n.rails=true
 		n.feature="ribbon"
@@ -147,23 +181,41 @@ func build_features()->void:
 			n.feature=feature.kind
 			match feature.kind:
 				"open":
-					n.rails=false
-					n.section="OPEN SKY · NO RAILS"
+					n.rails=difficulty=="easy"
+					n.section="SKYWAY" if n.rails else "OPEN SKY · NO RAILS"
 				"halfpipe":
-					n.shape_angle=1.48*blend
+					n.shape_angle=(1.1 if difficulty=="easy" else 1.48)*blend
 					n.width=lerpf(n.width,52.*feature.size,blend)
-					n.rails=false
+					n.rails=difficulty=="easy"
 					n.section="HALF PIPE"
 				"tube":
 					n.shape_angle=PI*blend
 					n.width=lerpf(n.width,PI*30.*feature.size,blend)
-					n.rails=false
+					n.rails=difficulty=="easy"
 					n.section="360° MAGNETIC TUBE"
 				"split":
 					n.split_gap=18.*feature.size*blend
 					n.width+=n.split_gap
 					n.section="SPLIT ROUTE"
 			break
+		for jump in jumps:
+			if n.u<=jump.start or n.u>=jump.end: continue
+			var t:float=(n.u-jump.start)/(jump.end-jump.start)
+			n.feature=jump.kind
+			n.air_gap=t>=jump.lip and t<jump.land
+			n.rails=not n.air_gap
+			n.zone=""
+			n.width+=smooth_phase(clampf(minf(t,1.-t)/.2,0.,1.))*(18. if difficulty=="normal" else 8.)
+			n.section="FLIGHT GAP" if n.air_gap else ("JUMP · KEEP SPEED" if t<jump.lip else "LANDING ZONE")
+	# Boundaries lie exactly on mesh nodes, shared by rendering and physics.
+	for jump in jumps:
+		var gap_indices:Array[int]=[]
+		for i in range(nodes.size()):
+			if nodes[i].feature==jump.kind and nodes[i].air_gap: gap_indices.append(i)
+		jump.takeoff=gap_indices[0]*step
+		jump.landing=(gap_indices[-1]+1)*step
+		jump.respawn=jump.takeoff-260.
+		features.append(jump.duplicate())
 	for n in nodes: n.geometry=geometry_data(n)
 	for i in range(nodes.size()):
 		nodes[i].before=nodes[posmod(i-1,nodes.size())].geometry
@@ -183,7 +235,19 @@ func sample(distance: float) -> Dictionary:
 		"heading":lerp_angle(a.heading,b.heading,f),"slope":lerpf(a.slope,b.slope,f),
 		"crest":lerpf(a.crest,b.crest,f),"curve":lerpf(a.curve,b.curve,f),"bank":lerpf(a.bank,b.bank,f),
 		"shape_angle":lerpf(a.shape_angle,b.shape_angle,f),"split_gap":lerpf(a.split_gap,b.split_gap,f),
-		"rails":a.rails,"feature":a.feature,"zone":a.zone,"tunnel":a.tunnel,"loop":a.loop,"section":a.section}
+		"air_gap":a.air_gap,"rails":a.rails,"feature":a.feature,"zone":a.zone,"tunnel":a.tunnel,"loop":a.loop,"section":a.section}
+
+func jump_at(distance:float,approach:float=0.)->Dictionary:
+	var local:=fposmod(distance,length)
+	for jump in jumps:
+		if local>=jump.takeoff-approach and local<jump.landing+120.: return jump
+	return {}
+
+func safe_respawn(distance:float)->float:
+	var jump:=jump_at(distance,260.)
+	if not jump.is_empty() and fposmod(distance,length)<jump.landing:
+		return floorf(distance/length)*length+jump.respawn
+	return distance
 
 static func point(n: Dictionary,lateral:float,height:float=0)->Vector3:
 	var position:=surface_position(n,lateral)
@@ -227,6 +291,7 @@ static func lateral_at(n:Dictionary,position:Vector3)->float:
 	return atan2(-delta.dot(n.frame.x),radius-delta.dot(n.frame.y))*radius
 
 static func supported(n:Dictionary,lateral:float,margin:float=0.)->bool:
+	if n.get("air_gap",false): return false
 	if not closed_tube(n) and absf(lateral)>n.width-margin: return false
 	var gap:float=n.get("split_gap",0.)
 	return gap<.01 or absf(lateral)>gap+margin

@@ -29,6 +29,10 @@ func _init(track:RefCounted)->void:
 		var a:Dictionary=track.nodes[i]
 		var b:Dictionary=track.nodes[(i+1)%track.nodes.size()]
 		var bounds:=AABB(a.p,Vector3.ZERO).expand(b.p).grow(maxf(a.width,b.width)+18)
+		if a.feature in ["jump","flight"]:
+			# Reserve airspace above and beside the flight corridor, including the
+			# run-up and landing. Buildings and traffic use this same exclusion.
+			bounds=bounds.grow(35.).expand(a.p+Vector3.UP*140.)
 		for cell in cells(bounds):
 			if not corridor.has(cell): corridor[cell]=[]
 			corridor[cell].append(bounds)

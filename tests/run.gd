@@ -74,7 +74,8 @@ func run() -> void:
 				if a_bounds.center.distance_to(b_bounds.center)<a_bounds.radius+b_bounds.radius+5: clear=false
 		check(clear,"Non-neighboring road sections clear each other, seed %d"%seed_value)
 	print("PASS deterministic tracks and continuous banked geometry")
-	var race := Race.new(roster(),42)
+	# Ground handling contracts use a protected course without mandatory gaps.
+	var race := Race.new(roster(),42,3,"easy")
 	var p: Dictionary = race.racers[0]
 	race.step(1.0,[{"throttle":1.0}])
 	check(p.distance==0 and p.speed==0,"Countdown freezes launch")

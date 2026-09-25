@@ -24,6 +24,7 @@ var next_seed := 0
 var selected_seed := 1
 var seed_input:LineEdit
 var laps := 3
+var difficulty := "normal"
 var quality := 1.0
 var results_clock := 0.0
 var back_release := 0.0
@@ -61,6 +62,7 @@ func _ready() -> void:
 	add_child(bridge)
 	bridge.declare_settings([
 		{"key":"laps","label":"Laps (next race)","kind":"number","default":3,"min":1,"max":5},
+		{"key":"difficulty","label":"Track difficulty (next race)","kind":"choice","default":"normal","options":["easy","normal","hard"]},
 		{"key":"quality","label":"Graphics","kind":"choice","default":"high","options":["performance","balanced","high"]}])
 	ui = Control.new()
 	ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -74,6 +76,7 @@ func _ready() -> void:
 		if arg == "--demo": demo = true
 		elif arg.begins_with("--players="): human_count = clampi(int(arg.get_slice("=",1)),1,4)
 		elif arg.begins_with("--seed="): next_seed = int(arg.get_slice("=",1))
+		elif arg.begins_with("--difficulty=") and arg.get_slice("=",1) in Race.Track.DIFFICULTIES: difficulty=arg.get_slice("=",1)
 		elif arg.begins_with("--capture="): capture_path = arg.trim_prefix("--capture=")
 		elif arg.begins_with("--capture-frame="): capture_frame = int(arg.get_slice("=",1))
 		elif arg.begins_with("--preview-u="): preview_u = clampf(float(arg.get_slice("=",1)),0,.99)
@@ -146,7 +149,7 @@ func new_race() -> void:
 	views.clear()
 	if next_seed == 0: next_seed = randi_range(1,MAX_SEED)
 	next_seed=clampi(next_seed,1,MAX_SEED)
-	race = Race.new(roster,next_seed,laps)
+	race = Race.new(roster,next_seed,laps,difficulty)
 	next_seed = next_seed%MAX_SEED+1
 	results_clock = 0
 	world = World.new()
@@ -380,6 +383,7 @@ func style_button(button:Button,primary:bool=false,selected:bool=false)->void:
 	button.add_theme_stylebox_override("focus",menu_style(Color.TRANSPARENT,Color(1,1,1,.6)))
 
 func make_menu()->void:
+	for view in views: view.hud.visible=false
 	var focus_id:="race"
 	if not is_instance_valid(menu): selected_seed=race.track.seed_value
 	if is_instance_valid(menu):
@@ -447,6 +451,16 @@ func make_menu()->void:
 	style_button(random_button)
 	random_button.pressed.connect(randomize_menu_seed)
 	seed_row.add_child(random_button)
+	var challenge:=Button.new()
+	challenge.set_meta("menu_id","difficulty")
+	challenge.text="Track difficulty   ·   %s"%difficulty.capitalize()
+	challenge.custom_minimum_size=Vector2(430,42)
+	style_button(challenge)
+	challenge.pressed.connect(func():
+		difficulty=Race.Track.DIFFICULTIES[(Race.Track.DIFFICULTIES.find(difficulty)+1)%3]
+		make_menu())
+	content.add_child(challenge)
+	menu_label(content,{"easy":"Wide turns · protective rails · no flight gaps","normal":"Open edges · short jump · wide landing","hard":"Long flight gaps · exposed edges · tighter landings"}[difficulty],13,Color("aebfca"))
 	var start:=Button.new()
 	start.set_meta("menu_id","race")
 	start.text="Race    \u2192"
@@ -489,8 +503,12 @@ func make_menu()->void:
 	random_button.focus_neighbor_right=seed_input.get_path()
 	for control in [seed_input,random_button]:
 		control.focus_neighbor_top=players[human_count-1].get_path()
-		control.focus_neighbor_bottom=start.get_path()
-	start.focus_neighbor_top=seed_input.get_path()
+		control.focus_neighbor_bottom=challenge.get_path()
+	challenge.focus_neighbor_top=seed_input.get_path()
+	challenge.focus_neighbor_bottom=start.get_path()
+	challenge.focus_neighbor_left=challenge.get_path()
+	challenge.focus_neighbor_right=challenge.get_path()
+	start.focus_neighbor_top=challenge.get_path()
 	start.focus_neighbor_bottom=help.get_path()
 	start.focus_neighbor_left=start.get_path()
 	start.focus_neighbor_right=start.get_path()
@@ -504,7 +522,7 @@ func make_menu()->void:
 		button.add_theme_stylebox_override("focus",menu_style(Color.TRANSPARENT,Color("7de9d6")))
 	menu_label(content,"Left stick  Navigate     A  Select     Start  Race",13,Color("91a8b7"))
 	start.grab_focus()
-	for button in players+[seed_input,random_button,start,help,quality_button]:
+	for button in players+[seed_input,random_button,challenge,start,help,quality_button]:
 		if button.get_meta("menu_id")==focus_id: button.grab_focus()
 
 func menu_label(parent:Node,value:String,size_value:int,color:Color=Color("d5e1ec"))->void:
@@ -598,6 +616,7 @@ func update_profiles(seats:Array,players:Array,presence:Array)->void:
 
 func setting_changed(key:String,value:Variant)->void:
 	if key=="laps": laps=clampi(int(value),1,5)
+	elif key=="difficulty" and str(value) in Race.Track.DIFFICULTIES: difficulty=str(value)
 	elif key=="quality":
 		quality={"performance":.6,"balanced":.8,"high":1.0}.get(str(value),1.0)
 		layout_views()
@@ -642,6 +661,7 @@ func write_probe()->void:
 				if not is_finite(copy[key]): copy[key]=null
 			snapshot.append(copy)
 	var state:Dictionary={"phase":bridge.phase,"running":running,
+		"difficulty":race.track.difficulty if race else "", "next_difficulty":difficulty,
 		"visible":get_window().mode!=Window.MODE_MINIMIZED and get_window().position.x> -10000,
 		"sound_enabled":sound_enabled,"muted":AudioServer.is_bus_mute(0),"clock":race.clock if race else -1,"countdown":race.countdown if race else -1,"vfx_clock":race.vfx_clock if race else -1,
 		"racers":snapshot,"views":views.size(),"session":bridge.session,

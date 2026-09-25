@@ -39,10 +39,12 @@ func run()->void:
 	game.human_count=players
 	game.next_seed=seed_value
 	game.start_local()
-	if landmark in ["loop","tunnel"]:
+	if landmark in ["loop","tunnel","open","halfpipe","tube","split"]:
 		var indices:Array=[]
 		for i in range(game.race.track.nodes.size()):
-			if game.race.track.nodes[i][landmark]: indices.append(i)
+			var node:Dictionary=game.race.track.nodes[i]
+			var matches:bool=node[landmark] if landmark in ["loop","tunnel"] else node.feature==landmark
+			if matches: indices.append(i)
 			elif not indices.is_empty(): break
 		if not indices.is_empty(): fraction=float(indices[indices.size()/2])/game.race.track.nodes.size()
 	game.running=false

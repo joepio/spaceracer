@@ -31,6 +31,10 @@ void fragment(){
     base*=1.-panel*.18;
     if(!OUTPUT_IS_SRGB){base*=.38;}
     vec3 light=rail_color*edge*.65+vec3(.30,.38,.44)*lane*.16;
+    float tube=smoothstep(.65,.95,1.-COLOR.a);
+    float guide=1.-smoothstep(.003,.009,abs(lateral-.66));
+    float ring=1.-smoothstep(.003,.008,abs(fract(UV.y/90.)-.5));
+    light+=vec3(.12,.48,.58)*tube*(guide*.65+ring*.5);
     // Functional markings are small insets in dark asphalt, never full colored lanes.
     if(COLOR.b>.5 && lateral>.79 && lateral<.92){
         float bar=step(.78,fract(UV.y/12.));

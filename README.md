@@ -31,6 +31,13 @@ it remains visible in the HUD and results so you can write it down. Returning
 to the menu keeps the current code for replay. Seeds reproduce the track and
 city within the same game version.
 
+Every seed includes rail-free sky sections, an open half-pipe, a full magnetic
+tube and a fork with two separate decks that rejoin. Feature placement and size
+vary with the seed. Steer/strafe up the pipe walls and around the tube ceiling;
+return toward the bottom as the tube opens out. Running past an unguarded edge
+enters free flight, with the existing landing/respawn rules. Pick a side before
+the fork; both routes use the same lap progress and merge back into one road.
+
 The title screen keeps player selection and Race upfront; Controls expands the
 driving reference. The race HUD uses compact corner readouts and a thin energy
 bar. A small route map appears in single-player; split-screen keeps that space clear.
@@ -134,6 +141,10 @@ clear the road and buildings. The opening skyline preserves views of the loop.
 Ships have beveled hulls, swept wings, cockpit glass and animated tapered plasma
 jets, bright engine cores, and instanced exhaust streaks. The engine socket glow
 responds to throttle; plume length grows with actual acceleration and boost.
+Exhaust sparks move backward relative to the craft at vehicle speed plus
+220–380 m/s (another 220 m/s during boost), with short exposure streaks. Their
+distance is integrated from the effects clock, so throttle changes cannot jump
+the trail and pausing freezes it. The particle count remains fixed at 20 per craft.
 Each craft has two short-range dynamic exhaust lights, one per nozzle. Throttle and boost
 illuminate its hull, the road and nearby racers, including during countdown; the
 lights follow free flight, track live player colors and turn off during recovery. They are shared across
@@ -259,6 +270,7 @@ godot --headless --path . --script res://tests/menu.gd
 godot --headless --path . --script res://tests/effects.gd
 godot --headless --path . --script res://tests/city.gd
 godot --headless --path . --script res://tests/lighting.gd
+godot --headless --path . --script res://tests/track_features.gd
 python tests/integration.py --godot /path/to/Godot_console.exe --headless
 python tests/integration.py --godot /path/to/Godot_console.exe
 ```

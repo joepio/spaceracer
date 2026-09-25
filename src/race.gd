@@ -42,6 +42,10 @@ func bot(p: Dictionary) -> Dictionary:
 	var brake:=clampf((p.speed-safe_speed)/35.0,0,1)
 	if absf(n.curve)>.006 and p.speed>145: brake=maxf(brake,.48)
 	var target:float=-n.width*.63 if n.zone=="repair" and p.energy<85 else sin(p.slot*2)*4
+	if float(n.get("split_gap",0.))>.01:
+		var route:float=p.get("route",0.)
+		if route==0: route=1. if p.slot%2==0 else -1.
+		target=route*(n.split_gap+(n.width-n.split_gap)*.5)
 	var slide:float=p.slide
 	var grip:=lerpf(14,1.8,slide)
 	var inertia:=lerpf(.25,1,slide)
@@ -127,6 +131,10 @@ func step(dt: float, inputs: Array) -> void:
 				p.launch_cooldown=1.0
 				p.energy = 65.0
 				p.x = 0.0
+				p.route=0.
+				var respawn_node:Dictionary=track.sample(p.distance)
+				if float(respawn_node.get("split_gap",0.))>.01:
+					p.x=(1. if p.slot%2==0 else -1.)*(respawn_node.split_gap+(respawn_node.width-respawn_node.split_gap)*.5)
 				p.heading = 0.0
 				p.slip = 0.0
 				p.speed = 90.0
@@ -162,7 +170,7 @@ func step(dt: float, inputs: Array) -> void:
 		var launch:=Flight.unload(p,dt,crest_force,hold_force)
 		p.x += p.slip * dt
 		var edge := lateral_limit(p, n.width)
-		if absf(p.x) > edge and p.lift<2.5:
+		if n.get("rails",true) and absf(p.x) > edge and p.lift<2.5:
 			var side := signf(p.x)
 			p.x = side * edge
 			if p.slip * side > 0:
@@ -172,17 +180,20 @@ func step(dt: float, inputs: Array) -> void:
 				p.slip = -side * minf(hit * .4, 40)
 				p.heading = -side * .10
 				p.flash = .18
+		constrain_surface(p,n)
 		if n.zone == "repair" and p.x < -n.width * .35 and p.lift<1:
 			p.energy = minf(100, p.energy + 34 * dt)
 		p.distance += p.speed * maxf(.55, cos(p.heading)) * dt
 		update_lap(p)
 		var next_node:Dictionary=track.sample(p.distance)
+		constrain_surface(p,next_node)
 		var next_pose:=Flight.ground_pose(p,next_node,clock)
 		p.ground_velocity=(next_pose.origin-previous_pose.origin)/dt
 		var rotation:=Quaternion(previous_pose.basis.inverse()*next_pose.basis).normalized()
 		if rotation.w<0: rotation=-rotation
 		p.air_rates=(rotation.get_axis()*rotation.get_angle()/dt).limit_length(3.0)
-		if launch and not p.finished: Flight.launch(p,next_node,clock)
+		var over_edge:bool=not next_node.get("rails",true) and not Track.closed_tube(next_node) and absf(p.x)>next_node.width
+		if (launch or over_edge) and not p.finished: Flight.launch(p,next_node,clock)
 		if p.energy <= 0:
 			p.recovery = 2.0
 			p.boost = 0.0
@@ -208,14 +219,37 @@ func update_lap(p:Dictionary)->void:
 static func lateral_limit(p:Dictionary,width:float)->float:
 	return width - HULL_HALF_WIDTH*absf(cos(p.heading)) - (HULL_HALF_LENGTH+HULL_CENTER)*absf(sin(p.heading)) - .2
 
+static func constrain_surface(p:Dictionary,n:Dictionary)->void:
+	if Track.closed_tube(n):
+		p.x=wrapf(p.x,-n.width,n.width)
+	elif n.get("rails",true):
+		var edge:=lateral_limit(p,n.width)
+		p.x=clampf(p.x,-edge,edge)
+	var gap:float=n.get("split_gap",0.)
+	if gap>.01:
+		var route:float=p.get("route",0.)
+		if route==0:
+			route=signf(p.x) if absf(p.x)>.1 else (1. if p.slot%2==0 else -1.)
+			p.route=route
+		var margin:float=n.width-lateral_limit(p,n.width)
+		margin*=smoothstep(0.,3.,gap)
+		if p.x*route<gap+margin:
+			p.x=route*(gap+margin)
+			if p.slip*route<0: p.slip=-p.slip*.25;p.heading=route*.04
+	else: p.route=0.
+
 func contact(a:Dictionary,b:Dictionary)->Vector2:
 	var gap:float=fposmod(a.distance-b.distance+track.length*.5,track.length)-track.length*.5
-	if absf(gap)>15 or absf(a.x-b.x)>15: return Vector2.ZERO
+	if absf(gap)>15: return Vector2.ZERO
+	var lateral_gap:float=a.x-b.x
+	var n:Dictionary=track.sample(a.distance)
+	if Track.closed_tube(n): lateral_gap=wrapf(lateral_gap,-n.width,n.width)
+	if absf(lateral_gap)>15: return Vector2.ZERO
 	var af:=Vector2(sin(a.heading),cos(a.heading))
 	var bf:=Vector2(sin(b.heading),cos(b.heading))
 	var ar:=Vector2(af.y,-af.x)
 	var br:=Vector2(bf.y,-bf.x)
-	var delta:=Vector2(a.x-b.x,gap)+(af-bf)*HULL_CENTER
+	var delta:=Vector2(lateral_gap,gap)+(af-bf)*HULL_CENTER
 	var depth:=INF
 	var normal:=Vector2.ZERO
 	for axis:Vector2 in [ar,af,br,bf]:
@@ -259,8 +293,7 @@ func resolve_contacts()->void:
 					a.speed=clampf(av.y/maxf(.55,cos(a.heading)),0,440)
 					b.speed=clampf(bv.y/maxf(.55,cos(b.heading)),0,440)
 		for p in racers:
-			var edge:=lateral_limit(p,track.sample(p.distance).width)
-			if not p.airborne: p.x=clampf(p.x,-edge,edge)
+			if not p.airborne: constrain_surface(p,track.sample(p.distance))
 		if not touching: break
 
 func standings() -> Array:

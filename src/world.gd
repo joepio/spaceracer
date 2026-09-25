@@ -110,10 +110,11 @@ func build(state: RefCounted) -> void:
 		ship_colors.append(color_for(p))
 	update_ships()
 
-func vertex(surface: SurfaceTool, n: Dictionary, x: float, h: float, uv: Vector2) -> void:
+func vertex(surface: SurfaceTool, n: Dictionary, x: float, h: float, uv: Vector2, normal:Vector3=Vector3.ZERO) -> void:
 	surface.set_uv(uv)
 	var zone := 1.0 if n.zone == "repair" else (2.0 if n.zone == "boost" else 0.0)
-	surface.set_color(Color(zone / 2, 1.0 if n.loop else 0.0, 1.0 if n.get("brake_hint",false) else 0.0))
+	surface.set_color(Color(zone / 2, 1.0 if n.loop else 0.0, 1.0 if n.get("brake_hint",false) else 0.0,1.-float(n.get("shape_angle",0.))/PI))
+	surface.set_normal(normal if normal!=Vector3.ZERO else Track.surface_frame(n,x).y*(-1. if h<0 else 1.))
 	surface.add_vertex(Track.point(n, x, h))
 
 func strip(surface: SurfaceTool, a: Dictionary, b: Dictionary, left: float, right: float, height: float, distance: float) -> void:
@@ -128,6 +129,7 @@ func build_track() -> void:
 	var nodes: Array = race.track.nodes
 	var rail_material := material(race.track.theme[3], .55)
 	var dark := material(Color("152236"))
+	dark.cull_mode=BaseMaterial3D.CULL_DISABLED
 	for chunk in range(0, nodes.size(), 32):
 		var surface := SurfaceTool.new()
 		var rail := SurfaceTool.new()
@@ -138,17 +140,31 @@ func build_track() -> void:
 		for i in range(chunk, mini(chunk + 32, nodes.size())):
 			var a: Dictionary = nodes[i]
 			var b: Dictionary = nodes[(i + 1) % nodes.size()]
-			strip(surface, a, b, -1, 1, 0, i * race.track.step)
-			strip(rail, a, b, -1.015, -1, .65, i * race.track.step)
-			strip(rail, a, b, 1, 1.015, .65, i * race.track.step)
-			strip(underside, a, b, -1.09, 1.09, -1.4, i * race.track.step)
-			wall(underside,a,b,-1.09,i*race.track.step)
-			wall(underside,a,b,1.09,i*race.track.step)
+			var distance:float=i*race.track.step
+			if maxf(a.split_gap,b.split_gap)>.0001:
+				# Two separate decks around a real opening, tapering back to one road.
+				for side in [-1.,1.]:
+					fork_strip(surface,a,b,side,0.,distance)
+					fork_strip(underside,a,b,side,-1.4,distance)
+					inner_rail(rail,a,b,side,distance)
+					fork_wall(underside,a,b,side,distance)
+			else:
+				var divisions:=24 if maxf(a.shape_angle,b.shape_angle)>.001 else 1
+				for across in range(divisions):
+					var left:float=-1.+2.*across/divisions
+					var right:float=-1.+2.*(across+1)/divisions
+					strip(surface,a,b,left,right,0.,distance)
+					strip(underside,a,b,left,right,-1.4,distance)
+			if a.rails and b.rails:
+				strip(rail,a,b,-1.015,-1.,.65,distance)
+				strip(rail,a,b,1.,1.015,.65,distance)
+			if not (Track.closed_tube(a) and Track.closed_tube(b)):
+				wall(underside,a,b,-1.,distance)
+				wall(underside,a,b,1.,distance)
 		var local_road:=road_material.duplicate() as ShaderMaterial
 		road_sections.append(local_road)
 		configure_reflections(local_road,nodes[mini(chunk+16,nodes.size()-1)].p,chunk<float(nodes.size())*.16)
 		for pair in [[surface, local_road], [rail, rail_material], [underside, dark]]:
-			pair[0].generate_normals()
 			var mesh := MeshInstance3D.new()
 			mesh.mesh = pair[0].commit()
 			mesh.material_override = pair[1]
@@ -168,7 +184,7 @@ func build_track() -> void:
 			box(frame, Vector3(n.width + 3, 11, 0), Vector3(1.7, 22, 2.2), rib)
 			box(frame, Vector3(0, 22, 0), Vector3(n.width * 2 + 8, 1.8, 2.2), rib)
 			box(frame, Vector3(0, 20.8, -.1), Vector3(n.width * 2 + 4, .3, 1.3), rail_material)
-		elif absf(n.curve) > .002:
+		elif absf(n.curve) > .002 and n.feature=="ribbon":
 			var sign_node := Node3D.new()
 			add_child(sign_node)
 			sign_node.transform = Transform3D(Track.basis_at(n), Track.point(n, -signf(n.curve) * (n.width + 2), 4))
@@ -176,6 +192,29 @@ func build_track() -> void:
 			for z in [-1.5,1.5]:
 				var marker:=box(sign_node,Vector3(0,0,z),Vector3(.7,.38,2),rail_material)
 				marker.rotation.x=.65*signf(n.curve)
+
+func fork_strip(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,height:float,distance:float)->void:
+	var left_a:float=-a.width if side<0 else a.split_gap
+	var right_a:float=-a.split_gap if side<0 else a.width
+	var left_b:float=-b.width if side<0 else b.split_gap
+	var right_b:float=-b.split_gap if side<0 else b.width
+	for item in [[a,left_a,distance],[b,left_b,distance+race.track.step],[a,right_a,distance],
+		[a,right_a,distance],[b,left_b,distance+race.track.step],[b,right_b,distance+race.track.step]]:
+		vertex(surface,item[0],item[1],height,Vector2(item[1]/item[0].width,item[2]))
+
+func inner_rail(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,distance:float)->void:
+	var left:=.35 if side<0 else 0.
+	var right:=0. if side<0 else .35
+	for item in [[a,left,distance],[b,left,distance+race.track.step],[a,right,distance],
+		[a,right,distance],[b,left,distance+race.track.step],[b,right,distance+race.track.step]]:
+		var lateral:float=side*(item[0].split_gap+item[1])
+		vertex(surface,item[0],lateral,.65,Vector2(lateral/item[0].width,item[2]))
+
+func fork_wall(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,distance:float)->void:
+	for item in [[a,0.,distance],[a,-1.4,distance],[b,0.,distance+race.track.step],
+		[b,0.,distance+race.track.step],[a,-1.4,distance],[b,-1.4,distance+race.track.step]]:
+		var lateral:float=side*item[0].split_gap
+		vertex(surface,item[0],lateral,item[1],Vector2(lateral/item[0].width,item[2]),item[0].frame.x*side)
 
 func build_tunnel()->void:
 	var surface:=SurfaceTool.new()
@@ -212,7 +251,7 @@ func build_tunnel()->void:
 func wall(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,distance:float)->void:
 	for item in [[a,0,distance],[a,-1.4,distance],[b,0,distance+race.track.step],
 		[b,0,distance+race.track.step],[a,-1.4,distance],[b,-1.4,distance+race.track.step]]:
-		vertex(surface,item[0],item[0].width*side,item[1],Vector2(side,item[2]))
+		vertex(surface,item[0],item[0].width*side,item[1],Vector2(side,item[2]),-Track.surface_frame(item[0],item[0].width*side).x*signf(side))
 
 static func box(parent: Node3D, position_value: Vector3, size_value: Vector3, mat: Material) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()

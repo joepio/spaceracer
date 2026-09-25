@@ -50,7 +50,7 @@ func run() -> void:
 		var max_height:=-INF
 		for index in range(track.nodes.size()):
 			var node:Dictionary=track.nodes[index]
-			check(node.width>=23 and node.width<=29.01 and absf(node.bank)<=.621,"Driveable width/bank")
+			check(node.width>=23 and node.width<=104. and absf(node.bank)<=.621,"Driveable arc width/bank, including pipes and forks")
 			var basis := Track.basis_at(node)
 			check(basis.determinant()>.99,"Track basis must be right handed")
 			check((Track.point(node,1)-node.p).dot(-basis.x)>.9,"Positive lateral input points screen-right")
@@ -69,7 +69,9 @@ func run() -> void:
 				if arc<200: continue
 				var a:Dictionary=track.nodes[i]
 				var b:Dictionary=track.nodes[j]
-				if a.p.distance_to(b.p)<a.width+b.width+5: clear=false
+				var a_bounds:=Track.cross_section_sphere(a)
+				var b_bounds:=Track.cross_section_sphere(b)
+				if a_bounds.center.distance_to(b_bounds.center)<a_bounds.radius+b_bounds.radius+5: clear=false
 		check(clear,"Non-neighboring road sections clear each other, seed %d"%seed_value)
 	print("PASS deterministic tracks and continuous banked geometry")
 	var race := Race.new(roster(),42)

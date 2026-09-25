@@ -1,6 +1,7 @@
 extends RefCounted
 ## World-space arcade flight. No road force or track-frame following after launch.
 const HOVER:=1.3
+const Track=preload("res://src/track.gd")
 
 static func ground_basis(frame:Basis,heading:float,trim:float,slip:float)->Basis:
 	# The mesh nose is +Z: negative X rotation raises it. Back-stick trim is negative.
@@ -10,13 +11,13 @@ static func hover_height(trim:float)->float:
 	return HOVER+maxf(0,-trim)*.45
 
 static func ground_pose(p:Dictionary,n:Dictionary,clock:float)->Transform3D:
-	var frame:=ground_basis(n.frame,p.heading,p.trim,p.slip)
+	var frame:=ground_basis(Track.surface_frame(n,p.x),p.heading,p.trim,p.slip)
 	# Small physical warning: the suspension extends and the wings gently buffet.
 	var buffet:float=p.unload*.018*sin(clock*19+p.slot)
 	frame=frame*Basis(Vector3.RIGHT,-p.unload*.08)*Basis(Vector3.BACK,buffet)
 	if p.landing_blend>0:
 		frame=frame.slerp(p.landing_frame,p.landing_blend).orthonormalized()
-	return Transform3D(frame,n.p-n.frame.x*p.x+n.frame.y*(hover_height(p.trim)+p.lift))
+	return Transform3D(frame,Track.point(n,p.x,hover_height(p.trim)+p.lift))
 
 static func pose(p:Dictionary,n:Dictionary,clock:float)->Transform3D:
 	if p.airborne or (p.crashed and p.recovery>0):
@@ -25,7 +26,7 @@ static func pose(p:Dictionary,n:Dictionary,clock:float)->Transform3D:
 	# Cosmetic only: grid warmup cannot change launch speed or physical grip.
 	var left:=smoothstep(0,.7,p.startup)
 	var right:=smoothstep(.25,1,p.startup)
-	result.origin-=n.frame.y*(1-(left+right)*.5)*.8
+	result.origin-=Track.surface_frame(n,p.x).y*(1-(left+right)*.5)*.8
 	result.basis=result.basis*Basis(Vector3.BACK,(left-right)*.12)
 	return result
 
@@ -111,21 +112,24 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 	# Distance/race progress stays at launch until an actual legal track landing.
 	var nearest:Dictionary=track.project(position,p.distance,p.air_travel*1.35+100)
 	var n:Dictionary=nearest.node
-	var before:float=(previous-n.p).dot(n.frame.y)-HOVER
-	var after:float=(position-n.p).dot(n.frame.y)-HOVER
+	var surface:=Track.surface_frame(n,nearest.lateral)
+	var surface_position:=Track.point(n,nearest.lateral)
+	var before:float=(previous-surface_position).dot(surface.y)-HOVER
+	var after:float=(position-surface_position).dot(surface.y)-HOVER
 	p.lift=after
-	p.lift_speed=velocity.dot(n.frame.y)
-	var inside:bool=absf(nearest.lateral)<n.width-5.8
+	p.lift_speed=velocity.dot(surface.y)
+	var inside:=Track.supported(n,nearest.lateral,5.8)
 	if p.air_time>.10 and inside and before>0 and after<=0:
-		var nose_alignment:float=frame.z.dot(n.frame.z)
-		var upright:float=frame.y.dot(n.frame.y)
-		var approach:float=velocity.dot(n.frame.z)
+		var nose_alignment:float=frame.z.dot(surface.z)
+		var upright:float=frame.y.dot(surface.y)
+		var approach:float=velocity.dot(surface.z)
 		if nose_alignment>.65 and upright>.65 and p.lift_speed> -75 and approach>65:
 			p.airborne=false
 			p.distance=nearest.distance
 			p.x=nearest.lateral
-			p.heading=clampf(atan2(-frame.z.dot(n.frame.x),frame.z.dot(n.frame.z)),-.7,.7)
-			p.slip=clampf(-velocity.dot(n.frame.x),-70,70)
+			p.route=signf(p.x) if float(n.get("split_gap",0.))>.01 else 0.
+			p.heading=clampf(atan2(-frame.z.dot(surface.x),frame.z.dot(surface.z)),-.7,.7)
+			p.slip=clampf(-velocity.dot(surface.x),-70,70)
 			p.speed=clampf(approach/maxf(.55,cos(p.heading)),65,440)
 			p.lift=maxf(0,after)
 			p.lift_speed=0.0

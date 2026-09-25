@@ -119,8 +119,8 @@ and L-shaped blocks. Six roof styles add penthouses, equipment and antenna clust
 Different window bands, warm offices and occasional neon break up repetition.
 Distant windows fade into the night haze to keep the racing surface readable.
 
-Floating district and advertising signs drift gently above the streets. Around
-180–200 flying cars travel along reserved aerial lanes between city blocks, with
+Large advertisements are mounted directly on buildings; floating text boards
+have been removed. Around 180–200 flying cars travel along reserved aerial lanes between city blocks, with
 separate hulls, canopies and bright engine trails. The enclosed expressway tunnel
 follows the banked track, with chasing cyan/magenta strips and a few shadow-free
 colored lights that illuminate the craft. The planets, mesas, reactor rings,
@@ -128,20 +128,20 @@ water backdrop and giant animals have been removed from the active environment.
 
 Every building reserves its full envelope, including roofs and antennas, against
 a conservative swept volume around every road segment. This includes banking,
-vertical loops, crossings and camera clearance. Sign positions and full traffic
-routes also clear the road and buildings; signs reserve their floating range.
+vertical loops, crossings and camera clearance. Mounted screens stay inside their building envelopes. Full traffic routes also
+clear the road and buildings. The opening skyline preserves views of the loop.
 
 Ships have beveled hulls, swept wings, cockpit glass and animated tapered plasma
 jets, bright engine cores, and instanced exhaust streaks. The engine socket glow
 responds to throttle; plume length grows with actual acceleration and boost.
-Each craft also has one short-range dynamic exhaust light. Throttle and boost
+Each craft has two short-range dynamic exhaust lights, one per nozzle. Throttle and boost
 illuminate its hull, the road and nearby racers, including during countdown; the
-light follows free flight and turns off during recovery. Lights are shared across
+lights follow free flight, track live player colors and turn off during recovery. They are shared across
 views and use no shadow maps.
 HDR bloom complements the localized engine halos in Forward+. The OpenGL fallback
 retains the local halos. Road panels, metallic shading,
 shoulder chevrons and animated energy strips communicate speed and curvature.
-All city traffic, signs, tunnel lighting and effects freeze with GameNight pause.
+All city traffic, tunnel lighting and effects freeze with GameNight pause.
 
 ## Graphics and performance
 
@@ -149,29 +149,42 @@ Forward+ is the default renderer, with screen-space reflections, restrained HDR
 bloom and ambient occlusion. A Vulkan-capable GPU is recommended. For the lighter
 OpenGL fallback, launch `IonRush.exe --rendering-method gl_compatibility`.
 
-The opening district stages four large advertising towers beside the seeded
+The opening district attempts to place six large advertising towers beside the seeded
 track, with mechanical floors, metal mullions and visible streetlights. Three
 static reflection probes capture the city once per race and are shared across
 all views. Ship paint uses clearcoat, fine panel seams and narrow hull bevels;
-machined nozzle rims surround the exhaust sockets. The four landmark screens
-also use inexpensive geometric reflections on the wet road: their real planes
-and artwork are sampled along each pixel’s reflected view ray. These reflections
-follow bends and camera motion; they approximate visibility rather than tracing
-intervening buildings. Screen-space reflections add the racers and local lights.
-The remainder of the circuit keeps the lighter procedural city treatment.
+machined nozzle rims surround the exhaust sockets. Every road chunk chooses four
+nearby mounted billboards and intersects their real planes along the reflected
+view ray. The opening 16% also samples up to 24 nearby box-shaped building parts,
+using the same facade texture, window occupancy and warm/neutral colors as the
+visible buildings. This preserves window and artwork reflections outside the
+screen, at a fixed per-pixel cost. Small rooftop details, octagonal towers and
+other unselected geometry are omitted; these are bounded software reflections,
+not hardware ray tracing or complete scene occlusion. Selection can change at
+chunk boundaries. Probes supply broader surroundings and screen-space reflections
+add visible geometry. Water-film normals break up the reflected images.
+
+Streetlights aim at the road from visible fixtures. At most two nearby fixture or
+billboard lights per player cast shadows (eight total for four players, fewer
+when views share lights). Shadow selection updates at most every 0.15 seconds;
+distance fades and 1024/2048 shadow atlases bound the cost. Exhaust and tunnel
+lights remain shadow-free. High adds a short, subtle volumetric haze; Balanced
+omits it. Screen-space indirect lighting was measured and disabled because its
+contribution to this scene was negligible. These are local lighting effects,
+not full-scene global illumination.
 
 Static track chunks are
 frustum-culled; city architecture uses spatially grouped MultiMesh instances. All
 views share one world and simulation. A faint, non-specular night fill, a handful of short-range shadow-free tunnel lights,
 procedural sky, road shading and instanced textured facades keep lighting inexpensive. Buildings and
-traffic are instanced; only car transforms and sign offsets change each frame.
+traffic are instanced; only car transforms and lighting/effect parameters change each frame.
 City lots, the enclosed tunnel and 3D loop geometry are generated once per race.
 
 Performance / Balanced / High change the 3D render scale to 60% / 80% / 100%.
 High is the default and renders at native window/display resolution, including
 fullscreen. Balanced and High use 2x MSAA, bloom and screen-space reflections; High also uses
-ambient occlusion. Reflection ray steps drop from 48 to 32 in split-screen.
-Performance disables these screen-space effects. HUD stays at window resolution.
+ambient occlusion and volumetric haze. Reflection ray steps drop from 48 to 32 in split-screen.
+Performance disables these screen-space effects and local shadows. HUD stays at window resolution.
 Split-screen divides a fixed total pixel budget between cameras. The UI
 logical canvas is 1600×900; the actual 3D target follows output pixels, capped at 120 fps. This favors clear silhouettes and
 readable track edges at high speed; it is intentionally stylized rather than
@@ -245,6 +258,7 @@ godot --headless --path . --script res://tests/flight.gd
 godot --headless --path . --script res://tests/menu.gd
 godot --headless --path . --script res://tests/effects.gd
 godot --headless --path . --script res://tests/city.gd
+godot --headless --path . --script res://tests/lighting.gd
 python tests/integration.py --godot /path/to/Godot_console.exe --headless
 python tests/integration.py --godot /path/to/Godot_console.exe
 ```
@@ -265,7 +279,8 @@ The city uses a mipmapped AI-generated office facade with neutral/warm windows,
 four large advertising artworks mounted on safe building lots, and wet-road
 restrained rail reflections on charcoal asphalt, soft ambient lighting and a dark,
 continuous horizon. Repair and boost zones use small inset markings. The road
-highlights are an artistic approximation, not screen-space scene reflections.
+reflections combine geometric window/billboard samples, static probes and
+screen-space reflections; direct lights produce the moving specular highlights.
 Balanced and High add a restrained five-tap peripheral speed blur to each view;
 the ship area and HUD stay crisp. Performance disables blur. Split-screen keeps
 the same total native pixel budget. Asset provenance and prompts: `assets/README.md`.
@@ -275,3 +290,21 @@ six rooftop styles: offset penthouses, paired blocks, stepped crowns, equipment
 huts and antenna clusters. Different facade rhythms break up the repeated grid.
 Building lots reserve the full roof and mast height and exclude one another as
 well as the complete swept track corridor.
+
+### Repeatable lighting measurements
+
+`tests/lighting_bench.gd` freezes seed 00031 at the normal gameplay camera for
+comparable screenshots. It warms for five seconds, disables VSync/the frame cap,
+then records per-viewport GPU timestamps, rendering CPU time and wall intervals.
+Screenshot readback is excluded. Use `--views=4` for split-screen or `--moving`
+for simulated bot driving (which includes gameplay CPU work and motion blur).
+The fixed-scene numbers are render costs, not advertised gameplay FPS.
+
+```powershell
+godot --path . --resolution 1920x1080 --script res://tests/lighting_bench.gd -- --out=C:/captures/ion-rush --label=solo --samples=1800
+```
+
+Other flags: `--quality=.8`, `--fraction=.055`, and
+`--ablation=no-box-reflections|no-ssr|no-ssil|no-shadows|no-volumetrics|no-probes`.
+Run one GPU test at a time; background CI/browser workloads affect CPU and wall
+timing. See [the measured lighting review](docs/lighting-review.md).

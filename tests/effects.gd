@@ -70,6 +70,12 @@ func run()->void:
 	p.recovery=1.0
 	Ship.animate_effects(ship,p,warm.vfx_clock,0)
 	check(not ship.get_node("EngineLight").visible and ship.get_node("EngineLight").light_energy==0,"Crashed craft cannot leave an orphan light pool")
+	check(not ship.get_node("EngineLightR").visible and ship.get_node("EngineLightR").light_energy==0,"Both nozzle lights turn off on crash")
+	Ship.set_jet_tint(ship,Color.MAGENTA)
+	p.recovery=0
+	Ship.animate_effects(ship,p,warm.vfx_clock,0)
+	check(ship.get_node("EngineLightR").light_color==ship.get_node("EngineLight").light_color and ship.get_node("EngineLight").light_color.r>.6,"Live player color updates both nozzle lights")
+	check(ship.get_node("EngineCore-1").material_override.emission.r>.7,"Live player color updates luminous nozzle core")
 	ship.free()
 	print("EFFECT_TESTS %d checks, %d failures"%[checks,failures])
 	quit(1 if failures else 0)

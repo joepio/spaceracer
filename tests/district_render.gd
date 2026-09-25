@@ -38,7 +38,7 @@ func review()->void:
 		game.race.clock+=.6
 		await capture(example[1])
 	print("DISTRICT fixtures=",game.world.showpiece.fixtures.size()," probes=",game.world.showpiece.probes.size())
-	print("CITY_RENDER buildings=",game.world.scenery.layout.buildings.size()," signs=",game.world.scenery.signs.size()," cars=",game.world.scenery.traffic.instance_count," tunnel_lights=",game.world.tunnel_lights.size())
+	print("CITY_RENDER buildings=",game.world.scenery.layout.buildings.size()," billboards=",game.world.scenery.layout.billboards.size()," cars=",game.world.scenery.traffic.instance_count," tunnel_lights=",game.world.tunnel_lights.size())
 	game.queue_free()
 	await process_frame
 	quit()

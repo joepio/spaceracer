@@ -5,9 +5,9 @@ var layout:RefCounted
 var traffic:MultiMesh
 var cabins:MultiMesh
 var lamps:MultiMesh
-var signs:Array[Node3D]=[]
-var sign_material:ShaderMaterial
 var animation_time:=0.0
+var local_lights:Array[Light3D]=[]
+var reflection_boxes:Array[Dictionary]=[]
 var groups:Dictionary={}
 var accent:Color
 var secondary:Color
@@ -33,7 +33,7 @@ static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int,layer:int=
 	renderer.multimesh=data
 	renderer.layers=layer
 	renderer.material_override=material
-	renderer.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	renderer.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_ON if layer==1 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(renderer)
 	return data
 
@@ -106,6 +106,8 @@ func build(parent:Node3D,race:RefCounted)->void:
 		var mesh:Mesh=cylinder if key.y==1 else BoxMesh.new()
 		var data:=batch(parent,mesh,glow if key.y==2 else architecture,records.size())
 		for i in range(records.size()):
+			if key.y==0 and records[i].transform.basis.get_scale().y>20. and records[i].transform.basis.get_scale().x>15. and records[i].transform.basis.get_scale().z>15.:
+				reflection_boxes.append({"bounds":records[i].transform*AABB(Vector3.ONE*-.5,Vector3.ONE),"tint":records[i].color})
 			data.set_instance_transform(i,records[i].transform)
 			data.set_instance_color(i,accent.lerp(secondary,records[i].color.r) if key.y==2 else records[i].color)
 	groups.clear()
@@ -118,7 +120,6 @@ func build(parent:Node3D,race:RefCounted)->void:
 	streets.shader=load("res://src/streets.gdshader")
 	ground.material_override=streets
 	parent.add_child(ground)
-	build_signs(parent)
 	build_billboards(parent)
 	var paint:=mat(Color("657892"))
 	paint.vertex_color_use_as_albedo=true
@@ -127,37 +128,8 @@ func build(parent:Node3D,race:RefCounted)->void:
 	lamps=batch(parent,BoxMesh.new(),mat(Color("8eeaff"),2),traffic.instance_count,2)
 	animate(0)
 
-func build_signs(parent:Node3D)->void:
-	sign_material=ShaderMaterial.new()
-	sign_material.shader=load("res://src/sign.gdshader")
-	var names:=["ION DISTRICT","NIGHT MARKET","FLUX MOTORS","SKYLINE EXPRESS","NOVA ARCADE","NEON HEIGHTS"]
-	for i in range(layout.signs.size()):
-		var sign_node:=Node3D.new()
-		parent.add_child(sign_node)
-		sign_node.transform=layout.signs[i].transform
-		signs.append(sign_node)
-		var board:=MeshInstance3D.new()
-		var quad:=QuadMesh.new()
-		quad.size=Vector2(44,18)
-		board.mesh=quad
-		board.material_override=sign_material
-		sign_node.add_child(board)
-		for line_index in range(2):
-			var label:=Label3D.new()
-			label.text=names[i%names.size()] if line_index==0 else "24 / 7   //   CITY NETWORK"
-			label.font_size=64 if line_index==0 else 36
-			label.pixel_size=.065
-			label.position=Vector3(0,2 if line_index==0 else -3,.15)
-			label.modulate=Color("d3ffff") if line_index==0 else Color("ff70c9")
-			label.outline_size=0
-			label.no_depth_test=false
-			sign_node.add_child(label)
-
 func animate(time:float)->void:
 	animation_time=time
-	sign_material.set_shader_parameter("race_time",time)
-	for i in range(signs.size()):
-		signs[i].position=layout.signs[i].transform.origin+Vector3.UP*sin(time*.65+i)*1.5
 	for i in range(traffic.instance_count):
 		var route:Dictionary=layout.routes[i/2]
 		var along:=fposmod(time*(58+i%5*9)+i*173,route.length)
@@ -199,12 +171,18 @@ func build_billboards(parent:Node3D)->void:
 			var light:=OmniLight3D.new()
 			light.position=Vector3(0,-item.size.y*.22,12.)
 			light.light_color=[Color("9caaff"),Color("7fcfff"),Color("b9db95"),Color("f7a8ca")][item.variant]
-			light.light_energy=2.8
+			light.light_energy=4.0
 			light.omni_range=210.
 			light.omni_attenuation=1.8
 			light.light_specular=.6
 			light.shadow_enabled=false
+			light.distance_fade_enabled=true
+			light.distance_fade_begin=350.
+			light.distance_fade_length=150.
+			light.distance_fade_shadow=130.
+			light.shadow_normal_bias=.3
 			mount.add_child(light)
+			local_lights.append(light)
 		for line in range(2):
 			var label:=Label3D.new()
 			label.text=titles[item.variant] if line==0 else copy[item.variant]

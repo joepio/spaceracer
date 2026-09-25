@@ -30,6 +30,8 @@ static func loft(parent:Node3D,name_value:String,sections:Array,material:Materia
 
 static func build(tint:Color)->Node3D:
 	var root:=Node3D.new()
+	var jet_tint:=Color("67cfff").lerp(tint,.65)
+	root.set_meta("jet_tint",jet_tint)
 	var paint:=ShaderMaterial.new()
 	paint.shader=load("res://src/ship.gdshader")
 	paint.set_shader_parameter("tint",Vector3(tint.r,tint.g,tint.b))
@@ -89,6 +91,7 @@ static func build(tint:Color)->Node3D:
 		plume.mesh=jet.commit()
 		var plasma:=ShaderMaterial.new()
 		plasma.shader=load("res://src/plasma.gdshader")
+		plasma.set_shader_parameter("jet_tint",Vector3(jet_tint.r,jet_tint.g,jet_tint.b))
 		plume.material_override=plasma
 		plume.position=Vector3(side*2.45,-.12,-3.65)
 		plume.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -114,12 +117,13 @@ static func build(tint:Color)->Node3D:
 		var halo:=MeshInstance3D.new()
 		halo.name="EngineHalo%d"%side
 		var quad:=QuadMesh.new()
-		quad.size=Vector2(3.2,3.2)
+		quad.size=Vector2(2.6,2.6)
 		halo.mesh=quad
 		halo.position=plume.position+Vector3(0,0,-.15)
 		halo.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var halo_material:=ShaderMaterial.new()
 		halo_material.shader=load("res://src/engine_glow.gdshader")
+		halo_material.set_shader_parameter("jet_tint",Vector3(jet_tint.r,jet_tint.g,jet_tint.b))
 		halo.material_override=halo_material
 		root.add_child(halo)
 		var core:=MeshInstance3D.new()
@@ -133,22 +137,28 @@ static func build(tint:Color)->Node3D:
 		var glow:=StandardMaterial3D.new()
 		glow.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
 		glow.albedo_color=Color("d3ffff")
+		glow.emission_enabled=true
+		glow.emission=jet_tint.lightened(.45)
 		core.material_override=glow
 		core.position=plume.position
 		core.scale=Vector3(1,.7,.5)
 		root.add_child(core)
-	# One short-range light represents both exhaust sockets. It illuminates this
-	# hull, the track and other racers through the shared 3D world in every view.
+	# Each nozzle illuminates the hull, road and other racers in the shared world.
 	var engine_light:=OmniLight3D.new()
 	engine_light.name="EngineLight"
-	engine_light.position=Vector3(0,.55,-4.2)
+	engine_light.position=Vector3(-2.45,.3,-3.9)
 	engine_light.light_color=Color("75cfff")
 	engine_light.light_energy=0.0
 	engine_light.omni_range=19.0
 	engine_light.omni_attenuation=1.6
 	engine_light.light_specular=.8
 	engine_light.shadow_enabled=false
+	engine_light.light_volumetric_fog_energy=.45
 	root.add_child(engine_light)
+	var right_light:=engine_light.duplicate() as OmniLight3D
+	right_light.name="EngineLightR"
+	right_light.position.x=2.45
+	root.add_child(right_light)
 	var wake:=MultiMeshInstance3D.new()
 	wake.name="EngineWake"
 	var particles:=MultiMesh.new()
@@ -168,6 +178,14 @@ static func build(tint:Color)->Node3D:
 	root.add_child(wake)
 	return root
 
+static func set_jet_tint(root:Node3D,tint:Color)->void:
+	var color:=Color("67cfff").lerp(tint,.65)
+	root.set_meta("jet_tint",color)
+	for side in [-1,1]:
+		root.get_node("ExhaustL" if side<0 else "ExhaustR").material_override.set_shader_parameter("jet_tint",Vector3(color.r,color.g,color.b))
+		root.get_node("EngineHalo%d"%side).material_override.set_shader_parameter("jet_tint",Vector3(color.r,color.g,color.b))
+		root.get_node("EngineCore%d"%side).material_override.emission=color.lightened(.45)
+
 static func animate_controls(root:Node3D,p:Dictionary)->void:
 	for side in [-1,1]:
 		var wing:Node3D=root.get_node("WingControlL" if side<0 else "WingControlR")
@@ -186,8 +204,14 @@ static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)
 	var engine_light:OmniLight3D=root.get_node("EngineLight")
 	engine_light.visible=alive and power>.015
 	engine_light.light_energy=power*(2.6+(1.8 if burning else 0.0))
-	engine_light.light_color=Color("a1dfff") if burning else Color("75cfff")
+	var jet_tint:Color=root.get_meta("jet_tint",Color("75cfff"))
+	engine_light.light_color=jet_tint.lightened(.25) if burning else jet_tint
 	engine_light.omni_range=22.0 if burning else 19.0
+	var right_light:OmniLight3D=root.get_node("EngineLightR")
+	right_light.visible=engine_light.visible
+	right_light.light_energy=engine_light.light_energy
+	right_light.light_color=engine_light.light_color
+	right_light.omni_range=engine_light.omni_range
 	var length:=.65+power*1.4+drive*power*4.0+(5.5 if burning else 0.0)
 	for side in [-1,1]:
 		var exhaust:MeshInstance3D=root.get_node("ExhaustL" if side<0 else "ExhaustR")
@@ -197,6 +221,7 @@ static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)
 		exhaust.material_override.set_shader_parameter("boost_amount",1.0 if burning else 0.0)
 		var core:MeshInstance3D=root.get_node("EngineCore%d"%side)
 		core.material_override.albedo_color=Color("152d42").lerp(Color("eeffff"),power)
+		core.material_override.emission_energy_multiplier=power*(5. if burning else 3.)
 		core.scale=Vector3(1,.7,.5)*(.75+power*.5)
 		var halo:MeshInstance3D=root.get_node("EngineHalo%d"%side)
 		halo.scale=Vector3.ONE*(.6+power*.65+(.15 if burning else 0.0))

@@ -160,7 +160,7 @@ def main():
             time.sleep(.4)
             assert read()["clock"] == paused["clock"] and read()["muted"]
             assert read()["vfx_clock"] == paused["vfx_clock"], "Engine effects must freeze while paused"
-            assert read()["city_time"] == paused["city_time"], "City signs must freeze while paused"
+            assert read()["city_time"] == paused["city_time"], "City traffic must freeze while paused"
             assert read()["traffic_position"] == paused["traffic_position"], "Air traffic must freeze while paused"
             assert read()["tunnel_time"] == paused["tunnel_time"], "Tunnel lighting must freeze while paused"
             assert args.headless or not read()["visible"]

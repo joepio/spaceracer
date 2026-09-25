@@ -15,9 +15,9 @@ func run()->void:
 		var track:=Track.new(seed_value)
 		var city:=Layout.new(track)
 		var repeat:=Layout.new(track)
-		check(city.buildings==repeat.buildings and city.signs==repeat.signs and city.routes==repeat.routes and city.billboards==repeat.billboards,"City generation is deterministic")
+		check(city.buildings==repeat.buildings and city.routes==repeat.routes and city.billboards==repeat.billboards,"City generation is deterministic")
 		check(city.buildings.size()>700,"Dense city has enough buildings")
-		check(city.signs.size()>=6 and city.routes.size()>=12,"City has readable signs and safe traffic routes")
+		check(city.routes.size()>=12,"City has safe traffic routes")
 		check(city.billboards.size()>=8,"City has prominent building-mounted advertisements")
 		for board in city.billboards:
 			check(city.buildings[board.building].bounds.encloses(board.bounds) and city.clear(board.bounds),"Mounted billboard stays within its safe building envelope")
@@ -42,13 +42,13 @@ func run()->void:
 			check(not collision,"Building envelope clears full road including loops/banking")
 		check(kinds.size()==8,"All eight architecture types appear")
 		check(roofs.size()==6 and narrow and broad,"Skyline includes varied roof silhouettes and genuinely different widths")
-		for item in city.signs+city.routes:
+		for item in city.routes:
 			var collision:=false
 			for ribbon in road:
 				if ribbon.intersects(item.bounds): collision=true;break
-			check(not collision and not city.occupied(item.bounds),"Signs and traffic routes clear road and buildings")
+			check(not collision and not city.occupied(item.bounds),"Traffic routes clear road and buildings")
 		check(not city.clear(AABB(track.nodes[0].p-Vector3.ONE,Vector3.ONE*2)),"Road itself cannot become a city lot")
-		print("CITY seed=",seed_value," buildings=",city.buildings.size()," signs=",city.signs.size()," airlanes=",city.routes.size()," billboards=",city.billboards.size())
+		print("CITY seed=",seed_value," buildings=",city.buildings.size()," airlanes=",city.routes.size()," billboards=",city.billboards.size())
 	# Independently sample the driving surface against each new fixture envelope.
 	# Dense lateral and longitudinal samples catch poles over either racing edge.
 	for seed_value in [1,31,145]:

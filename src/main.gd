@@ -202,6 +202,7 @@ func layout_views() -> void:
 		var output_pixels:=Vector2(get_window().size)
 		views[i].viewport.size = Vector2i((cell/dimensions)*output_pixels*quality)
 		views[i].viewport.msaa_3d = Viewport.MSAA_2X if quality>=.8 else Viewport.MSAA_DISABLED
+		views[i].viewport.positional_shadow_atlas_size=(2048 if count==1 and quality>=1. else 1024) if quality>=.8 else 0
 
 func _physics_process(dt: float) -> void:
 	if race == null: return

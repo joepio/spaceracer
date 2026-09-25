@@ -1,0 +1,112 @@
+[
+  {
+    "elapsed_s": 0.6099999999860302,
+    "system_cpu_percent": 78.79901960784314,
+    "gpu_util_clock_mem_w_temp": "2, 1027, 7001, 43.24, 47"
+  },
+  {
+    "elapsed_s": 1.202999999979511,
+    "system_cpu_percent": 70.54263565891472,
+    "gpu_util_clock_mem_w_temp": "0, 787, 7001, 34.70, 46"
+  },
+  {
+    "elapsed_s": 1.812999999994645,
+    "system_cpu_percent": 85.01628664495114,
+    "gpu_util_clock_mem_w_temp": "4, 2572, 14001, 46.01, 47"
+  },
+  {
+    "elapsed_s": 2.4219999999913853,
+    "system_cpu_percent": 86.07456140350878,
+    "gpu_util_clock_mem_w_temp": "1, 2557, 14001, 49.34, 47"
+  },
+  {
+    "elapsed_s": 3.0309999999881256,
+    "system_cpu_percent": 93.26923076923077,
+    "gpu_util_clock_mem_w_temp": "3, 2595, 14001, 49.31, 47"
+  },
+  {
+    "elapsed_s": 3.625,
+    "system_cpu_percent": 96.04700854700855,
+    "gpu_util_clock_mem_w_temp": "3, 2550, 14001, 49.09, 47"
+  },
+  {
+    "elapsed_s": 4.23499999998603,
+    "system_cpu_percent": 92.10526315789474,
+    "gpu_util_clock_mem_w_temp": "0, 2527, 14001, 48.54, 47"
+  },
+  {
+    "elapsed_s": 4.8439999999827705,
+    "system_cpu_percent": 90.41666666666667,
+    "gpu_util_clock_mem_w_temp": "29, 967, 7001, 43.08, 49"
+  },
+  {
+    "elapsed_s": 5.437999999994645,
+    "system_cpu_percent": 87.82051282051282,
+    "gpu_util_clock_mem_w_temp": "60, 2767, 14001, 91.15, 54"
+  },
+  {
+    "elapsed_s": 6.030999999988126,
+    "system_cpu_percent": 80.26315789473684,
+    "gpu_util_clock_mem_w_temp": "72, 2850, 14001, 151.84, 57"
+  },
+  {
+    "elapsed_s": 6.60999999998603,
+    "system_cpu_percent": 79.5045045045045,
+    "gpu_util_clock_mem_w_temp": "71, 2850, 14001, 167.38, 58"
+  },
+  {
+    "elapsed_s": 7.187999999994645,
+    "system_cpu_percent": 75.6578947368421,
+    "gpu_util_clock_mem_w_temp": "64, 2850, 14001, 171.41, 57"
+  },
+  {
+    "elapsed_s": 7.765999999974156,
+    "system_cpu_percent": 81.0185185185185,
+    "gpu_util_clock_mem_w_temp": "60, 2850, 14001, 166.61, 56"
+  },
+  {
+    "elapsed_s": 8.375,
+    "system_cpu_percent": 75.21929824561404,
+    "gpu_util_clock_mem_w_temp": "65, 2850, 14001, 173.11, 58"
+  },
+  {
+    "elapsed_s": 8.96899999998277,
+    "system_cpu_percent": 78.0701754385965,
+    "gpu_util_clock_mem_w_temp": "68, 2850, 14001, 175.98, 58"
+  },
+  {
+    "elapsed_s": 9.577999999979511,
+    "system_cpu_percent": 74.35897435897436,
+    "gpu_util_clock_mem_w_temp": "63, 2850, 14001, 175.66, 57"
+  },
+  {
+    "elapsed_s": 10.171999999991385,
+    "system_cpu_percent": 83.1140350877193,
+    "gpu_util_clock_mem_w_temp": "66, 2850, 14001, 177.11, 59"
+  },
+  {
+    "elapsed_s": 10.780999999988126,
+    "system_cpu_percent": 85.25641025641025,
+    "gpu_util_clock_mem_w_temp": "59, 2850, 14001, 161.82, 57"
+  },
+  {
+    "elapsed_s": 11.375,
+    "system_cpu_percent": 90.5701754385965,
+    "gpu_util_clock_mem_w_temp": "54, 2850, 14001, 156.32, 56"
+  },
+  {
+    "elapsed_s": 11.96899999998277,
+    "system_cpu_percent": 83.1140350877193,
+    "gpu_util_clock_mem_w_temp": "65, 2850, 14001, 158.99, 57"
+  },
+  {
+    "elapsed_s": 12.562999999994645,
+    "system_cpu_percent": 82.56578947368422,
+    "gpu_util_clock_mem_w_temp": "1, 2865, 14001, 120.60, 50"
+  },
+  {
+    "elapsed_s": 13.155999999988126,
+    "system_cpu_percent": 78.28947368421053,
+    "gpu_util_clock_mem_w_temp": "3, 2872, 14001, 68.88, 49"
+  }
+]

@@ -3,7 +3,7 @@ extends RefCounted
 const Track=preload("res://src/track.gd")
 var probes:Array[ReflectionProbe]=[]
 var fixtures:Array[Dictionary]=[]
-var lights:Array[OmniLight3D]=[]
+var lights:Array[Light3D]=[]
 
 func build(parent:Node3D,track:RefCounted)->void:
 	var metal:=StandardMaterial3D.new()
@@ -13,10 +13,13 @@ func build(parent:Node3D,track:RefCounted)->void:
 	var white:=StandardMaterial3D.new()
 	white.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
 	white.albedo_color=Color("c4e4ff")
-	# Twenty-four fixtures across roughly the opening kilometre, spaced in metres.
+	white.emission_enabled=true
+	white.emission=Color("c4e4ff")
+	white.emission_energy_multiplier=3.
+	# Up to 36 fixtures across the opening kilometre, after road-clearance checks.
 	var limit:=minf(track.length*.12,1250.)
-	for station in range(12):
-		var n:Dictionary=track.sample(25.+station*limit/12.)
+	for station in range(18):
+		var n:Dictionary=track.sample(25.+station*limit/18.)
 		if n.loop or n.tunnel: continue
 		for side in [-1,1]:
 			var frame:=Transform3D(n.frame,n.p)
@@ -29,15 +32,24 @@ func build(parent:Node3D,track:RefCounted)->void:
 			piece(stand,Vector3(x,7.5,0),Vector3(.75,19.,.75),metal)
 			piece(stand,Vector3(x,17.8,0),Vector3(2.7,.6,2.7),metal)
 			piece(stand,Vector3(x,17.35,0),Vector3(2.35,.16,2.35),white)
-			var light:=OmniLight3D.new()
+			var light:=SpotLight3D.new()
 			stand.add_child(light)
 			light.position=Vector3(x,16.8,0)
 			light.light_color=Color("b9d9ff") if station%3!=1 else Color("ffe0b4")
-			light.light_energy=3.2
+			light.light_energy=7.
 			light.light_specular=.75
-			light.omni_range=67.
-			light.omni_attenuation=1.4
+			light.spot_range=110.
+			light.spot_angle=67.
+			light.spot_attenuation=1.2
+			light.look_at(Track.point(n,side*n.width*.2,0.),n.frame.y)
+			light.shadow_normal_bias=.25
+			light.shadow_bias=.025
+			light.distance_fade_enabled=true
+			light.distance_fade_begin=180.
+			light.distance_fade_length=80.
+			light.distance_fade_shadow=110.
 			light.shadow_enabled=false
+			light.light_volumetric_fog_energy=.7
 			lights.append(light)
 			fixtures.append({"bounds":bounds,"transform":frame,"x":x})
 	# Capture the real static scene, excluding racers and flying traffic (layer 2).

@@ -12,7 +12,10 @@ var cameras: Array[Camera3D] = []
 var race: RefCounted
 var scene_environment:Environment
 var advanced_renderer:=false
+var lighting_quality:=1.0
+var lighting_clock:=-1.0
 var road_material: ShaderMaterial
+var road_sections:Array[ShaderMaterial]=[]
 var tunnel_material:ShaderMaterial
 var tunnel_lights:Array[OmniLight3D]=[]
 var ship_colors: Array[Color] = []
@@ -53,12 +56,12 @@ func build(state: RefCounted) -> void:
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("b7c2d2")
-	env.ambient_light_energy = .48
+	env.ambient_light_energy = .28
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
-	env.fog_light_color = Color("21334b")
+	env.fog_light_color = Color("182437")
 	env.fog_light_energy = .65
-	env.fog_density = .00045
+	env.fog_density = .00032
 	env.fog_sky_affect = 0.0
 	if advanced_renderer:
 		env.ssr_enabled=true
@@ -67,9 +70,19 @@ func build(state: RefCounted) -> void:
 		env.ssao_enabled=true
 		env.ssao_radius=2.
 		env.ssao_intensity=1.1
+		# Measured SSIL contribution is negligible in this open night scene.
+		env.ssil_enabled=false
+		env.ssil_intensity=1.5
+		env.ssil_radius=4.
 		env.glow_enabled=true
-		env.glow_intensity=.55
+		env.glow_intensity=.7
 		env.glow_hdr_threshold=1.2
+		env.volumetric_fog_enabled=true
+		env.volumetric_fog_density=.0012
+		env.volumetric_fog_albedo=Color("7c94b1")
+		env.volumetric_fog_length=180.
+		env.volumetric_fog_ambient_inject=.12
+		env.volumetric_fog_temporal_reprojection_amount=.65
 	environment.environment = env
 	add_child(environment)
 	var night_fill := DirectionalLight3D.new()
@@ -85,22 +98,6 @@ func build(state: RefCounted) -> void:
 	tunnel_material.shader=load("res://src/tunnel.gdshader")
 	scenery=Scenery.new()
 	scenery.build(self,race)
-	var centers:=PackedVector3Array()
-	var axes:=PackedVector3Array()
-	var up:=PackedVector3Array()
-	var data:=PackedVector3Array()
-	for item in scenery.layout.billboards:
-		if not scenery.layout.buildings[item.building].get("landmark",false): continue
-		centers.append(item.transform.origin+item.transform.basis.z*.3)
-		axes.append(item.transform.basis.x)
-		up.append(item.transform.basis.y)
-		data.append(Vector3(item.size.x,item.size.y,item.variant))
-	road_material.set_shader_parameter("sign_count",centers.size())
-	centers.resize(4);axes.resize(4);up.resize(4);data.resize(4)
-	road_material.set_shader_parameter("sign_centers",centers)
-	road_material.set_shader_parameter("sign_right",axes)
-	road_material.set_shader_parameter("sign_up",up)
-	road_material.set_shader_parameter("sign_data",data)
 	road_material.set_shader_parameter("billboard_art",load("res://assets/city-billboards.png"))
 	build_track()
 	showpiece=Showpiece.new()
@@ -147,13 +144,16 @@ func build_track() -> void:
 			strip(underside, a, b, -1.09, 1.09, -1.4, i * race.track.step)
 			wall(underside,a,b,-1.09,i*race.track.step)
 			wall(underside,a,b,1.09,i*race.track.step)
-		for pair in [[surface, road_material], [rail, rail_material], [underside, dark]]:
+		var local_road:=road_material.duplicate() as ShaderMaterial
+		road_sections.append(local_road)
+		configure_reflections(local_road,nodes[mini(chunk+16,nodes.size()-1)].p,chunk<float(nodes.size())*.16)
+		for pair in [[surface, local_road], [rail, rail_material], [underside, dark]]:
 			pair[0].generate_normals()
 			var mesh := MeshInstance3D.new()
 			mesh.mesh = pair[0].commit()
 			mesh.material_override = pair[1]
 			mesh.layers = 4 # Road excluded from static city captures; cameras still see it.
-			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 			add_child(mesh)
 	build_tunnel()
 	# Tunnel ribs and track-side turn chevrons are static geometry.
@@ -206,7 +206,7 @@ func build_tunnel()->void:
 	tunnel.name="NeonExpresswayTunnel"
 	tunnel.mesh=surface.commit()
 	tunnel.material_override=tunnel_material
-	tunnel.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	tunnel.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	add_child(tunnel)
 
 func wall(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,distance:float)->void:
@@ -229,6 +229,7 @@ func build_ship(tint: Color) -> Node3D:
 
 func update_ships() -> void:
 	road_material.set_shader_parameter("race_time",race.clock)
+	for section in road_sections: section.set_shader_parameter("race_time",race.clock)
 	tunnel_material.set_shader_parameter("race_time",race.clock)
 	for i in range(tunnel_lights.size()): tunnel_lights[i].light_energy=1.4+1.2*(.5+.5*sin(race.clock*4-i*.8))
 	if scenery: scenery.animate(race.clock)
@@ -240,6 +241,7 @@ func update_ships() -> void:
 		ships[i].visible = not (p.crashed and p.recovery>0) and (p.recovery<=0 or fmod(p.recovery,.2)<.1)
 		var tint := color_for(p)
 		if ship_colors[i] != tint:
+			Ship.set_jet_tint(ships[i],tint)
 			ships[i].get_node("Body").material_override.set_shader_parameter("tint",Vector3(tint.r,tint.g,tint.b))
 			for side in [-1,1]:
 				var light:StandardMaterial3D=ships[i].get_node("Light%d"%side).material_override
@@ -247,6 +249,7 @@ func update_ships() -> void:
 				light.emission=tint
 			ship_colors[i] = tint
 		Ship.animate_effects(ships[i],p,race.vfx_clock,race.countdown)
+	update_lighting()
 
 func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false) -> void:
 	var p: Dictionary = race.racers[index]
@@ -258,8 +261,63 @@ static func set_dynamic_layer(node:Node)->void:
 	for child in node.get_children(): set_dynamic_layer(child)
 
 func set_quality(value:float,view_count:int)->void:
+	lighting_quality=value
+	lighting_clock=-1.
 	if not advanced_renderer: return
+	scene_environment.ssil_enabled=false
+	scene_environment.volumetric_fog_enabled=value>=1.
 	scene_environment.ssr_enabled=value>=.8
 	scene_environment.ssr_max_steps=32 if view_count>1 or value<1. else 48
 	scene_environment.ssao_enabled=value>=1.
 	scene_environment.glow_enabled=value>=.8
+
+func update_lighting()->void:
+	if showpiece==null or scenery==null: return
+	if lighting_clock>=0 and race.vfx_clock-lighting_clock<.15: return
+	lighting_clock=race.vfx_clock
+	var lights:Array=showpiece.lights+scenery.local_lights
+	var selected:Array[Light3D]=[]
+	if advanced_renderer and lighting_quality>=.8:
+		for i in range(race.racers.size()):
+			if not race.racers[i].get("view",false): continue
+			var position:Vector3=ships[i].global_position
+			var candidates:Array=lights.duplicate()
+			candidates.sort_custom(func(a:Light3D,b:Light3D):
+				return a.global_position.distance_to(position)-(12. if a.shadow_enabled else 0.) < b.global_position.distance_to(position)-(12. if b.shadow_enabled else 0.))
+			for light:Light3D in candidates.slice(0,2):
+				if light.global_position.distance_to(position)<150. and not selected.has(light): selected.append(light)
+	for light:Light3D in lights: light.shadow_enabled=selected.has(light)
+
+func configure_reflections(material:ShaderMaterial,position:Vector3,detailed:bool)->void:
+	var boxes:Array=scenery.reflection_boxes.filter(func(item:Dictionary): return item.bounds.end.y>position.y-40. and item.bounds.get_center().distance_to(position)<800.) if detailed else []
+	boxes.sort_custom(func(a:Dictionary,b:Dictionary): return a.bounds.get_center().distance_squared_to(position)<b.bounds.get_center().distance_squared_to(position))
+	var low:=PackedVector3Array()
+	var high:=PackedVector3Array()
+	var tint:=PackedColorArray()
+	for item in boxes.slice(0,24):
+		low.append(item.bounds.position)
+		high.append(item.bounds.end)
+		tint.append(item.tint)
+	material.set_shader_parameter("box_count",low.size())
+	low.resize(24);high.resize(24);tint.resize(24)
+	material.set_shader_parameter("box_low",low)
+	material.set_shader_parameter("box_high",high)
+	material.set_shader_parameter("box_tint",tint)
+	material.set_shader_parameter("city_art",load("res://assets/office-facade.png"))
+	var signs:Array=scenery.layout.billboards.duplicate()
+	signs.sort_custom(func(a:Dictionary,b:Dictionary): return a.transform.origin.distance_squared_to(position)<b.transform.origin.distance_squared_to(position))
+	var centers:=PackedVector3Array()
+	var right:=PackedVector3Array()
+	var up:=PackedVector3Array()
+	var data:=PackedVector3Array()
+	for item in signs.slice(0,4):
+		centers.append(item.transform.origin+item.transform.basis.z*.3)
+		right.append(item.transform.basis.x)
+		up.append(item.transform.basis.y)
+		data.append(Vector3(item.size.x,item.size.y,item.variant))
+	material.set_shader_parameter("sign_count",centers.size())
+	centers.resize(4);right.resize(4);up.resize(4);data.resize(4)
+	material.set_shader_parameter("sign_centers",centers)
+	material.set_shader_parameter("sign_right",right)
+	material.set_shader_parameter("sign_up",up)
+	material.set_shader_parameter("sign_data",data)

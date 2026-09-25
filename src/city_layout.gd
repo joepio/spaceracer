@@ -4,11 +4,27 @@ const CELL:=120.0
 const FLOOR:=-180.0
 var corridor:Dictionary={}
 var buildings:Array[Dictionary]=[]
-var signs:Array[Dictionary]=[]
 var routes:Array[Dictionary]=[]
 var billboards:Array[Dictionary]=[]
+var vista_from:=Vector3.ZERO
+var vista_targets:Array[Vector3]=[]
 
 func _init(track:RefCounted)->void:
+	# Keep a view of the first loop from the approach, as well as physical clearance.
+	var approach:Dictionary=track.sample(track.length*.055)
+	vista_from=approach.p+approach.frame.y*7.
+	var peak:=Vector3.ZERO
+	var entered:=false
+	for n in track.nodes:
+		if n.loop:
+			if not entered: vista_targets.append(n.p);peak=n.p
+			entered=true
+			if n.p.y>peak.y: peak=n.p
+		elif entered:
+			vista_targets.append(n.p)
+			break
+	if entered: vista_targets.append(peak)
+
 	for i in range(track.nodes.size()):
 		var a:Dictionary=track.nodes[i]
 		var b:Dictionary=track.nodes[(i+1)%track.nodes.size()]
@@ -16,17 +32,13 @@ func _init(track:RefCounted)->void:
 		for cell in cells(bounds):
 			if not corridor.has(cell): corridor[cell]=[]
 			corridor[cell].append(bounds)
-	for i in range(25,track.nodes.size(),47):
-		var n:Dictionary=track.nodes[i]
-		if n.loop or n.tunnel: continue
-		var side:=1.0 if i%2==0 else -1.0
-		var position:Vector3=n.p+n.frame.x*side*(n.width+84)+n.frame.y*27
-		var frame:=Basis(-n.frame.x,n.frame.y,-n.frame.z)
-		var bounds: AABB=Transform3D(frame,position)*AABB(Vector3(-24,-11,-2),Vector3(48,22,4))
-		bounds=bounds.grow(2.5)
-		if not clear(bounds): continue
-		signs.append({"transform":Transform3D(frame,position),"bounds":bounds})
 	place_landmarks(track)
+	# Preserve the mounted landmark artwork in the opening approach composition.
+	# Buildings remain on their audited lots; random infill cannot mask these views.
+	for building in buildings:
+		vista_targets.append(building.center+Vector3.UP*building.height*.72)
+	var avenue:Array[Vector3]=[]
+	for i in range(15): avenue.append(track.sample(track.length*i*.01).p)
 	var rng:=RandomNumberGenerator.new()
 	rng.seed=track.seed_value+170
 	for x in range(-18,19):
@@ -45,12 +57,12 @@ func _init(track:RefCounted)->void:
 				depth=width*rng.randf_range(.8,1.2)
 			if rng.randf()<.12: height=rng.randf_range(650,860)
 			var center:=Vector3(x*CELL+rng.randf_range(-7,7),FLOOR,z*CELL+rng.randf_range(-7,7))
+			var original_height:=height
+			for point:Vector3 in avenue:
+				if Vector2(point.x-center.x,point.z-center.z).length()<360.:
+					height=maxf(height,point.y-FLOOR+original_height*.55)
 			var bounds:=AABB(center-Vector3(width*.5,0,depth*.5),Vector3(width,height+180,depth))
-			if not clear(bounds) or occupied(bounds.grow(5)): continue
-			var sign_hit:=false
-			for sign_value in signs:
-				if bounds.intersects(sign_value.bounds): sign_hit=true;break
-			if sign_hit: continue
+			if not clear(bounds) or occupied(bounds.grow(5)) or blocks_vista(bounds): continue
 			buildings.append({"center":center,"width":width,"depth":depth,"height":height,
 				"kind":kind,"roof":rng.randi_range(0,5),"roof_height":rng.randf_range(22,55),"antenna":rng.randf_range(35,80),"color":Color(rng.randf(),rng.randf(),rng.randf()),"bounds":bounds})
 	place_billboards(track)
@@ -60,10 +72,7 @@ func _init(track:RefCounted)->void:
 			var start:=Vector3(block*480,80+posmod(row,3)*85,row*CELL+CELL*.5)
 			var bounds:=AABB(start-Vector3(14,5,5),Vector3(508,10,10))
 			if not clear(bounds) or occupied(bounds): continue
-			var sign_hit:=false
-			for sign_value in signs:
-				if bounds.intersects(sign_value.bounds): sign_hit=true;break
-			if not sign_hit: routes.append({"start":start,"length":480.0,"direction":1.0 if row%4==0 else -1.0,"bounds":bounds})
+			routes.append({"start":start,"length":480.0,"direction":1.0 if row%4==0 else -1.0,"bounds":bounds})
 
 static func cells(bounds:AABB)->Array[Vector2i]:
 	var result:Array[Vector2i]=[]
@@ -95,12 +104,13 @@ func place_billboards(track:RefCounted)->void:
 			var horizontal:=Vector2(delta.x,delta.z).length_squared()
 			if horizontal<distance: nearest=n.p;distance=horizontal
 		if distance>550*550: continue
+		if building.get("landmark",false): nearest=vista_from
 		var direction:Vector3=nearest-building.center
 		var normal:=Vector3(signf(direction.x),0,0) if absf(direction.x)>absf(direction.z) else Vector3(0,0,signf(direction.z))
 		var on_x:=absf(normal.x)>.5
 		var width:float=(building.depth*.82 if on_x else building.width*.78)*.88
 		var height:=width*2.5
-		var center_y:=clampf(nearest.y+height*.8,building.center.y+building.height*.15+height*.5,building.center.y+building.height-height*.5-8)
+		var center_y:=clampf(nearest.y+height*.20,building.center.y+building.height*.15+height*.5,building.center.y+building.height-height*.5-8)
 		var position:Vector3=building.center+normal*((building.width*.39 if on_x else building.depth*.41)+.7)
 		position.y=center_y
 		var frame:=Basis(Vector3.UP.cross(normal),Vector3.UP,normal)
@@ -112,8 +122,8 @@ func place_billboards(track:RefCounted)->void:
 func place_landmarks(track:RefCounted)->void:
 	# Stage a small opening district before filling random city lots. It follows
 	# each seeded ribbon, and each full building still passes the corridor audit.
-	for i in range(4):
-		var n:Dictionary=track.sample(track.length*(.018+i*.027))
+	for i in range(6):
+		var n:Dictionary=track.sample(track.length*[.018,.04,.06,.078,.10,.12][i])
 		var side:float=1. if i%2==0 else -1.
 		var direction:Vector3=Vector3(n.frame.x.x,0,n.frame.x.z).normalized()*side
 		for offset in [100.,140.,180.]:
@@ -123,12 +133,13 @@ func place_landmarks(track:RefCounted)->void:
 			var d:=78.+i*3.
 			var h:=maxf(450.+i*65.,n.p.y-FLOOR+260.)
 			var bounds:=AABB(center-Vector3(w*.5,0,d*.5),Vector3(w,h+180,d))
-			if not clear(bounds) or occupied(bounds.grow(8)): continue
-			var overlap:=false
-			for sign_value in signs:
-				if bounds.intersects(sign_value.bounds): overlap=true;break
-			if overlap: continue
+			if not clear(bounds) or occupied(bounds.grow(8)) or blocks_vista(bounds): continue
 			buildings.append({"center":center,"width":w,"depth":d,"height":h,
-				"kind":0,"roof":4,"roof_height":44.,"antenna":62.,
+				"kind":0,"roof":i%6,"roof_height":44.,"antenna":62.,
 				"color":Color(.14+i*.19,.25+i*.14,.55),"bounds":bounds,"landmark":true})
 			break
+
+func blocks_vista(bounds:AABB)->bool:
+	for target in vista_targets:
+		if bounds.grow(24.).intersects_segment(vista_from,target)!=null: return true
+	return false

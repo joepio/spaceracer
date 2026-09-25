@@ -1,9 +1,15 @@
 shader_type spatial;
+#include "res://src/city_surface.gdshaderinc"
 render_mode cull_disabled;
 uniform float race_time=0.;
 // Four nearby landmark screens: intersect their real planes with the reflected
 // view ray. This preserves perspective on banks without rendering extra cameras.
 uniform sampler2D billboard_art : source_color, filter_linear_mipmap, repeat_disable;
+uniform sampler2D city_art : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform int box_count=0;
+uniform vec3 box_low[24];
+uniform vec3 box_high[24];
+uniform vec4 box_tint[24];
 uniform int sign_count=0;
 uniform vec3 sign_centers[4];
 uniform vec3 sign_right[4];
@@ -34,7 +40,7 @@ void fragment(){
     if(zone>.8 && zone<1.2 && UV.x<-.35){
         float outline=1.-smoothstep(.008,.019,min(abs(UV.x+.40),abs(UV.x+.89)));
         float dash=step(.82,fract(UV.y/16.-race_time*.28));
-        light+=vec3(.18,.55,.40)*(outline*.28+dash*.012);
+        light+=vec3(.18,.55,.40)*(outline*.09+dash*.012);
     }
     if(zone>1.8 && lateral<.30){
         float arrow=step(.87,fract((UV.y-lateral*24.)/18.));
@@ -49,10 +55,38 @@ void fragment(){
     vec3 reflection=rail_color*rail_pool*streak*(.10+grazing*.25);
     ALBEDO=base+vec3(start*.34);
     vec3 n=normalize(mat3(INV_VIEW_MATRIX)*NORMAL);
+    vec3 dpdx=dFdx(road_position), dpdy=dFdy(road_position);
+    vec2 duvdx=dFdx(UV), duvdy=dFdy(UV);
+    vec3 tangent=normalize(dpdx*duvdy.y-dpdy*duvdx.y);
+    vec3 along=normalize(cross(n,tangent));
+    float ripple=noise(vec2(UV.x*340.,UV.y*.7))-.5;
+    float micro=noise(vec2(UV.x*110.,UV.y*2.1))-.5;
+    n=normalize(n+tangent*ripple*.10+along*micro*.023);
+    NORMAL=normalize(mat3(VIEW_MATRIX)*n);
     vec3 eye=normalize(CAMERA_POSITION_WORLD-road_position);
     vec3 ray=reflect(-eye,n);
     vec3 screens=vec3(0.);
     float nearest=1600.;
+    int hit_box=-1;
+    vec3 inverse_ray=1./mix(vec3(.00001),ray,step(vec3(.00001),abs(ray)));
+    for(int i=0;i<24;i++){
+        if(i>=box_count){break;}
+        vec3 t0=(box_low[i]-road_position)*inverse_ray;
+        vec3 t1=(box_high[i]-road_position)*inverse_ray;
+        vec3 near_axis=min(t0,t1),far_axis=max(t0,t1);
+        float enter=max(max(near_axis.x,near_axis.y),near_axis.z);
+        float leave=min(min(far_axis.x,far_axis.y),far_axis.z);
+        if(enter>0. && enter<=leave && enter<nearest){nearest=enter;hit_box=i;}
+    }
+    if(hit_box>=0){
+        vec3 hit=road_position+ray*nearest;
+        vec3 relative=(hit-(box_low[hit_box]+box_high[hit_box])*.5)/(box_high[hit_box]-box_low[hit_box]);
+        vec3 face_normal=abs(relative.x)>abs(relative.z)?vec3(sign(relative.x),0,0):vec3(0,0,sign(relative.z));
+        if(abs(relative.y)>max(abs(relative.x),abs(relative.z))){face_normal=vec3(0,sign(relative.y),0);}
+        vec3 reflected_albedo,reflected_emission;
+        city_surface(city_art,hit,face_normal,box_tint[hit_box].rgb,box_tint[hit_box].a,nearest,reflected_albedo,reflected_emission);
+        screens=(reflected_emission+reflected_albedo*.15)*mix(.08,.65,pow(1.-max(dot(n,eye),0.),3.))*exp(-nearest*.0015);
+    }
     for(int i=0;i<4;i++){
         if(i>=sign_count){break;}
         vec3 normal=cross(sign_right[i],sign_up[i]);
@@ -67,13 +101,13 @@ void fragment(){
         // Narrow ripples stretch the reflected image along the road surface.
         uv.x=clamp(uv.x+(noise(vec2(UV.x*220.,UV.y*1.5))-.5)*.022,.003,.997);
         vec3 art=texture(billboard_art,vec2((sign_data[i].z+uv.x)*.25,uv.y)).rgb;
-        screens=art*mix(.18,.8,pow(1.-max(dot(n,eye),0.),3.))*exp(-distance*.0015);
+        screens=art*2.2*mix(.18,.8,pow(1.-max(dot(n,eye),0.),3.))*exp(-distance*.0015);
     }
     EMISSION=light+reflection+screens*mix(.38,1.,grain);
     // Broken water film modulates captured scene reflections and real point lights.
     float wet=smoothstep(.28,.72,noise(vec2(UV.x*13.,UV.y*.065)));
-    NORMAL=normalize(NORMAL+vec3(dFdx(grain),dFdy(grain),0.)*.035);
+
     METALLIC=mix(.18,.42,wet);
     SPECULAR=.5;
-    ROUGHNESS=mix(.38,.15,wet);
+    ROUGHNESS=mix(.32,.12,wet);
 }

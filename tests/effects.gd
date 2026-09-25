@@ -76,6 +76,32 @@ func run()->void:
 	Ship.animate_effects(ship,p,warm.vfx_clock,0)
 	check(ship.get_node("EngineLightR").light_color==ship.get_node("EngineLight").light_color and ship.get_node("EngineLight").light_color.r>.6,"Live player color updates both nozzle lights")
 	check(ship.get_node("EngineCore-1").material_override.emission.r>.7,"Live player color updates luminous nozzle core")
+	p.boost=0
+	p.speed=300.
+	p.airborne=false
+	ship.set_meta("wake_travel",8.)
+	ship.set_meta("wake_time",10.)
+	Ship.animate_effects(ship,p,10.,0)
+	var wake:MultiMesh=ship.get_node("EngineWake").multimesh
+	var before:float=ship.get_meta("wake_travel")
+	var before_position:=wake.get_instance_transform(0).origin
+	Ship.animate_effects(ship,p,10.001,0)
+	var after:float=ship.get_meta("wake_travel")
+	var backward_speed:float=(after-before)/.001
+	check(backward_speed>p.speed+200.,"Exhaust particles eject backward faster than the craft travels forward")
+	# The headless dummy renderer does not retain MultiMesh instance transforms.
+	if DisplayServer.get_name()!="headless":
+		check((before_position.z-wake.get_instance_transform(0).origin.z)/.001>p.speed+200.,"Rendered particles move at the simulated ejection speed")
+	Ship.animate_effects(ship,p,10.001,0)
+	check(float(ship.get_meta("wake_travel"))==after,"Particle movement freezes with the effects clock")
+	p.speed=450.
+	Ship.animate_effects(ship,p,10.001,0)
+	check(float(ship.get_meta("wake_travel"))==after,"Changing speed cannot teleport existing wake particles")
+	p.airborne=true
+	p.air_velocity=Vector3(0,0,470)
+	p.boost=1.
+	Ship.animate_effects(ship,p,10.002,0)
+	check((float(ship.get_meta("wake_travel"))-after)/.001>470.+500.,"Boosted flight exhaust also outruns the vehicle")
 	ship.free()
 	print("EFFECT_TESTS %d checks, %d failures"%[checks,failures])
 	quit(1 if failures else 0)

@@ -232,11 +232,24 @@ static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)
 		reverse.material_override.set_shader_parameter("power",p.brake_vfx*.9)
 		reverse.material_override.set_shader_parameter("race_time",time)
 	var wake:MultiMesh=root.get_node("EngineWake").multimesh
+	# Positions are local to the moving craft: subtract its forward speed as well
+	# as the exhaust ejection speed, so sparks travel backward in world space.
+	var vehicle_speed:float=p.air_velocity.length() if p.airborne else absf(p.speed)
+	var exhaust_speed:=vehicle_speed+220.+power*160.+(220. if burning else 0.)
+	var previous_time:float=root.get_meta("wake_time",time)
+	var elapsed:=clampf(time-previous_time,0.,.1)
+	var travel:=fposmod(float(root.get_meta("wake_travel",0.))+exhaust_speed*elapsed,64.)
+	root.set_meta("wake_time",time)
+	root.set_meta("wake_travel",travel)
 	for particle in range(20):
-		var age:=fposmod(time*(2.2 if burning else 1.6)+particle*.173+p.slot*.31,1.0)
+		# Integrate distance instead of multiplying absolute time by changing speed.
+		# A fixed wake span prevents throttle changes from teleporting the particles.
+		var distance:=fposmod(travel+particle*11.072+p.slot*19.84,64.)
+		var age:=distance/64.
 		var side:=1 if particle%2==0 else -1
 		var phase:=particle*2.4
-		var position:=Vector3(side*2.45+sin(phase)*age*.6,-.12+cos(phase)*age*.4,-3.8-age*length*1.55)
-		var size:=Vector3(.035,.035,.3+age*.7)*(power if countdown<=0 else 0.0)
+		var position:=Vector3(side*2.45+sin(phase)*age*.8,-.12+cos(phase)*age*.6,-3.8-distance)
+		# Short exposure streaks keep rapid ejection readable without more particles.
+		var size:=Vector3(.025,.025,clampf(exhaust_speed*.004,1.,4.5))*(power if countdown<=0 else 0.0)
 		wake.set_instance_transform(particle,Transform3D(Basis.IDENTITY.scaled(size),position))
-		wake.set_instance_color(particle,Color(.3,.8,1,(1-age)*power*.7))
+		wake.set_instance_color(particle,Color(jet_tint.r,jet_tint.g,jet_tint.b,pow(1.-age,2.)*power*.6))

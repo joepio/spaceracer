@@ -19,7 +19,10 @@ var roster: Array = []
 var running := false
 var in_menu := true
 var human_count := 1
+const MAX_SEED := 99999
 var next_seed := 0
+var selected_seed := 1
+var seed_input:LineEdit
 var laps := 3
 var quality := 1.0
 var results_clock := 0.0
@@ -103,6 +106,29 @@ func local_roster(count: int, bots_only: bool = false) -> Array:
 			"view":i<count,"color":World.PALETTE[i].to_html()})
 	return out
 
+func start_selected() -> void:
+	finish_seed_edit()
+	next_seed=selected_seed
+	start_local()
+
+func seed_text_changed(value:String)->void:
+	var digits:=""
+	for character in value:
+		if character>="0" and character<="9": digits+=character
+	if digits!=value:
+		var caret:=seed_input.caret_column
+		seed_input.text=digits
+		seed_input.caret_column=mini(caret,digits.length())
+	if int(digits)>0: selected_seed=clampi(int(digits),1,MAX_SEED)
+
+func finish_seed_edit()->void:
+	if is_instance_valid(seed_input): seed_input.text="%05d"%selected_seed
+
+func randomize_menu_seed()->void:
+	# Pick a different five-digit code, even on repeated presses.
+	selected_seed=(selected_seed+randi_range(1,MAX_SEED-1)-1)%MAX_SEED+1
+	finish_seed_edit()
+
 func start_local() -> void:
 	if is_instance_valid(menu): menu.queue_free()
 	roster = local_roster(human_count,demo)
@@ -118,9 +144,10 @@ func new_race() -> void:
 		ui.remove_child(view.holder)
 		view.holder.queue_free()
 	views.clear()
-	if next_seed == 0: next_seed = int(Time.get_unix_time_from_system()) % 1000000 + 1
+	if next_seed == 0: next_seed = randi_range(1,MAX_SEED)
+	next_seed=clampi(next_seed,1,MAX_SEED)
 	race = Race.new(roster,next_seed,laps)
-	next_seed += 1
+	next_seed = next_seed%MAX_SEED+1
 	results_clock = 0
 	world = World.new()
 	add_child(world)
@@ -287,11 +314,14 @@ func _input(event:InputEvent)->void:
 		get_viewport().set_input_as_handled()
 		if not event.pressed: return
 		if event.button_index==JOY_BUTTON_START:
-			start_local()
+			start_selected()
 		else:
-			var focused:=get_viewport().gui_get_focus_owner() as Button
-			if focused and menu.is_ancestor_of(focused): focused.pressed.emit()
-			else: start_local()
+			var focused:=get_viewport().gui_get_focus_owner()
+			if focused is Button and menu.is_ancestor_of(focused): focused.pressed.emit()
+			elif focused is LineEdit:
+				focused.edit()
+				focused.select_all()
+			else: start_selected()
 
 func navigate_menu(dt:float)->void:
 	if not in_menu or not is_instance_valid(menu): return
@@ -320,7 +350,7 @@ func navigate_menu(dt:float)->void:
 func _unhandled_input(event:InputEvent)->void:
 	if bridge.launched_by_daemon: return
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode==KEY_ENTER and in_menu: start_local()
+		if event.keycode==KEY_ENTER and in_menu: start_selected()
 		elif event.keycode==KEY_F2 and in_menu:
 			human_count=human_count%4+1
 			make_menu()
@@ -350,6 +380,7 @@ func style_button(button:Button,primary:bool=false,selected:bool=false)->void:
 
 func make_menu()->void:
 	var focus_id:="race"
+	if not is_instance_valid(menu): selected_seed=race.track.seed_value
 	if is_instance_valid(menu):
 		var focused:=get_viewport().gui_get_focus_owner()
 		if focused and menu.is_ancestor_of(focused): focus_id=str(focused.get_meta("menu_id","race"))
@@ -366,9 +397,9 @@ func make_menu()->void:
 	shade.material=fade
 	menu.add_child(shade)
 	var content:=VBoxContainer.new()
-	content.position=Vector2(110,135)
+	content.position=Vector2(110,95)
 	content.size=Vector2(430,630)
-	content.add_theme_constant_override("separation",22)
+	content.add_theme_constant_override("separation",16)
 	menu.add_child(content)
 	menu_label(content,"G A M E N I G H T",14,Color("7de9d6"))
 	menu_label(content,"ION RUSH",68,Color("edf7ff"))
@@ -390,13 +421,38 @@ func make_menu()->void:
 		style_button(button,false,i==human_count)
 		button.pressed.connect(func(): human_count=i;make_menu())
 		row.add_child(button)
+	menu_label(content,"TRACK SEED",12,Color("91a8b7"))
+	var seed_row:=HBoxContainer.new()
+	seed_row.add_theme_constant_override("separation",10)
+	content.add_child(seed_row)
+	seed_input=LineEdit.new()
+	seed_input.set_meta("menu_id","seed")
+	seed_input.text="%05d"%selected_seed
+	seed_input.max_length=5
+	seed_input.select_all_on_focus=true
+	seed_input.custom_minimum_size=Vector2(280,46)
+	seed_input.add_theme_font_size_override("font_size",24)
+	seed_input.add_theme_color_override("font_color",Color("edf7ff"))
+	seed_input.add_theme_stylebox_override("normal",menu_style(Color(1,1,1,.045),Color(1,1,1,.12)))
+	seed_input.add_theme_stylebox_override("focus",menu_style(Color.TRANSPARENT,Color("7de9d6")))
+	seed_input.text_changed.connect(seed_text_changed)
+	seed_input.focus_exited.connect(finish_seed_edit)
+	seed_input.text_submitted.connect(func(_value:String): start_selected())
+	seed_row.add_child(seed_input)
+	var random_button:=Button.new()
+	random_button.set_meta("menu_id","random")
+	random_button.text="Random"
+	random_button.custom_minimum_size=Vector2(140,46)
+	style_button(random_button)
+	random_button.pressed.connect(randomize_menu_seed)
+	seed_row.add_child(random_button)
 	var start:=Button.new()
 	start.set_meta("menu_id","race")
 	start.text="Race    \u2192"
 	start.alignment=HORIZONTAL_ALIGNMENT_LEFT
 	start.custom_minimum_size=Vector2(430,58)
 	style_button(start,true)
-	start.pressed.connect(start_local)
+	start.pressed.connect(start_selected)
 	content.add_child(start)
 	var links:=HBoxContainer.new()
 	links.add_theme_constant_override("separation",14)
@@ -424,9 +480,16 @@ func make_menu()->void:
 	for i in range(players.size()):
 		players[i].focus_neighbor_left=players[posmod(i-1,4)].get_path()
 		players[i].focus_neighbor_right=players[(i+1)%4].get_path()
-		players[i].focus_neighbor_bottom=start.get_path()
+		players[i].focus_neighbor_bottom=seed_input.get_path()
 		players[i].focus_neighbor_top=help.get_path()
-	start.focus_neighbor_top=players[human_count-1].get_path()
+	seed_input.focus_neighbor_left=random_button.get_path()
+	seed_input.focus_neighbor_right=random_button.get_path()
+	random_button.focus_neighbor_left=seed_input.get_path()
+	random_button.focus_neighbor_right=seed_input.get_path()
+	for control in [seed_input,random_button]:
+		control.focus_neighbor_top=players[human_count-1].get_path()
+		control.focus_neighbor_bottom=start.get_path()
+	start.focus_neighbor_top=seed_input.get_path()
 	start.focus_neighbor_bottom=help.get_path()
 	start.focus_neighbor_left=start.get_path()
 	start.focus_neighbor_right=start.get_path()
@@ -440,7 +503,7 @@ func make_menu()->void:
 		button.add_theme_stylebox_override("focus",menu_style(Color.TRANSPARENT,Color("7de9d6")))
 	menu_label(content,"Left stick  Navigate     A  Select     Start  Race",13,Color("91a8b7"))
 	start.grab_focus()
-	for button in players+[start,help,quality_button]:
+	for button in players+[seed_input,random_button,start,help,quality_button]:
 		if button.get_meta("menu_id")==focus_id: button.grab_focus()
 
 func menu_label(parent:Node,value:String,size_value:int,color:Color=Color("d5e1ec"))->void:

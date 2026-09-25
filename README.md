@@ -25,6 +25,12 @@ machines, filling spare positions with AI. Escape/Back opens the menu; F5 starts
 a fresh track. Three laps by default. Results last eight seconds, then a new
 seeded track starts automatically.
 
+The start menu has a five-digit **Track seed** (00001–99999). Type a code or select
+**Random** with the controller to choose another. Race uses that exact code;
+it remains visible in the HUD and results so you can write it down. Returning
+to the menu keeps the current code for replay. Seeds reproduce the track and
+city within the same game version.
+
 The title screen keeps player selection and Race upfront; Controls expands the
 driving reference. The race HUD uses compact corner readouts and a thin energy
 bar. A small route map appears in single-player; split-screen keeps that space clear.

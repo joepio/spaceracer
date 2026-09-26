@@ -106,6 +106,11 @@ Stalling loses lift. Control surfaces show the corresponding pitch, roll and yaw
 One vehicle-relative chase camera follows road, lift-off, flight and touchdown.
 Its orientation, chase distance and field of view ease continuously; its anchor
 moves with the craft so smoothing does not leave the camera behind at high speed.
+Acceleration briefly pulls the lens wider, then settles at cruise. Boost builds
+to a wider lens, stronger peripheral motion blur and subtle camera vibration.
+Small motes streak past the sides, leaving the ship, racing line and HUD clear.
+Each split-screen view responds only to its own craft. Performance graphics
+disable blur and reduce the mote count; pause freezes the effects clock.
 Approach the track from above, line up with its direction and banking, and touch
 down without excessive descent speed to reconnect. Missing the road, a hard or
 misaligned impact, hitting its underside, falling below the world, or remaining
@@ -293,6 +298,7 @@ godot --headless --path . --script res://tests/lighting.gd
 godot --headless --path . --script res://tests/track_features.gd
 godot --headless --path . --script res://tests/jumps.gd
 godot --headless --path . --script res://tests/difficulty_soak.gd
+godot --headless --path . --script res://tests/speed_feel.gd
 python tests/integration.py --godot /path/to/Godot_console.exe --headless
 python tests/integration.py --godot /path/to/Godot_console.exe
 ```

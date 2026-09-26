@@ -11,10 +11,14 @@ var fraction:=.055
 var moving:=false
 var quality:=1.0
 var landmark:=""
+var speed:=250.
+var boost:=false
 func _initialize()->void:
 	root.unfocusable=true
 	for arg in OS.get_cmdline_user_args():
 		if arg=="--moving": moving=true
+		elif arg=="--boost": boost=true
+		elif arg.begins_with("--speed="): speed=float(arg.trim_prefix("--speed="))
 		elif arg.begins_with("--landmark="): landmark=arg.trim_prefix("--landmark=")
 		elif arg.begins_with("--quality="): quality=float(arg.trim_prefix("--quality="))
 		elif arg.begins_with("--out="): output=arg.trim_prefix("--out=")
@@ -64,11 +68,15 @@ func run()->void:
 		p.engine_power=1.
 		p.thrust=1.
 		p.acceleration=95.
-		p.speed=250.
+		p.speed=speed
+		p.boost=1. if boost else 0.
 	game.world.update_ships()
 	var viewports:Array[RID]=[root.get_viewport_rid()]
 	for view in game.views:
 		game.world.update_camera(view.camera,view.index,0,true)
+		game.running=true
+		game.update_speed_effects(view,.21)
+		game.running=false
 		viewports.append(view.viewport.get_viewport_rid())
 		view.hud.queue_redraw()
 	for rid in viewports: RenderingServer.viewport_set_measure_render_time(rid,true)
@@ -82,6 +90,10 @@ func run()->void:
 	if ablation=="no-shadows": disable_shadows(game.world)
 	if ablation=="no-probes":
 		for probe in game.world.showpiece.probes: probe.intensity=0.
+	if ablation=="no-speed-post" and not moving:
+		for view in game.views:
+			view.blur.set_shader_parameter("amount",0.)
+			view.speed_effects.visible=false
 	Engine.max_fps=0
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	# Warm shader pipelines, every cubemap face and GPU clocks before timing.
@@ -115,6 +127,8 @@ func run()->void:
 	var result:={"moving":moving,"quality":quality,"seed":seed_value,"fraction":fraction,"views":players,"resolution":root.size,"samples":samples,"ablation":ablation,"wall_ms":stats(frame_ms),"gpu_ms":stats(gpu_ms),"render_cpu_ms":stats(cpu_ms),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"video_mem_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.,"device":RenderingServer.get_video_adapter_name(),"camera":str(game.views[0].camera.global_transform)}
 	result.sample_start_utc=sample_start
 	result.difficulty=game.race.track.difficulty
+	result.speed=speed
+	result.boost=boost
 	result.sample_end_utc=sample_end
 	result.shadow_lights=(game.world.showpiece.lights+game.world.scenery.local_lights).filter(func(light):return light.shadow_enabled).size()
 	result.viewport_sizes=game.views.map(func(view):return str(view.viewport.size))

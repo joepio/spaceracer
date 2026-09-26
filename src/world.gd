@@ -312,10 +312,10 @@ func update_ships() -> void:
 		Ship.animate_effects(ships[i],p,race.vfx_clock,race.countdown)
 	update_lighting()
 
-func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false) -> void:
+func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false, effects_enabled:bool=true) -> void:
 	var p: Dictionary = race.racers[index]
 	var n:Dictionary=race.track.sample(p.distance)
-	Chase.update(camera,Flight.pose(p,n,race.clock),p.speed,p.boost>0,dt,snap)
+	Chase.update(camera,Flight.pose(p,n,race.clock),p.speed,p.boost>0 or p.on_pad,dt,snap,p.acceleration,effects_enabled and race.countdown<=0 and p.recovery<=0 and not p.finished)
 
 static func set_dynamic_layer(node:Node)->void:
 	if node is VisualInstance3D: node.layers=2

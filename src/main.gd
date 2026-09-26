@@ -2,6 +2,7 @@ extends Node
 const Race = preload("res://src/race.gd")
 const World = preload("res://src/world.gd")
 const Hud = preload("res://src/hud.gd")
+const SpeedEffects = preload("res://src/speed_effects.gd")
 const Bridge = preload("res://src/bridge.gd")
 const KEYS = [
 	[KEY_A,KEY_D,KEY_W,KEY_S,KEY_SPACE,KEY_Q,KEY_E],
@@ -176,6 +177,9 @@ func new_race() -> void:
 		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		holder.add_child(image)
+		var speed_effects:=SpeedEffects.new()
+		speed_effects.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		holder.add_child(speed_effects)
 		var camera := Camera3D.new()
 		camera.far = 5000
 		camera.near = .5
@@ -187,7 +191,7 @@ func new_race() -> void:
 		hud.show_map = indices.size() == 1
 		hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		holder.add_child(hud)
-		views.append({"holder":holder,"viewport":viewport,"camera":camera,"hud":hud,"index":index,"blur":blur})
+		views.append({"holder":holder,"viewport":viewport,"camera":camera,"hud":hud,"index":index,"blur":blur,"speed_effects":speed_effects})
 		world.update_camera(camera,index,0,true)
 	layout_views()
 
@@ -253,10 +257,9 @@ func _process(dt: float) -> void:
 	if race == null: return
 	if running or in_menu:
 		world.update_ships()
-		for view in views: world.update_camera(view.camera,view.index,dt)
+		for view in views: world.update_camera(view.camera,view.index,dt,false,running and not in_menu)
 	for view in views:
-		var blur_amount:=smoothstep(110.,340.,float(race.racers[view.index].speed))*.035
-		view.blur.set_shader_parameter("amount",blur_amount if quality>=.8 and running and race.countdown<=0 else 0.)
+		update_speed_effects(view,dt)
 		view.hud.visible=not in_menu
 		view.hud.queue_redraw()
 	update_audio()
@@ -276,6 +279,16 @@ func _process(dt: float) -> void:
 		last_frame_usec=now
 		if frame_number==capture_frame:
 			capture.call_deferred()
+
+func update_speed_effects(view:Dictionary,dt:float)->void:
+	var p:Dictionary=race.racers[view.index]
+	var active:bool=running and not in_menu and race.countdown<=0 and p.recovery<=0 and not p.finished
+	var rush:float=view.camera.get_meta("speed_rush",0.)
+	var boost:float=view.camera.get_meta("speed_boost",0.)
+	var surge:float=view.camera.get_meta("speed_surge",0.)
+	var amount:=rush*(.05+boost*.042+surge*.014)
+	view.blur.set_shader_parameter("amount",amount if quality>=.8 and active else 0.)
+	view.speed_effects.update_effects(view.camera,dt,active,quality<.8)
 
 func capture() -> void:
 	await RenderingServer.frame_post_draw
@@ -661,6 +674,8 @@ func write_probe()->void:
 				if not is_finite(copy[key]): copy[key]=null
 			snapshot.append(copy)
 	var state:Dictionary={"phase":bridge.phase,"running":running,
+		"speed_travel":views.map(func(view):return view.speed_effects.travel),
+		"speed_camera_clock":views.map(func(view):return view.camera.get_meta("speed_clock",0.)),
 		"difficulty":race.track.difficulty if race else "", "next_difficulty":difficulty,
 		"visible":get_window().mode!=Window.MODE_MINIMIZED and get_window().position.x> -10000,
 		"sound_enabled":sound_enabled,"muted":AudioServer.is_bus_mute(0),"clock":race.clock if race else -1,"countdown":race.countdown if race else -1,"vfx_clock":race.vfx_clock if race else -1,

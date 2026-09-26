@@ -24,7 +24,7 @@ func clear(bounds:AABB)->bool:
 	return true
 
 static func triangle(surface:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,color:Color)->void:
-	var normal:Vector3=(b-a).cross(c-a).normalized()
+	var normal:Vector3=(c-a).cross(b-a).normalized()
 	for point in [a,b,c]:
 		surface.set_color(color);surface.set_normal(normal);surface.add_vertex(point)
 
@@ -47,12 +47,15 @@ static func branch(surface:SurfaceTool,a:Vector3,b:Vector3,thickness:float,segme
 			var p1:=a.lerp(b,q)+bend+w*thickness*lerpf(1.,.2,q)
 			var p2:=a.lerp(b,r)+next_bend+w*thickness*lerpf(1.,.2,r)
 			var p3:=a.lerp(b,r)+next_bend+v*thickness*lerpf(1.,.2,r)
-			for vertex in [[p0,v],[p1,w],[p2,w],[p0,v],[p2,w],[p3,v]]:
+			for vertex in [[p0,v],[p2,w],[p1,w],[p0,v],[p3,v],[p2,w]]:
 				surface.set_color(Color.WHITE)
 				surface.set_normal(vertex[1])
 				surface.add_vertex(vertex[0])
 
-static func leaf_card(surface:SurfaceTool,center:Vector3,across:Vector3,along:Vector3,cell:int,color:Color,normal:Vector3)->void:
+static func leaf_card(surface:SurfaceTool,center:Vector3,across:Vector3,along:Vector3,cell:int,color:Color)->void:
+	# Godot front faces are clockwise. Leaf tops must match the card plane;
+	# radial crown normals can point down and illuminate the visible underside.
+	var normal:=along.cross(across).normalized()
 	var offset:=Vector2(cell%3,cell/3)*Vector2(1./3.,.5)
 	var points:=[center-across-along,center+across-along,center+across+along,center-across+along]
 	var uvs:=[Vector2(0,0),Vector2(1,0),Vector2(1,1),Vector2(0,1)]
@@ -100,7 +103,7 @@ static func model(variant:int,low_detail:bool=false)->Dictionary:
 					var az:float=pair.x*TAU/8.
 					var el:float=pair.y*PI/4.
 					vertices.append(end+Vector3(cos(az)*sin(el),cos(el),sin(az)*sin(el))*crown*.72)
-				for index in [0,1,2,0,2,3]:
+				for index in [0,2,1,0,3,2]:
 					leaves.set_color(Color(.8,.9,.8,0.))
 					leaves.set_normal((vertices[index]-end).normalized())
 					leaves.set_uv(Vector2(side/8.,ring/4.))
@@ -115,7 +118,7 @@ static func model(variant:int,low_detail:bool=false)->Dictionary:
 			var along:=Vector3(-sin(azimuth),rng.randf_range(-.65,.65),cos(azimuth))*.026*scale
 			var color:=Color(rng.randf_range(.78,1.),rng.randf_range(.84,1.),rng.randf_range(.78,1.),1.)
 			var cell:=rng.randi_range(0,5)
-			if not low_detail or leaf%4==0: leaf_card(leaves,center,across,along,cell,color,((center-end)/crown+Vector3.UP*.18).normalized())
+			if not low_detail or leaf%4==0: leaf_card(leaves,center,across,along,cell,color)
 	leaves.generate_tangents()
 	return {"wood":wood.commit(),"leaves":leaves.commit(),"bounds":bounds}
 

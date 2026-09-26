@@ -11,5 +11,5 @@ void vertex(){
 void fragment(){
     ALBEDO=tint*vec3(.105,.28,.085);
     ROUGHNESS=.78;
-    BACKLIGHT=tint*vec3(.015,.025,.008);
+    BACKLIGHT=vec3(0.);
 }

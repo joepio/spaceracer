@@ -43,7 +43,7 @@ Six crown shapes, independent trunk/canopy proportions, smaller 80–340 metre t
 mossy islands and more than 5,000 varied ferns break up repetition in the checked seeds.
 Photographed CC0 leaf and bark maps come from ambientCG; provenance is in
 `third_party/ambientcg/README.txt`. Cutout foliage uses mipmaps and two mesh detail
-levels, including simpler distant trunks. Lower ambient fill, outward canopy normals
+levels, including simpler distant trunks. Lower ambient fill, correctly oriented leaf and trunk normals
 and directional shadows keep the shaded sides dark, including on Android.
 Water uses two scrolling ripple-normal samples, low swells and a seeded 512px
 shoreline map for shallows, with existing sky/probe reflections and desktop SSR.

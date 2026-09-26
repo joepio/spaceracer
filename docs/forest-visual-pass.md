@@ -39,3 +39,19 @@ Validation: `tests/forest.gd` checks determinism, dominant giant-tree density,
 variation, LOD clearance identity, race-clock animation, route clearance and
 water crashes, then runs 72 AI finishers across worlds' difficulty/seed cases.
 `tests/world_jumps.gd` covers actual scenery collision on both forest and city jumps.
+
+## Leaf underside correction
+
+The initial pass still had inverted winding on canopy interiors and trunks,
+and radial crown normals on flat leaf cards. With two-sided rendering these
+could turn the underside toward the sun. The corrected geometry uses clockwise
+faces with matching outward normals, and leaf normals follow each card plane.
+Artificial leaf/fern backlighting is removed. Canopy filler has darker, occluded
+interior shading and no specular highlight. Ambient/sun settings are unchanged.
+
+`tests/foliage_lighting.gd` checks winding/normal agreement across all six models
+and both detail levels, then renders the same leaf from above and below under
+one overhead light. On Forward+ the underside/top luminance ratio is 0.156;
+on Mobile it is 0.146 (required below 0.35). Both checks passed. Run natively
+with `--script tests/foliage_lighting.gd`; add `--rendering-method mobile` for Mobile.
+Headless mode runs only the geometry checks.

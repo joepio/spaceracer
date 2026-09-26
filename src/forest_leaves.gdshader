@@ -17,16 +17,21 @@ void vertex(){
 void fragment(){
     ALPHA=1.;
     ALPHA_SCISSOR_THRESHOLD=.48;
-    ALBEDO=vec3(.055,.12,.026)*tint;
+    // This closed volume fills gaps inside a crown; it is occluded interior,
+    // not a second glossy layer of sunlit leaves.
+    ALBEDO=vec3(.026,.055,.013)*tint;
+    AO=mix(.55,1.,shell);
+    AO_LIGHT_AFFECT=.65;
     NORMAL_MAP=vec3(.5,.5,1.);
     if(shell>.5){
         ALPHA=texture(leaf_mask,UV).r;
         vec3 leaf=texture(leaf_color,UV).rgb;
         ALBEDO=leaf*vec3(.36,.48,.38)*tint;
         NORMAL_MAP=texture(leaf_normal,UV).rgb;
-        BACKLIGHT=leaf*tint*.025;
+        // Let sun direction and shadows shade the reverse face, without added transmission.
+        BACKLIGHT=vec3(0.);
     }
     NORMAL_MAP_DEPTH=.25;
     ROUGHNESS=.72;
-    SPECULAR=.25;
+    SPECULAR=.12*shell;
 }

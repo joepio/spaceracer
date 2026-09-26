@@ -9,17 +9,19 @@ func check(ok:bool,message:String)->void:
 	if not ok: failures+=1;push_error(message)
 func _initialize()->void: call_deferred("run")
 func run()->void:
-	for biome in ["forest","city"]:
+	for example in [["forest",31],["city",31],["forest",34],["city",34],["cell",34]]:
+		var biome:String=example[0]
+		var seed_value:int=example[1]
 		for difficulty in ["normal","hard"]:
 			var roster:Array=[]
 			for slot in range(6): roster.append({"slot":slot,"bot":true})
-			var race:=Race.new(roster,31,1,difficulty,biome)
+			var race:=Race.new(roster,seed_value,1,difficulty,biome)
 			var world:=World.new();root.add_child(world);world.build(race)
 			check(not race.track.obstacles.shapes.is_empty(),"Full world includes actual obstacle collision")
 			for jump in race.track.jumps:
 				var launched:={};var landed:={}
 				# Fresh pilots for each jump, in a normal three-wide pack.
-				race.racers=Race.new(roster,31,1,difficulty,biome).racers
+				race.racers=Race.new(roster,seed_value,1,difficulty,biome).racers
 				race.countdown=0.;race.clock=0.;race.over=false
 				for p in race.racers:
 					p.distance=jump.takeoff-180.-floorf(p.slot/3.)*13.;p.speed=250.
@@ -37,8 +39,8 @@ func run()->void:
 							p.finished=true
 					if landed.size()==6: break
 				for p in race.racers:
-					check(landed.get(p.slot,false),"%s %s seed 31 %s pilot %d lands with world collisions enabled"%[biome,difficulty,jump.kind,p.slot])
-				print("WORLD_JUMP ",biome," ",difficulty," ",jump.kind," results=",landed)
+					check(landed.get(p.slot,false),"%s %s seed %d %s pilot %d lands with world collisions enabled"%[biome,difficulty,seed_value,jump.kind,p.slot])
+				print("WORLD_JUMP ",biome," ",difficulty," seed=",seed_value," ",jump.kind," results=",landed)
 			world.free()
 			await process_frame
 	print("WORLD_JUMP_TESTS ",checks," checks, ",failures," failures")

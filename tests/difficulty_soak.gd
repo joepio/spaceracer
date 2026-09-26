@@ -5,7 +5,7 @@ var finishers:=0
 func _initialize()->void: call_deferred("run")
 func run()->void:
 	for difficulty in ["easy","normal","hard"]:
-		for seed_value in [6,31,145,421]:
+		for seed_value in range(31,37):
 			var roster:Array=[]
 			for slot in range(6): roster.append({"slot":slot,"bot":true})
 			var race:=Race.new(roster,seed_value,3,difficulty)
@@ -24,5 +24,5 @@ func run()->void:
 				failures+=1
 				push_error("Incomplete or incorrect difficulty race")
 			print("DIFFICULTY_SOAK ",difficulty," ",seed_value," finishers=",finished,"/6 launches=",launches," time=",race.clock)
-	print("DIFFICULTY_SOAK_TOTAL ",finishers,"/72 finishers, ",failures," failures")
+	print("DIFFICULTY_SOAK_TOTAL ",finishers,"/108 finishers, ",failures," failures")
 	quit(1 if failures else 0)

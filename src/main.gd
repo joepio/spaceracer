@@ -25,6 +25,7 @@ const MAX_SEED := 99999
 var next_seed := 0
 var selected_seed := 1
 var seed_input:LineEdit
+var track_character:Label
 var laps := 3
 var difficulty := "normal"
 var biome := "city"
@@ -506,6 +507,7 @@ func adjust_menu(id:String,step:int)->void:
 	refresh_menu_values()
 
 func refresh_menu_values()->void:
+	if is_instance_valid(track_character): track_character.text=Race.Track.Profiles.title(selected_seed)
 	for row in menu_rows:
 		if not is_instance_valid(row) or not row is Button: continue
 		match str(row.get_meta("menu_id","")):
@@ -610,7 +612,13 @@ func make_menu()->void:
 		style_button(right)
 		right.pressed.connect(adjust_menu.bind(id,1))
 		row.add_child(right)
-		if id=="seed": menu_button(content,"random","Random seed",randomize_menu_seed)
+		if id=="seed":
+			track_character=Label.new()
+			track_character.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+			track_character.add_theme_font_size_override("font_size",16)
+			track_character.add_theme_color_override("font_color",Color("7de9d6"))
+			content.add_child(track_character)
+			menu_button(content,"random","Random seed",randomize_menu_seed)
 	menu_button(content,"controls","Controls & credits",func(): show_menu_controls=not show_menu_controls;make_menu())
 	if local_paused:
 		menu_button(content,"restart","Restart race",func(): finish_seed_edit();next_seed=selected_seed;start_local())

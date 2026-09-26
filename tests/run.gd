@@ -50,7 +50,7 @@ func run() -> void:
 		var max_height:=-INF
 		for index in range(track.nodes.size()):
 			var node:Dictionary=track.nodes[index]
-			check(node.width>=23 and node.width<=104. and absf(node.bank)<=.621,"Driveable arc width/bank, including pipes and forks")
+			check(node.width>=18 and node.width<=104. and absf(node.bank)<=.621,"Driveable arc width/bank, including narrows, pipes and forks")
 			var basis := Track.basis_at(node)
 			check(basis.determinant()>.99,"Track basis must be right handed")
 			check((Track.point(node,1)-node.p).dot(-basis.x)>.9,"Positive lateral input points screen-right")
@@ -60,8 +60,8 @@ func run() -> void:
 			inverted=inverted or basis.y.y<-.65
 			min_height=minf(min_height,node.p.y)
 			max_height=maxf(max_height,node.p.y)
-		check(inverted,"Every seed contains a rideable inverted loop")
-		check(max_height-min_height>350,"Meaningful vertical relief")
+		check(inverted==not track.loops.is_empty(),"Only loop recipes contain inverted centreline sections")
+		check(max_height-min_height>(350 if inverted else 190),"Meaningful vertical relief")
 		var clear:=true
 		for i in range(0,track.nodes.size(),6):
 			for j in range(i+6,track.nodes.size(),6):

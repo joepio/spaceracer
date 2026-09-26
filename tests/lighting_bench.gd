@@ -21,6 +21,7 @@ func _initialize()->void:
 		elif arg=="--scripted-motion": moving=true;scripted_motion=true
 		elif arg=="--boost": boost=true
 		elif arg.begins_with("--speed="): speed=float(arg.trim_prefix("--speed="))
+		elif arg.begins_with("--seed="): seed_value=int(arg.trim_prefix("--seed="))
 		elif arg.begins_with("--landmark="): landmark=arg.trim_prefix("--landmark=")
 		elif arg.begins_with("--quality="): quality=float(arg.trim_prefix("--quality="))
 		elif arg.begins_with("--out="): output=arg.trim_prefix("--out=")
@@ -51,7 +52,7 @@ func run()->void:
 			if absf(node.curve)>.0035 and node.feature=="ribbon" and not node.loop:
 				fraction=fposmod(i*game.race.track.step-180.,game.race.track.length)/game.race.track.length
 				break
-	if landmark in ["loop","tunnel","open","halfpipe","tube","split","jump","flight"]:
+	if landmark in ["loop","tunnel","open","halfpipe","tube","split","jump","flight","chicane","narrows"]:
 		var indices:Array=[]
 		for i in range(game.race.track.nodes.size()):
 			var node:Dictionary=game.race.track.nodes[i]

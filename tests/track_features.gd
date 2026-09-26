@@ -14,16 +14,20 @@ func feature_distance(track:RefCounted,kind:String)->float:
 	var matches:Array=[]
 	for i in range(track.nodes.size()):
 		if track.nodes[i].feature==kind: matches.append(i)
+		elif not matches.is_empty(): break
 	return matches[matches.size()/2]*track.step
 func run()->void:
-	for seed_value in [1,2,3,9,17,31,42,145]:
+	var covered:Array=[]
+	for seed_value in [1,2,3,9,17,31,32,33,34,35,36,42,145]:
 		var track:=Track.new(seed_value)
 		var repeat:=Track.new(seed_value)
 		check(track.features==repeat.features,"Feature placement and dimensions reproduce from short seed")
 		for kind in ["open","halfpipe","tube","split"]:
+			if not track.nodes.any(func(n):return n.feature==kind): continue
+			if kind not in covered: covered.append(kind)
 			var distance:=feature_distance(track,kind)
 			var n:Dictionary=track.sample(distance)
-			check(n.feature==kind,"Every seed has each new section type")
+			check(n.feature==kind,"Feature placement matches the selected recipe")
 			for fraction in [-.95,-.5,0.,.5,.95]:
 				var lateral:float=n.width*fraction
 				var point:=Track.point(n,lateral,1.3)
@@ -42,6 +46,7 @@ func run()->void:
 			var a:Dictionary=track.nodes[i]
 			var b:Dictionary=track.nodes[(i+1)%track.nodes.size()]
 			check(Track.point(a,0).distance_to(Track.point(b,0))<track.step*1.01,"Feature transitions preserve the centreline")
+	check(covered.size()==4,"Track families collectively cover every curved/split/open component")
 	var race:=Race.new([{"slot":0},{"slot":1}],31)
 	race.countdown=0.
 	var p:Dictionary=race.racers[0]

@@ -40,6 +40,23 @@ to the menu keeps the current code for replay. Seeds reproduce the track and
 scenery within the same game version. Write down the difficulty and world with
 the code; both appear beside the seed in the HUD and results.
 
+The seed also chooses a **track character**, shown beneath the code in both menus.
+Try these examples in any world:
+
+| Seed | Character | Racing rhythm |
+| --- | --- | --- |
+| 00031 | Grand Circuit | Mixed corners, loop, fork and pipes |
+| 00032 | Underpass | Four long illuminated tunnels with daylight/open-air breaks |
+| 00033 | Switchback | Repeated tight left/right chicanes and a narrow sector |
+| 00034 | Sky Circus | Three loops, repeated jumps and an exposed skyway |
+| 00035 | Velocity | Long true straights, broad end turns, narrows and a split |
+| 00036 | Pipeline | Repeated half-pipes and enclosed magnetic tubes |
+
+Other seeds vary the dimensions, hills, corner shapes and component sizes within
+these families. Character is independent of scenery and difficulty. This generator
+revision intentionally changes older layouts outside the Grand Circuit family;
+sharing a seed requires the same game version. See [track generation notes](docs/track-identities.md).
+
 **World** switches between the neon **City**, **Forest — Verdant Reach**, and **The Cell**.
 The forest has a bright blue daytime sky, soft procedural clouds and warm sunlight.
 It races through rolling grassy hills, wooded banks and connected lakes beneath a dense canopy dominated by 340–650 metre trees.
@@ -82,14 +99,16 @@ Adjust **Level** with left/right in either menu:
 
 - **Easy:** wider road, gentler sharp corners, protected edges and no mandatory
   flight gaps. The half-pipe is shallower. Deliberate pull-back takeoff still works.
-- **Normal:** exposed sky sections and pipe edges, a short jump, and a wide landing.
-- **Hard:** much tighter braking corners, sparser guardrails, and two longer gaps
+- **Normal:** exposed sky sections and pipe edges where the recipe uses them,
+  short jumps, and wider landings.
+- **Hard:** much tighter braking corners, sparser guardrails, and longer gaps
   with narrow landing decks displaced sideways. Aim in flight to reach them;
-  holding straight ahead misses the landing. About a third of the road is unguarded.
+  holding straight ahead misses the landing. The number of gaps and open edges
+  depends on the track character.
 
-Every seed includes a half-pipe, a full magnetic tube and a fork with two separate
-decks that rejoin. Feature placement and size
-vary with the seed. Steer/strafe up the pipe walls and around the tube ceiling;
+Recipes choose from half-pipes, full magnetic tubes, forks with two separate
+decks that rejoin, chicane complexes, smoothly narrowing decks, tunnels, loops and jumps.
+Steer/strafe up the pipe walls and around the tube ceiling;
 return toward the bottom as the tube opens out. Running past an unguarded edge
 enters free flight, with the existing landing/respawn rules. Pick a side before
 the fork; both routes use the same lap progress and merge back into one road.

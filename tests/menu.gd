@@ -53,6 +53,7 @@ func run()->void:
 	await process_frame
 	check(focus_id()=="race","Race focused initially")
 	check(game.seed_input.text.length()==5 and int(game.seed_input.text)==game.race.track.seed_value,"Preview code displayed")
+	check(game.track_character.text==game.race.track.layout,"Seed displays the track character")
 	await stick(0,.9)
 	check(focus_id()=="players","Down selects player row")
 	await stick(.9,0)
@@ -120,6 +121,7 @@ func run()->void:
 	row("seed").grab_focus()
 	await press(JOY_BUTTON_DPAD_RIGHT)
 	check(game.selected_seed==422 and row("race").text=="Restart","Pending change marks primary Restart")
+	check(game.track_character.text=="Underpass","Changing seed immediately previews its new character while paused")
 	check(game.race==original and game.race.track.seed_value==421 and game.local_paused,"Adjusting settings does not rebuild paused race")
 	await press(JOY_BUTTON_DPAD_LEFT)
 	check(row("race").text=="Resume","Undoing changes restores Resume")

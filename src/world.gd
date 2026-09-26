@@ -298,6 +298,7 @@ func fork_wall(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,distance
 		vertex(surface,item[0],lateral,item[1],Vector2(lateral/item[0].width,item[2]),item[0].frame.x*side)
 
 func build_tunnel()->void:
+	if not race.track.nodes.any(func(n):return n.tunnel): return
 	var surface:=SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i in range(race.track.nodes.size()):

@@ -1,4 +1,5 @@
 extends RefCounted
+const Profiles=preload("res://src/track_profiles.gd")
 ## Closed magnetic ribbon with continuous frames through inverted sections.
 const THEMES = [
 	["MIDNIGHT GRID", Color("050b26"), Color("223e85"), Color("24eacd"), Color("ff4d9e")],
@@ -12,6 +13,7 @@ var step: float
 var seed_value: int
 var theme: Array
 var layout: String
+var profile:Dictionary
 var loops: Array[Dictionary] = []
 var radius: float
 var lobes: int
@@ -37,10 +39,18 @@ func base_position(u: float) -> Vector3:
 	# Broad sweepers alternate with localized tighter corner complexes.
 	var corner_a := exp(-pow(angle_difference(a, 2.7+corner_shift) / corner_a_width, 2))
 	var corner_b := exp(-pow(angle_difference(a, 5.45-corner_shift) / corner_b_width, 2))
-	var r := radius + amplitude * sin(lobes * a + phase) + 260 * corner_a - 175 * corner_b
+	var r:float=radius+amplitude*sin(lobes*a+phase)+(260*corner_a-175*corner_b)*profile.corner_scale
+	for corner in profile.corners:
+		var width:float=corner[2]*(1.4 if difficulty=="easy" else (.72 if difficulty=="hard" else 1.))
+		var center:float=corner[0]*TAU+corner_shift
+		# A paired offset makes a proper left/right chicane in the centreline.
+		r+=corner[1]*(exp(-pow(angle_difference(a,center-.11)/width,2))-exp(-pow(angle_difference(a,center+.11)/width,2)))
 	var ridge := 170 * exp(-pow((u - .55) / .075, 2))
 	var altitude:=200 + climb * sin(hills * a + phase) + 12 * sin(3*a+phase*.4) + ridge
 	if biome=="forest": altitude=80+climb*.42*sin(hills*a+phase)+6*sin(3*a+phase*.4)+ridge*.3
+	if profile.shape=="stadium":
+		var horizontal:=Profiles.stadium(u,radius,stretch)
+		return Vector3(horizontal.x,altitude,horizontal.y)
 	return Vector3(sin(a) * r * stretch, altitude, cos(a) * r)
 
 static func smooth_phase(t: float) -> float:
@@ -84,6 +94,7 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 	seed_value = track_seed
 	biome=setting if setting in BIOMES else "city"
 	difficulty=challenge if challenge in DIFFICULTIES else "normal"
+	profile=Profiles.recipe(track_seed)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = track_seed
 	theme = THEMES[rng.randi_range(0,3)]
@@ -105,10 +116,8 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 	elif difficulty=="hard":
 		corner_a_width*=.62
 		corner_b_width*=.70
-	layout = ["SKYLINE DIVE","ORBITAL SWITCHBACK","DOUBLE HELIX"][posmod(track_seed,3)]
-	var starts: Array[float] = [.16]
-	if posmod(track_seed,3)==2: starts.append(.68)
-	for start in starts:
+	layout=profile.name
+	for start:float in profile.loops:
 		var center: float = start+.052
 		var f := base_position(center+.001)-base_position(center-.001)
 		f.y=0
@@ -118,10 +127,11 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 		var jump_rng:=RandomNumberGenerator.new()
 		jump_rng.seed=track_seed+62041
 		var shift:=jump_rng.randf_range(-.002,.002)
-		jumps.append({"kind":"jump","start":.070+shift,"end":.152+shift,
-			"lip":.38,"land":.56 if difficulty=="normal" else .61,
-			"rise":12. if difficulty=="normal" else 25.,"drop":0.,"offset":34.*(1. if track_seed%2==0 else -1.)})
-		if difficulty=="hard":
+		for span in profile.jumps:
+			jumps.append({"kind":"jump","start":span[0]+shift,"end":span[1]+shift,
+				"lip":.38,"land":.56 if difficulty=="normal" else .61,
+				"rise":12. if difficulty=="normal" else 25.,"drop":0.,"offset":34.*(1. if track_seed%2==0 else -1.)})
+		if difficulty=="hard" and profile.hard_flight:
 			jumps.append({"kind":"flight","start":.927,"end":.994,"lip":.27,"land":.58,"rise":28.,"drop":0.,"offset":46.*(-1. if track_seed%2==0 else 1.)})
 	var raw: Array[Vector3] = []
 	var distances: Array[float] = [0.0]
@@ -149,8 +159,11 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 		var section:="MAGNETIC LOOP" if loop_section else ("SKYLINE DIVE" if u>.49 and u<.64 else ("TECHNICAL SECTOR" if u>.38 and u<.48 else "HIGH SPEED SWEEP"))
 		var hint:=base_position(u+.001)-base_position(u-.001)
 		hint.y=0
-		nodes.append({"p":raw[j].lerp(raw[j+1],f),"u":u,"width":23+6*pow(sin(u*TAU*3+phase),2),
-			"bank":0.0,"zone":zone,"tunnel":u>.33 and u<.38,"loop":loop_section,"section":section,
+		var enclosed:=false
+		for span in profile.tunnels:
+			if u>span[0] and u<span[1]: enclosed=true
+		nodes.append({"p":raw[j].lerp(raw[j+1],f),"u":u,"width":(23+6*pow(sin(u*TAU*3+phase),2))*profile.width_scale,
+			"bank":0.0,"zone":zone,"tunnel":enclosed,"loop":loop_section,"section":section,
 			"right_hint":hint.normalized().cross(Vector3.UP)})
 		if difficulty=="easy": nodes[-1].width+=9.
 	for i in range(count):
@@ -198,7 +211,7 @@ func build_features()->void:
 	# and position. All sections have long, smooth entry/exit ramps.
 	var rng:=RandomNumberGenerator.new()
 	rng.seed=seed_value+91837
-	for recipe in [["open",.275,.315],["halfpipe",.405,.49],["split",.535,.615],["tube",.805,.92]]:
+	for recipe in profile.sections:
 		var shift:=rng.randf_range(-.006,.006)
 		features.append({"kind":recipe[0],"start":recipe[1]+shift,"end":recipe[2]+shift,
 			"size":rng.randf_range(.90,1.10)})
@@ -214,6 +227,11 @@ func build_features()->void:
 			var blend:=smooth_phase(clampf(minf(q,1.-q)/.24,0.,1.))
 			n.feature=feature.kind
 			match feature.kind:
+				"chicane":
+					n.section="CHICANE"
+				"narrows":
+					n.width=lerpf(n.width,25. if difficulty=="easy" else (15. if difficulty=="hard" else 18.),blend)
+					n.section="NARROWS"
 				"open":
 					n.rails=difficulty=="easy"
 					n.section="SKYWAY" if n.rails else "OPEN SKY · NO RAILS"
@@ -249,7 +267,7 @@ func build_features()->void:
 	for jump in jumps:
 		var gap_indices:Array[int]=[]
 		for i in range(nodes.size()):
-			if nodes[i].feature==jump.kind and nodes[i].air_gap: gap_indices.append(i)
+			if nodes[i].feature==jump.kind and nodes[i].air_gap and nodes[i].u>jump.start and nodes[i].u<jump.end: gap_indices.append(i)
 		jump.takeoff=gap_indices[0]*step
 		jump.landing=(gap_indices[-1]+1)*step
 		jump.respawn=jump.takeoff-260.

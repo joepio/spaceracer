@@ -93,3 +93,24 @@ jobs and playtest) measured about 3.2 ms to activate all six pooled wrecks, vers
 39.9 ms when their meshes were allocated at impact. The combined simulation and
 visual updates averaged 4.44 ms per 120 Hz tick, p95 12.42 ms; fragment simulation
 runs on every second tick. This is a worst-case CPU probe, not rendered frame time.
+
+## Airspeed-dependent lift and unrestricted low-speed turns
+
+Wing lift now fades between 75 and 155 m/s of forward airspeed, with less inherent
+lift below cruise speed. Angle of attack still adds lift before the existing stall
+limit. Maximum thrust is below gravity, so pointing vertically up cannot hover.
+At 60 m/s with neutral pitch and no throttle, the isolated simulation drops 22.3 m
+in one second. At 235 m/s with full throttle it drops only 0.06 m. Starting at
+130 m/s, full throttle with a 22-degree nose-up attitude gains about 1 m, versus
+losing 14.5 m with level pitch. Releasing throttle eventually costs speed and lift.
+
+Ground yaw has no hard angle clamp. Alignment assistance fades out below 35 m/s
+and reaches its normal strength at 130 m/s, letting stationary craft rotate freely
+and hold their chosen heading. Wrapped angles remain continuous through full turns.
+Track progress and strafe use actual facing rather than a minimum forward-speed
+factor, and contact impulses account for opposite-facing vehicles.
+
+The 15-check airspeed/turning regression covers gravity, power/pitch recovery,
+stalling, two stationary rotations in both directions, released-stick heading,
+reverse/sideways travel and head-on contacts. The 54 flight checks, 18,058 jump
+checks across 44 seeds, and 196,078 core simulation checks pass (48/48 finishers).

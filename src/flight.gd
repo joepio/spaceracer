@@ -77,15 +77,20 @@ static func integrate_air(p:Dictionary,dt:float,roll_input:float,yaw_input:float
 	p.air_frame=frame
 	p.air_roll+=p.air_rates.z*dt
 	var airflow:=velocity.normalized() if speed>1 else frame.z
-	var alignment:=maxf(0,frame.z.dot(airflow))
 	var attack:=atan2(-velocity.dot(frame.y),maxf(1,velocity.dot(frame.z)))
 	var wing_lift:=frame.y-airflow*frame.y.dot(airflow)
 	if wing_lift.length_squared()>.001: wing_lift=wing_lift.normalized()
 	var stall:=1-smoothstep(.48,1.05,absf(attack))
-	var coefficient:=clampf(.8+attack*7,-2.0,4.0)*stall
-	var lift_force:=clampf(speed*speed*.0011*coefficient,-260,350)*alignment*alignment
-	var force:=frame.z*throttle*52+wing_lift*lift_force+Vector3.DOWN*48
-	force-=velocity*(.035+speed*.00075+brake*.65+absf(attack)*.12)
+	var forward_air:float=maxf(0.,velocity.dot(frame.z))
+	# Below approach speed the wing loses lift instead of catching every fall.
+	# A raised nose adds angle of attack, but needs airspeed and engine power;
+	# pulling too far still stalls. Fast flight keeps its familiar lift balance.
+	var attached:=smoothstep(75.,155.,forward_air)
+	var camber:=lerpf(.22,.8,smoothstep(100.,210.,forward_air))
+	var coefficient:=clampf(camber+attack*7,-2.0,4.0)*stall
+	var lift_force:=clampf(forward_air*forward_air*.0011*coefficient*attached,-260,350)
+	var force:=frame.z*throttle*44+wing_lift*lift_force+Vector3.DOWN*48
+	force-=velocity*(.035+speed*.00075+brake*.65+absf(attack)*.12+(1.-attached)*.12)
 	force-=frame.x*velocity.dot(frame.x)*3.2
 	# Preserve launch momentum, then smoothly settle below road cruise speed.
 	var limit:=maxf(AIR_SPEED,float(p.get("air_entry_speed",AIR_SPEED))-70.*p.air_time)

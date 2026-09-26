@@ -207,14 +207,17 @@ func step(dt: float, inputs: Array) -> void:
 		if throttle == 0:
 			acceleration -= 38
 		acceleration -= 240*brake+planted*p.speed*.12
-		acceleration -= absf(steer) * p.speed * lerpf(.045,.08,p.slide) + n.slope * 28
+		acceleration -= absf(steer) * p.speed * lerpf(.045,.08,p.slide) + n.slope * 28*cos(p.heading)
 		p.acceleration=maxf(0,acceleration)
 		p.speed = clampf(p.speed + acceleration * dt, 0, 440)
-		var yaw:=steer*lerpf(1.65,3.8,p.slide)*(.35+.65*minf(p.speed/120,1))*(.45 if p.airborne else 1.0)
-		p.heading=clampf(p.heading+(yaw-n.curve*p.speed-p.heading*lerpf(3.5,.8,p.slide))*dt,-1.05,1.05)
-		var lateral:float=sin(p.heading)*p.speed+strafe*46*(.35 if p.airborne else 1.0)
+		var yaw:=steer*lerpf(1.65,3.8,p.slide)
+		var assistance:float=smoothstep(35.,130.,p.speed)*lerpf(3.5,.8,p.slide)
+		var facing:float=wrapf(p.heading,-PI,PI)
+		var advance:float=p.speed*cos(facing)-strafe*46*sin(facing)
+		p.heading=wrapf(facing+(yaw-n.curve*advance-sin(facing)*assistance)*dt,-PI,PI)
+		var lateral:float=sin(p.heading)*p.speed+strafe*46*cos(p.heading)
 		# Momentum carries outward as the road turns under a low-grip craft.
-		var forward_speed:float=p.speed*maxf(.55,cos(p.heading))
+		var forward_speed:float=p.speed*cos(p.heading)-strafe*46*sin(p.heading)
 		p.slip-=n.curve*forward_speed*forward_speed*lerpf(.25,1,p.slide)*dt
 		var grip:float=lerpf(14,1.8,p.slide)*(1+planted*.75-loose*.48)*(1-p.unload*.35)
 		p.slip=lerpf(p.slip,lateral,1-exp(-grip*dt))
@@ -236,7 +239,7 @@ func step(dt: float, inputs: Array) -> void:
 		constrain_surface(p,n)
 		if n.zone == "repair" and p.x < -n.width * .35 and p.lift<1:
 			p.energy = minf(100, p.energy + 34 * dt)
-		p.distance += p.speed * maxf(.55, cos(p.heading)) * dt
+		p.distance += (p.speed*cos(p.heading)-strafe*46*sin(p.heading))*dt
 		update_lap(p)
 		var next_node:Dictionary=track.sample(p.distance)
 		constrain_surface(p,next_node)
@@ -334,8 +337,8 @@ func resolve_contacts()->void:
 				b.x-=correction.x
 				a.distance+=correction.y
 				b.distance-=correction.y
-				var av:=Vector2(a.slip,a.speed*maxf(.55,cos(a.heading)))
-				var bv:=Vector2(b.slip,b.speed*maxf(.55,cos(b.heading)))
+				var av:=Vector2(a.slip,a.speed*cos(a.heading))
+				var bv:=Vector2(b.slip,b.speed*cos(b.heading))
 				var closing:=(av-bv).dot(normal)
 				if closing<0:
 					var impulse:=-closing*.55
@@ -343,8 +346,8 @@ func resolve_contacts()->void:
 					bv-=normal*impulse
 					a.slip=av.x
 					b.slip=bv.x
-					a.speed=clampf(av.y/maxf(.55,cos(a.heading)),0,440)
-					b.speed=clampf(bv.y/maxf(.55,cos(b.heading)),0,440)
+					a.speed=clampf(a.speed+normal.dot(Vector2(sin(a.heading),cos(a.heading)))*impulse,0,440)
+					b.speed=clampf(b.speed-normal.dot(Vector2(sin(b.heading),cos(b.heading)))*impulse,0,440)
 		for p in racers:
 			if not p.airborne and not p.crashed: constrain_surface(p,track.sample(p.distance))
 		if not touching: break

@@ -107,6 +107,10 @@ the lateral momentum. Grip returns slowly, with forward trim and countersteering
 helping catch the slide. Dorsal airbrakes open and orange forward-facing reverse
 jets fire with brake pressure; a brief visual decay keeps short taps readable.
 LB/RB and the right stick's horizontal axis strafe without steering the nose.
+At low speed, left-stick steering can rotate the craft through full circles and
+holds its heading when released. Track alignment assistance fades in with speed;
+there is no hard heading clamp. Thrust and strafing follow the craft's facing,
+including sideways and backwards movement, without artificial forward progress.
 
 Right stick forward lowers the nose and adds grip/downforce at the expense of
 speed. Pulling back raises the nose; a partial pull trades grip for speed. Holding
@@ -123,7 +127,10 @@ independent body-axis controls: roll sets bank, with no forced levelling or hidd
 yaw. Bank and pull back to turn like a fighter. LT acts as an air brake. Angular
 rates build and stop quickly with stick input; wing lift, bank, angle of attack,
 side-slip and gravity bend the flight path rather than instantly redirecting it.
-Stalling loses lift. Control surfaces show the corresponding pitch, roll and yaw.
+Lift falls sharply at low forward airspeed. Slow flight sinks under gravity;
+use throttle to regain speed and a moderate nose-up attitude to arrest the sink.
+Pulling too far still stalls, and even full throttle cannot hover vertically.
+Fast powered flight can remain nearly level. Control surfaces show pitch, roll and yaw.
 Sustained flight tops out at 846 km/h, below the 954 km/h road cruise speed.
 Extra launch momentum decays smoothly instead of disappearing at takeoff.
 
@@ -330,6 +337,7 @@ loads this game and the lobby together.
 godot --headless --path . --editor --import --quit
 godot --headless --path . --script res://tests/run.gd
 godot --headless --path . --script res://tests/flight.gd
+godot --headless --path . --script res://tests/airspeed_turning.gd
 godot --headless --path . --script res://tests/crashes.gd
 godot --headless --path . --script res://tests/wrecks.gd
 godot --headless --path . --script res://tests/menu.gd

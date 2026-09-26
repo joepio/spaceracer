@@ -19,8 +19,13 @@ Touch shows a Use button when carrying an item.
 | EMP | World-space spherical pulse, expanding to 220 m over 650 ms. Rivals inside lose engines for 2.2 seconds; the emitter is exempt. Momentum and aerodynamic steering remain, while throttle, boost, ground strafe are disabled. Cancels warp; a warp interrupted above missing deck becomes real flight. No shield damage. Two-second reboot protection prevents chain locks. |
 | Jammer | Six-second transmitter, 260 m forward range and 28-degree half-angle. Distance and angular falloff scale visual noise and random steering/strafe/pitch perturbations, capped at .38/.32/.18. Strongest source wins; effects do not add together. No buttons/throttle/brake modifications. |
 
-EMP takes 16% of rolls and Jammer 14%. Within the remaining 70%, missile/warp/drone
-odds interpolate from 18/28/54% at the front to 30/36/34% at the back.
+EMP takes 16% of rolls and Jammer 14%. Within the remaining 70%, missile odds
+interpolate from 18% at the front to 30% at the back. Warp is excluded for the
+leader; others have 8–20% pool odds by rank, plus up to 40 percentage points
+from a smoothstep over 150–1,500 metres behind the leader. Drone fills the rest.
+Thus last-place warp odds rise from 14% overall nearby to 42% far behind,
+including in two-player races. Gap uses unwrapped race distance across laps.
+Items earned before taking the lead remain usable.
 A leader's missile roll becomes a drone. Inventory survives an
 invalid activation, but crashes discard it. Heavy hits give 1.1 seconds of
 protection against stacked attacks; respawning gives two seconds. Empty shields

@@ -24,13 +24,32 @@ func run()->void:
 	for i in range(6000):
 		if race.weapons.choose(1,6) in ["missile","warp"]: fronts+=1
 		if race.weapons.choose(6,6) in ["missile","warp"]: backs+=1
-	check(backs>fronts*1.25 and fronts>1000,"Catch-up odds favor the rear while useful items remain available up front")
+	check(backs>fronts*1.25 and fronts>500,"Catch-up odds favor the rear while useful items remain available up front")
+	for count in [1,2,6]:
+		var leader_warps:=0
+		for i in range(6000):
+			if race.weapons.choose(1,count,2000.)=="warp": leader_warps+=1
+		check(leader_warps==0,"Leader never rolls warp, even with an inconsistent gap, racers=%d"%count)
+	for count in [2,6]:
+		var close_warps:=0;var distant_warps:=0
+		race.weapons.rng.seed=1234
+		for i in range(6000):
+			if race.weapons.choose(count,count,50.)=="warp": close_warps+=1
+		race.weapons.rng.seed=1234
+		for i in range(6000):
+			if race.weapons.choose(count,count,1800.)=="warp": distant_warps+=1
+		check(close_warps>600 and close_warps<1100 and distant_warps>2300 and distant_warps<2750,"Warp is substantially more likely far behind, racers=%d"%count)
+	for rank in range(1,7):
+		for gap in [0.,150.,500.,1500.,10000.]:
+			var odds:Vector3=race.Weapons.weights(rank,6,gap)
+			check(odds.x>=0. and odds.y>=0. and odds.z>=0. and is_equal_approx(odds.x+odds.y+odds.z,1.),"Item weights stay normalized")
 	var row:Dictionary=race.weapons.pickups[1]
 	for p in race.racers:
 		race.weapons.begin_step(race,2.01,neutral())
 		p.weapon_before=row.distance-30.;p.weapon_x_before=row.x;p.distance=row.distance+30.;p.x=row.x
 		race.weapons.collect(race,p)
 		check(not p.weapon.is_empty(),"Swept pickup collects at speed for each player, including sparse seat IDs")
+		if race.standings()[0]==p: check(p.weapon!="warp","Actual first-place collector cannot receive warp")
 		p.weapon="";race.weapons.collect(race,p)
 		check(p.weapon.is_empty(),"Backing through a used row cannot farm it")
 		race.weapons.begin_step(race,2.01,neutral())
@@ -38,6 +57,23 @@ func run()->void:
 		p.weapon_before+=race.track.length;p.distance+=race.track.length
 		race.weapons.collect(race,p)
 		check(not p.weapon.is_empty(),"Pickup recharges on the following lap")
+	race=fresh()
+	var chaser:Dictionary=race.racers[1]
+	row=race.weapons.pickups[1]
+	chaser.distance=race.track.length+row.distance+10.;chaser.weapon_before=chaser.distance-20.
+	chaser.x=row.x;chaser.weapon_x_before=row.x
+	race.racers[0].distance=chaser.distance+2000.
+	# Choose a seed whose result distinguishes the real gap from rank alone.
+	var discriminating_seed:=false
+	for seed_value in range(100):
+		race.weapons.rng.seed=seed_value
+		var distant:String=race.weapons.choose(2,race.racers.size(),2000.)
+		race.weapons.rng.seed=seed_value
+		var nearby:String=race.weapons.choose(2,race.racers.size(),0.)
+		if distant=="warp" and nearby!="warp":
+			race.weapons.rng.seed=seed_value;discriminating_seed=true;break
+	race.weapons.collect(race,chaser)
+	check(discriminating_seed and chaser.weapon=="warp","Collection uses actual unwrapped leader gap across laps")
 	race=fresh()
 	var owner:Dictionary=race.racers[2];var leader:Dictionary=race.racers[0]
 	owner.weapon="missile"

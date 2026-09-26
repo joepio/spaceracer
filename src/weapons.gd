@@ -53,13 +53,15 @@ static func available(p:Dictionary)->bool:
 static func pose(race:RefCounted,p:Dictionary)->Transform3D:
 	return Flight.pose(p,race.track.sample(p.distance),race.clock)
 
-static func weights(rank:int,count:int)->Vector3:
+static func weights(rank:int,count:int,gap:float=0.)->Vector3:
 	var behind:=clampf((rank-1.)/maxf(1.,count-1.),0.,1.)
-	# The front still gets useful items; positions change odds, never driving speed.
-	return Vector3(.18,.28,.54).lerp(Vector3(.30,.36,.34),behind)
+	var missile:=lerpf(.18,.30,behind)
+	# Warp is a catch-up item: distance matters even in a two-player race.
+	var warp:=0. if rank<=1 else lerpf(.08,.20,behind)+.40*smoothstep(150.,1500.,gap)
+	return Vector3(missile,warp,1.-missile-warp)
 
-func choose(rank:int,count:int)->String:
-	var odds:=weights(rank,count)
+func choose(rank:int,count:int,gap:float=0.)->String:
+	var odds:=weights(rank,count,gap)
 	var roll:=rng.randf()
 	if roll<.16: return "emp"
 	if roll<.30: return "jammer"
@@ -217,7 +219,7 @@ func collect(race:RefCounted,p:Dictionary)->void:
 		var lateral:=lerpf(p.weapon_x_before,p.x,(crossing-start)/maxf(.001,end-start))
 		if absf(lateral-pickup.x)>7.: continue
 		var ordered:Array=race.standings()
-		p.weapon=choose(ordered.find(p)+1,ordered.size())
+		p.weapon=choose(ordered.find(p)+1,ordered.size(),maxf(0.,ordered[0].distance-p.distance))
 		if ordered[0]==p and p.weapon=="missile": p.weapon="drone"
 		p.weapon_acquired=race.clock
 		pickup.cooldown=2.;pickup.reveal=0.

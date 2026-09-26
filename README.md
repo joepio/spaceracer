@@ -177,10 +177,13 @@ wreck the craft. Banked tracks use their own
 surface orientation. A depleted hull rebuilds with 25 shield points after automatic
 recovery to prevent an unavoidable repeat crash at the next jump.
 
-Catch-up bias affects only random item odds. Front-to-back odds interpolate from
-18/28/54 to 30/36/34 within the missile/warp/drone pool. EMP has a 16%
-chance and Jammer 14%; the remaining 70% uses that pool. A missile rolled by the leader becomes
-a drone. There is no hidden handling or engine-speed penalty for leading.
+Catch-up bias affects only random item odds. First place never receives warp.
+Warp odds increase with position and actual distance behind the leader: last
+place has a 14% chance nearby, rising smoothly to 42% at 1,500 metres behind.
+The distance bonus starts at 150 metres and also works in two-player races.
+EMP stays at 16% and Jammer at 14%; other rolls use the missile/warp/drone pool.
+A leader's missile roll becomes a drone. There is no hidden handling or
+engine-speed penalty for leading. Items earned before taking the lead stay usable.
 Damage uses the existing shield/boost-energy bar; depletion produces the normal
 wreck and automatic recovery after two seconds. Respawning grants two seconds of weapon protection.
 

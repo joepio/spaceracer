@@ -28,6 +28,12 @@ func run()->void:
 	touch(1,"steer",true,Vector2(82,0))
 	touch(2,"flight",true,Vector2(-41,41))
 	check(pad.controls().steer==1. and pad.controls().strafe==-.5 and pad.controls().trim==-.5,"Two sticks maintain conventional independent axes")
+	touch(7,"left")
+	check(pad.controls().left and not pad.controls().right and pad.controls().strafe==-.5,"Left bump is independent of analog strafe")
+	touch(7,"left",false)
+	touch(7,"right")
+	check(pad.controls().right and not pad.controls().left,"Both bump directions work on touch")
+	touch(7,"right",false)
 	touch(3,"brake")
 	touch(4,"boost")
 	pad.weapon_available=true

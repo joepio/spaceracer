@@ -26,6 +26,7 @@ func centers()->Dictionary:
 	return {"steer":Vector2(165,size.y-225),"flight":Vector2(size.x-165,size.y-225),
 		"throttle":Vector2(365,size.y-105),"brake":Vector2(355,size.y-245),
 		"fire":Vector2(size.x-365,size.y-105),"boost":Vector2(size.x-355,size.y-245),"reset":Vector2(size.x*.5,size.y-100),
+		"left":Vector2(size.x*.5-70,size.y-230),"right":Vector2(size.x*.5+70,size.y-230),
 		"pause":Vector2(size.x*.5,52)}
 
 func _input(event:InputEvent)->void:
@@ -76,6 +77,7 @@ func controls()->Dictionary:
 	var held:=fingers.values()
 	return {"steer":sticks.steer.x,"strafe":sticks.flight.x,"trim":-sticks.flight.y,
 		"throttle":float(throttle_on and not held.has("brake")),"brake":float(held.has("brake")),
+		"left":held.has("left"),"right":held.has("right"),
 		"fire":weapon_available and held.has("fire"),"boost":held.has("boost"),"reset":reset_available and held.has("reset")}
 
 func _process(_dt:float)->void:
@@ -96,6 +98,6 @@ func _draw()->void:
 		draw_arc(point,r,0,TAU,48,Color(.5,.95,.85,.8) if active else Color(1,1,1,.3),2,true)
 		if is_stick:
 			draw_circle(point+sticks[id]*radius,23,Color(.65,1,.9,.55))
-		var title:String={"steer":"Steer","flight":"Flight","throttle":"Power" if throttle_on else "Throttle","brake":"Brake","boost":"Boost","reset":"Reset","fire":"Use","pause":"Ⅱ"}[id]
+		var title:String={"left":"Bump L","right":"Bump R","steer":"Steer","flight":"Flight","throttle":"Power" if throttle_on else "Throttle","brake":"Brake","boost":"Boost","reset":"Reset","fire":"Use","pause":"Ⅱ"}[id]
 		var width:=font.get_string_size(title,HORIZONTAL_ALIGNMENT_LEFT,-1,20).x
 		draw_string(font,point+Vector2(-width*.5,r+26 if is_stick else 7),title,HORIZONTAL_ALIGNMENT_LEFT,-1,20,Color(1,1,1,.8))

@@ -283,6 +283,8 @@ func controls(p: Dictionary) -> Dictionary:
 		for axis in ["steer","strafe","trim"]:
 			if absf(touch[axis])>absf(c[axis]): c[axis]=touch[axis]
 		for axis in ["throttle","brake"]: c[axis]=maxf(c[axis],touch[axis])
+		c.left=c.left or touch.left
+		c.right=c.right or touch.right
 		c.fire=c.fire or touch.fire
 		c.boost=c.boost or touch.boost
 		c.reset=c.reset or touch.reset
@@ -610,7 +612,7 @@ func make_menu()->void:
 		var help:=VBoxContainer.new()
 		reference.add_child(help)
 		menu_label(help,"CONTROLS",24)
-		menu_label(help,"RT / A  Throttle     LT  Brake     B  Boost\nX  Use pickup\nLeft stick  Steer / yaw\nRight stick  Strafe / roll · Grip / pitch\nY  Reset     Start  Pause\n\nKeyboard  WASD · Space · Q / E · 1 · X pickup",20)
+		menu_label(help,"RT / A  Throttle     LT  Brake     B  Boost\nX  Use pickup     LB / RB  Side bump\nLeft stick  Steer / yaw\nRight stick  Strafe / roll · Grip / pitch\nY  Reset     Start  Pause\n\nKeyboard  WASD · Space · Q / E bump · 1 · X pickup",20)
 		var credits:=RichTextLabel.new()
 		credits.bbcode_enabled=true
 		credits.fit_content=true

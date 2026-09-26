@@ -19,6 +19,8 @@ var pickup_bases:Array[MeshInstance3D]=[]
 var pickup_echoes:Array[MeshInstance3D]=[]
 var pickup_halos:Array[MeshInstance3D]=[]
 var pickup_lights:Array[OmniLight3D]=[]
+var bump_jets:Array[Node3D]=[]
+var bump_material:ShaderMaterial
 var laser_material:StandardMaterial3D
 var steel:StandardMaterial3D
 var mint:StandardMaterial3D
@@ -54,6 +56,8 @@ func configure(state:RefCounted)->void:
 	flame=material(Color("ffac42"),3.);laser_material=material(Color("ff385e"),2.8)
 	guidance_material=ShaderMaterial.new();guidance_material.shader=load("res://src/plasma.gdshader")
 	guidance_material.set_shader_parameter("jet_tint",Vector3(.08,.9,.7))
+	bump_material=guidance_material.duplicate() as ShaderMaterial
+	bump_material.set_shader_parameter("jet_tint",Vector3(1.,.35,.06))
 	cores=MultiMesh.new();cores.transform_format=MultiMesh.TRANSFORM_3D;cores.mesh=box(Vector3.ONE*3.5)
 	cores.instance_count=race.weapons.pickups.size()
 	var batch:=MultiMeshInstance3D.new();batch.multimesh=cores;batch.material_override=mint
@@ -64,6 +68,14 @@ func configure(state:RefCounted)->void:
 		pickup_bases.append(base)
 		base.transform=pickup.pose;base.position-=pickup.pose.basis.y*3.
 	for p in race.racers:
+		var thrusters:=Node3D.new();add_child(thrusters);bump_jets.append(thrusters)
+		for end in [-1.,1.]:
+			var nozzle:=Vector3(4.,.1,end*2.)
+			mesh(thrusters,sphere(.32),material(Color("fff2cb"),4.),nozzle)
+			for angle in [0.,PI*.5]:
+				var ribbon:=QuadMesh.new();ribbon.size=Vector2(1.6,6.)
+				var jet:=mesh(thrusters,ribbon,bump_material,nozzle+Vector3.RIGHT*3.)
+				jet.basis=Basis(Vector3.RIGHT,angle)*Basis(Vector3.BACK,PI*.5)
 		var collect_mat:=ShaderMaterial.new();collect_mat.shader=load("res://src/pickup_flash.gdshader")
 		pickup_echoes.append(mesh(self,ring(.88,1.),collect_mat))
 		pickup_halos.append(mesh(self,ring(.91,1.),collect_mat))
@@ -163,6 +175,7 @@ func make_missile()->Node3D:
 func update()->void:
 	var time:float=race.vfx_clock
 	guidance_material.set_shader_parameter("race_time",time)
+	bump_material.set_shader_parameter("race_time",time)
 	for i in range(emp_fields.size()):
 		emp_fields[i].visible=i<race.weapons.pulses.size()
 		emp_rings[i].visible=i<race.weapons.pulses.size()
@@ -203,6 +216,10 @@ func update()->void:
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
 		var frame:=Weapons.pose(race,p)
+		var side_jets:=bump_jets[i]
+		side_jets.visible=p.bump_time>0. and not p.crashed and not p.airborne
+		var pulse:=maxf(.05,sin(clampf(1.-p.bump_time/.24,0.,1.)*PI))
+		side_jets.transform=frame*Transform3D(Basis(Vector3.UP,PI if p.bump_side<0. else 0.).scaled_local(Vector3(1.,pulse,pulse)),Vector3.ZERO)
 		var flash:float=clampf(p.pickup_fx/.45,0.,1.)
 		pickup_echoes[i].visible=flash>0.
 		pickup_halos[i].visible=flash>0. and not p.crashed

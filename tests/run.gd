@@ -168,7 +168,7 @@ func run() -> void:
 	var responsive:=Race.new(roster(),31)
 	responsive.countdown=0
 	responsive.racers[0].speed=200.0
-	for tick in range(12): responsive.step(1.0/120,[{"right":true,"throttle":1.0}])
+	for tick in range(12): responsive.step(1.0/120,[{"strafe":1.0,"throttle":1.0}])
 	check(responsive.racers[0].slip>30,"Strafe reaches strong lateral speed within 100 ms")
 	print("PASS full-hull contacts, rear impacts, rotated wings, grid, rail crowding and strafe response")
 	var dry:=handling_race()

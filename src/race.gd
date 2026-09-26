@@ -2,6 +2,7 @@ extends RefCounted
 const Track = preload("res://src/track.gd")
 const Weapons=preload("res://src/weapons.gd")
 const Flight=preload("res://src/flight.gd")
+const Bump=preload("res://src/bump.gd")
 const TOP_SPEED := 265.0
 const BOOST_SPEED := 390.0
 # Full visible hull, including swept wings; local nose is slightly ahead of origin.
@@ -30,6 +31,7 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 			"ground_velocity":Vector3.ZERO,"air_rates":Vector3.ZERO,"unload":0.0,"landing_frame":Basis.IDENTITY,"landing_blend":0.0,"air_time":0.0,"air_travel":0.0,"air_roll":0.0,"launch_cooldown":0.0,"crashed":false,"trim": 0.0, "lift": 0.0, "lift_speed": 0.0, "airborne": false, "slide": 0.0, "braking": 0.0, "thrust": 0.0, "flash": 0.0, "recovery": 0.0, "lap": 1, "rank": i + 1, "finished": false,
 			"time": INF, "best_lap": INF, "lap_start": 0.0, "drifting": false, "on_pad": false}, true)
 		Weapons.initialize(p)
+		Bump.initialize(p)
 		racers.append(p)
 	weapons=Weapons.new(track)
 
@@ -97,6 +99,7 @@ func step(dt: float, inputs: Array) -> void:
 	for i in range(racers.size()):
 		var input:Dictionary=inputs[i]
 		var pilot:Dictionary=racers[i]
+		Bump.begin(pilot,input,dt,countdown)
 		var reset_pressed:bool=input.get("reset",false)
 		if countdown<=0 and reset_pressed and not pilot.reset_held and can_reset(pilot):
 			Flight.crash(pilot)
@@ -122,7 +125,7 @@ func step(dt: float, inputs: Array) -> void:
 		if pilot.ignited: pilot.startup=move_toward(pilot.startup,1.0,dt*(.8 if countdown>0 else 5.0))
 		racers[i].input_steer=clampf(input.get("steer",0.0),-1,1)
 		racers[i].input_pitch=clampf(input.get("trim",0.0),-1,1)
-		racers[i].input_strafe=clampf(float(input.get("strafe",0.0))+int(input.get("right",false))-int(input.get("left",false)),-1,1)
+		racers[i].input_strafe=clampf(float(input.get("strafe",0.0)),-1,1)
 		racers[i].input_brake=clampf(float(input.get("brake",0.0)),0,1)
 	if countdown > 0:
 		countdown = maxf(0, countdown - dt)
@@ -153,7 +156,7 @@ func step(dt: float, inputs: Array) -> void:
 		var brake:=clampf(float(c.get("brake",0.0)),0,1)
 		p.braking=brake
 		p.thrust=throttle*(1-brake) if p.recovery==0 else 0.0
-		var strafe:=clampf(float(c.get("strafe",0.0))+int(c.get("right",false))-int(c.get("left",false)),-1,1)
+		var strafe:=clampf(float(c.get("strafe",0.0)),-1,1)
 		if p.emp_time>0. and not p.airborne: strafe=0.
 		var pitch_input:=clampf(float(c.get("trim",0.0)),-1,1)
 		if p.crashed:
@@ -229,11 +232,12 @@ func step(dt: float, inputs: Array) -> void:
 		var yaw:=steer*lerpf(1.65,3.8,p.slide)
 		var assistance:float=smoothstep(35.,130.,p.speed)*lerpf(3.5,.8,p.slide)
 		var facing:float=wrapf(p.heading,-PI,PI)
-		var advance:float=p.speed*cos(facing)-strafe*46*sin(facing)
+		var side_speed:float=strafe*46+Bump.velocity(p)
+		var advance:float=p.speed*cos(facing)-side_speed*sin(facing)
 		p.heading=wrapf(facing+(yaw-n.curve*advance-sin(facing)*assistance)*dt,-PI,PI)
-		var lateral:float=sin(p.heading)*p.speed+strafe*46*cos(p.heading)
+		var lateral:float=sin(p.heading)*p.speed+side_speed*cos(p.heading)
 		# Momentum carries outward as the road turns under a low-grip craft.
-		var forward_speed:float=p.speed*cos(p.heading)-strafe*46*sin(p.heading)
+		var forward_speed:float=p.speed*cos(p.heading)-side_speed*sin(p.heading)
 		p.slip-=n.curve*forward_speed*forward_speed*lerpf(.25,1,p.slide)*dt
 		var grip:float=lerpf(14,1.8,p.slide)*(1+planted*.75-loose*.48)*(1-p.unload*.35)
 		p.slip=lerpf(p.slip,lateral,1-exp(-grip*dt))
@@ -255,7 +259,7 @@ func step(dt: float, inputs: Array) -> void:
 		constrain_surface(p,n)
 		if n.zone == "repair" and p.x < -n.width * .35 and p.lift<1:
 			p.energy = minf(100, p.energy + 34 * dt)
-		p.distance += (p.speed*cos(p.heading)-strafe*46*sin(p.heading))*dt
+		p.distance += (p.speed*cos(p.heading)-side_speed*sin(p.heading))*dt
 		update_lap(p)
 		var next_node:Dictionary=track.sample(p.distance)
 		constrain_surface(p,next_node)
@@ -365,6 +369,8 @@ func resolve_contacts()->void:
 					b.slip=bv.x
 					a.speed=clampf(a.speed+normal.dot(Vector2(sin(a.heading),cos(a.heading)))*impulse,0,440)
 					b.speed=clampf(b.speed-normal.dot(Vector2(sin(b.heading),cos(b.heading)))*impulse,0,440)
+				Bump.strike(self,a,b,-normal)
+				Bump.strike(self,b,a,normal)
 		for p in racers:
 			if not p.airborne and not p.crashed: constrain_surface(p,track.sample(p.distance))
 		if not touching: break

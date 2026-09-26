@@ -50,6 +50,17 @@ func run()->void:
 		collector.weapon="";collector.weapon_before=pickup.distance-4.;collector.weapon_x_before=pickup.x;collector.x=pickup.x
 		race.weapons.collect(race,collector)
 		if "--pickup-respawn" in OS.get_cmdline_user_args(): race.weapons.begin_step(race,2.2,[{},{},{},{},{},{}])
+	if "--bump-showcase" in OS.get_cmdline_user_args():
+		race.weapons.missiles.clear();race.weapons.shots.clear()
+		for i in range(race.racers.size()):
+			var p:Dictionary=race.racers[i]
+			p.distance=start+[0.,0.,-40.,400.,500.,600.][i]
+			p.x=-4. if i==0 else 4. if i==1 else 0.
+			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.speed=200.
+		race.Bump.begin(race.racers[0],{"right":true},.01,0.)
+		race.racers[0].bump_time=.12
+		race.resolve_contacts()
+		assert(race.racers[1].energy==86.)
 	for view in game.views: game.world.update_camera(view.camera,view.index,0.,true)
 	for view in game.views: RenderingServer.viewport_set_measure_render_time(view.viewport.get_viewport_rid(),true)
 	var gpu:Array[float]=[]
@@ -77,6 +88,10 @@ func run()->void:
 		assert(game.world.weapon_vfx.pickup_lights[0].visible!=respawn)
 		assert(game.world.weapon_vfx.pickup_halos[0].visible!=respawn)
 		print("PICKUP_RENDER respawn=",respawn," collected=",race.racers[0].weapon)
+	if "--bump-showcase" in OS.get_cmdline_user_args():
+		assert(game.world.weapon_vfx.bump_jets[0].visible and not game.world.weapon_vfx.bump_jets[1].visible)
+		assert(game.world.weapon_vfx.shields[1].visible)
+		print("BUMP_RENDER contact damage and opposing thruster verified")
 	var output:="C:/dev/ion-rush-captures/controls/weapons-showcase.png"
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--output="): output=arg.trim_prefix("--output=")

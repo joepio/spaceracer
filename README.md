@@ -105,12 +105,13 @@ bar. A small route map appears in single-player; split-screen keeps that space c
 | Brake / slide | LT (analog) | S | Down |
 | Boost | B | Space | Ctrl |
 | Use pickup | X | X | Slash |
-| Strafe | Right stick left / right, or LB / RB | Q / E | Comma / Period |
+| Strafe / roll | Right stick left / right | — | — |
+| Side bump | LB / RB | Q / E | Comma / Period |
 | Grip / speed trim | Right stick forward / backward | Controller only | Controller only |
 | Reset when airborne or crashed | Y | 1 | 2 |
 | Pause / resume | Start | Escape | Escape |
 
-Keyboard P3: IJKL, U boost, Y/O strafe. P4: TFGH, R boost, V/B strafe.
+Keyboard P3: IJKL, U boost, Y/O bump. P4: TFGH, R boost, V/B bump.
 Keyboard recovery uses 3 for P3 and 4 for P4. Pickup use is P for P3 and C for P4.
 Standalone assigns connected controllers at race start and fills disconnected seats when a controller is paired later. Other connected players keep their seats. Keyboard controls also work.
 
@@ -220,7 +221,7 @@ adhesion quickly and leaves a slide after release; the nose responds faster than
 the lateral momentum. Grip returns slowly, with forward trim and countersteering
 helping catch the slide. Dorsal airbrakes open and orange forward-facing reverse
 jets fire with brake pressure; a brief visual decay keeps short taps readable.
-LB/RB and the right stick's horizontal axis strafe without steering the nose.
+The right stick's horizontal axis strafes without steering the nose. LB/RB trigger a short left/right side bump: 14 shield damage on side contact, once per rival per attack, with a shared 0.9-second cooldown. Release and press again to attack; bumps require being on the track and engines enabled.
 At low speed, left-stick steering can rotate the craft through full circles and
 holds its heading when released. Track alignment assistance fades in with speed;
 there is no hard heading clamp. Thrust and strafing follow the craft's facing,
@@ -235,7 +236,7 @@ input releases into independent flight, carrying the actual track velocity and
 attitude through takeoff with no added kick. Crests can also unload adhesion.
 
 In flight, right stick forward/back pitches down/up, left stick left/right controls
-yaw through the rudders, and right stick left/right (or LB/RB) rolls via the wing
+yaw through the rudders, and right stick left/right rolls via the wing
 ailerons. The same fin mapping is visible while driving. These are
 independent body-axis controls: roll sets bank, with no forced levelling or hidden
 yaw. Bank and pull back to turn like a fighter. LT acts as an air brake. Angular

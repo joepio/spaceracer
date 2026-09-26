@@ -71,16 +71,14 @@ func _draw() -> void:
 	elif p.trim>.2: status="Grip"
 	elif p.trim<-.2: status="Low grip"
 	if p.warp_time>0.: status="Autopilot"
-	if race.can_reset(p) and p.landing_assist<=0.:
+	if race.can_reset(p):
 		centered("Reset" if OS.has_feature("android") else "Y to reset",w,h*.80,12,Color("ffd08a"))
 	label(status,Vector2(w-176,h-10),9,energy_color if p.lap>1 else Color("8b9eac"))
 	if show_map: minimap(Vector2(61,h-48),44)
 	var item:String=race.Weapons.NAMES.get(p.weapon,"")
-	if p.landing_fx>0.: item="LANDING ASSIST"
-	elif p.warp_time>0.: item="WARP  %.1f"%p.warp_time
+	if p.warp_time>0.: item="WARP  %.1f"%p.warp_time
 	elif p.drone_time>0.: item="SENTRY  %.1f"%p.drone_time
 	elif p.jammer_time>0.: item="JAMMER  %.1f"%p.jammer_time
-	elif p.weapon=="landing": item="AUTO · Landing assist"
 	elif not item.is_empty(): item=("" if OS.has_feature("android") else "X · ")+item
 	var item_flash:bool=p.pickup_fx>0. and not p.pickup_energy
 	if not item.is_empty(): centered(item,w,h-25,14 if item_flash else 12,Color("d8ffac") if item_flash else Color("97ffdf"))

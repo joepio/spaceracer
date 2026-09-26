@@ -65,8 +65,6 @@ func run()->void:
 	Flight.integrate_air(target,.05,.5,.5,1.,0.)
 	Flight.integrate_air(powered,.05,.5,.5,1.,0.)
 	check(target.air_velocity.distance_to(powered.air_velocity)>1. and target.air_rates.length()>0.,"Airborne EMP cuts engine force while keeping aerodynamic controls")
-	target.weapon="landing";target.landing_assist=0.
-	check(not Flight.guide_landing(target,race.track,.01) and target.weapon=="landing","Landing booster pickup waits for engines to reboot")
 	Flight.crash(target)
 	check(target.emp_time==0.,"Crash clears disabled-engine state")
 	race=fresh();race.countdown=.1

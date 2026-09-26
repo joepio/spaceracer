@@ -2,7 +2,7 @@ extends RefCounted
 ## Race-owned, deterministic combat. No rendering or wall-clock dependencies.
 const Track=preload("res://src/track.gd")
 const Flight=preload("res://src/flight.gd")
-const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry drone","landing":"Landing assist","emp":"EMP","jammer":"Jammer"}
+const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry drone","emp":"EMP","jammer":"Jammer"}
 const WARP_DURATION:=2.8
 const JAMMER_RANGE:=260.
 const JAMMER_HALF_ANGLE:=28.
@@ -43,7 +43,7 @@ static func initialize(p:Dictionary)->void:
 	p.merge({"weapon":"","fire_held":false,"weapon_acquired":0.,"warp_time":0.,"warp_age":0.,"warp_fx":0.,
 		"drone_time":0.,"drone_cooldown":0.,"drone_target":-1,"shield_hit":0.,"weapon_guard":0.,
 		"missile_warning":0.,"evade_notice":0.,"last_jink":-10.,"jinking":false,"combat_g":0.,
-		"landing_assist":0.,"landing_fx":0.,"landing_damage":0.,"emp_time":0.,"emp_guard":0.,
+		"landing_damage":0.,"emp_time":0.,"emp_guard":0.,
 		"jammer_time":0.,"jammer_deploy":0.,"jam_strength":0.,"pickup_fx":0.,"pickup_pose":Transform3D.IDENTITY,
 		"pickup_energy":false,"energy_fx":0.,"energy_gained":0.},true)
 
@@ -61,10 +61,9 @@ static func weights(rank:int,count:int)->Vector3:
 func choose(rank:int,count:int)->String:
 	var odds:=weights(rank,count)
 	var roll:=rng.randf()
-	if roll<.18: return "landing"
-	if roll<.34: return "emp"
-	if roll<.48: return "jammer"
-	roll=(roll-.48)/.52
+	if roll<.16: return "emp"
+	if roll<.30: return "jammer"
+	roll=(roll-.30)/.70
 	return "missile" if roll<odds.x else ("warp" if roll<odds.x+odds.y else "drone")
 
 func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
@@ -78,7 +77,6 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 		p.shield_hit=maxf(0.,p.shield_hit-dt)
 		p.weapon_guard=maxf(0.,p.weapon_guard-dt)
 		p.evade_notice=maxf(0.,p.evade_notice-dt)
-		p.landing_fx=maxf(0.,p.landing_fx-dt)
 		p.pickup_fx=maxf(0.,p.pickup_fx-dt)
 		p.energy_fx=maxf(0.,p.energy_fx-dt)
 		p.emp_time=maxf(0.,p.emp_time-dt)
@@ -90,7 +88,7 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 		if race.countdown<=0. and fire and not p.fire_held: activate(race,i)
 		p.fire_held=fire
 		if not available(p):
-			p.weapon="";p.warp_time=0.;p.drone_time=0.;p.drone_target=-1;p.landing_assist=0.
+			p.weapon="";p.warp_time=0.;p.drone_time=0.;p.drone_target=-1
 			p.emp_time=0.
 			p.jammer_time=0.
 		p.jammer_deploy=move_toward(p.jammer_deploy,1. if p.jammer_time>0. else 0.,dt*5.)
@@ -178,7 +176,6 @@ func step_emp(race:RefCounted,dt:float)->void:
 					Flight.launch(p,race.track.sample(p.distance),race.clock)
 				p.emp_time=EMP_DURATION;p.emp_guard=EMP_DURATION+2.
 				p.warp_time=0.;p.boost=0.;p.on_pad=false
-				p.landing_assist=0.;p.landing_fx=0.
 				p.engine_power=0.;p.thrust=0.;p.acceleration=0.;p.input_throttle=0.;p.brake_vfx=0.
 		if pulse.age>1.05: pulses.erase(pulse)
 

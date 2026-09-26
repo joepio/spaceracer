@@ -12,8 +12,6 @@ var explosions:Array[MeshInstance3D]=[]
 var blast_lights:Array[OmniLight3D]=[]
 var smoke:MultiMesh
 var smoke_count:=0
-var guidance:Array[Node3D]=[]
-var guidance_material:ShaderMaterial
 var emp_fields:Array[MeshInstance3D]=[]
 var emp_rings:Array[MeshInstance3D]=[]
 var emp_arcs:Array[MeshInstance3D]=[]
@@ -66,9 +64,7 @@ func configure(state:RefCounted)->void:
 	race=state
 	steel=material(Color("283b50"));mint=material(Color("59ffda"),1.8)
 	flame=material(Color("ffac42"),3.);laser_material=material(Color("ff385e"),2.8)
-	guidance_material=ShaderMaterial.new();guidance_material.shader=load("res://src/plasma.gdshader")
-	guidance_material.set_shader_parameter("jet_tint",Vector3(.08,.9,.7))
-	bump_material=guidance_material.duplicate() as ShaderMaterial
+	bump_material=ShaderMaterial.new();bump_material.shader=load("res://src/plasma.gdshader")
 	bump_material.set_shader_parameter("jet_tint",Vector3(1.,.35,.06))
 	# Three instanced materials for every battery: housing, charge bars, white +.
 	battery_batch([[Vector3(2.8,3.9,1.8),Vector3.ZERO],[Vector3(1.1,.45,1.),Vector3(0,2.15,0)]],material(Color("263342")))
@@ -116,15 +112,6 @@ func configure(state:RefCounted)->void:
 		var arc_mat:=pulse_mat.duplicate() as ShaderMaterial
 		arc_mat.set_shader_parameter("shutdown",true)
 		emp_arcs.append(mesh(self,sphere(1.),arc_mat))
-		var boosters:=Node3D.new();add_child(boosters);guidance.append(boosters)
-		for side in [-1.,1.]:
-			for end in [-1.,1.]:
-				var nozzle:=Vector3(side*3.4,-.4,end*2.2)
-				mesh(boosters,sphere(.35),material(Color("dfffff"),4.),nozzle)
-				for angle in [0.,PI*.5]:
-					var ribbon:=QuadMesh.new();ribbon.size=Vector2(1.4,4.6)
-					var jet:=mesh(boosters,ribbon,guidance_material,nozzle+Vector3.DOWN*2.3)
-					jet.rotation.y=angle
 		var drone:=Node3D.new();add_child(drone);drones.append(drone)
 		mesh(drone,box(Vector3(1.5,.65,2.)),steel)
 		mesh(drone,sphere(.35),mint,Vector3(0,.05,1.))
@@ -214,7 +201,6 @@ func puff(position_value:Vector3,radius:float,opacity:float,heat:float,seed_valu
 func update()->void:
 	var time:float=race.vfx_clock
 	smoke_count=0
-	guidance_material.set_shader_parameter("race_time",time)
 	bump_material.set_shader_parameter("race_time",time)
 	for i in range(race.weapons.batteries.size()):
 		var battery:Dictionary=race.weapons.batteries[i]
@@ -298,10 +284,6 @@ func update()->void:
 		arcs.transform=frame.scaled_local(Vector3(5.3,2.3,5.8))
 		arcs.material_override.set_shader_parameter("age",time+p.slot)
 		arcs.material_override.set_shader_parameter("strength",minf(1.,p.emp_time*4.))
-		var boosters:=guidance[i]
-		boosters.visible=p.landing_fx>0. and not p.crashed
-		boosters.transform=frame
-		boosters.scale=Vector3(1.,clampf(p.landing_fx/.5,0.,1.)*(1.+sin(time*67.)*.12),1.)
 		var drone:=drones[i];drone.visible=p.drone_time>0. and not p.crashed
 		drone.transform=Transform3D(frame.basis.scaled(Vector3.ONE*1.35),Weapons.drone_position(race,p))
 		if drone.visible:

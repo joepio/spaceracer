@@ -129,7 +129,6 @@ static func crash(p:Dictionary,normal:Vector3=Vector3.ZERO)->void:
 	p.unload=0.0
 	p.thrust=0.;p.engine_power=0.;p.acceleration=0.;p.braking=0.
 	p.input_throttle=0.;p.input_steer=0.;p.input_pitch=0.;p.input_strafe=0.;p.input_brake=0.
-	p.landing_assist=0.;p.landing_fx=0.
 	p.emp_time=0.
 
 static func touchdown_damage(frame:Basis,surface:Basis,velocity:Vector3)->float:
@@ -140,40 +139,10 @@ static func touchdown_damage(frame:Basis,surface:Basis,velocity:Vector3)->float:
 	var sideways:=maxf(0.,absf(velocity.dot(surface.x))-18.)
 	return minf(18.,impact*.10+pow(tilt,1.35)*5.+sideways*.035)
 
-static func engage_landing_assist(p:Dictionary)->void:
-	p.weapon="";p.landing_assist=1.;p.landing_fx=.65
-
-static func guide_landing(p:Dictionary,track:RefCounted,dt:float)->bool:
-	if p.get("emp_time",0.)>0.: return false
-	if p.get("weapon","")!="landing" and p.get("landing_assist",0.)<=0.: return false
-	var hit:Dictionary=track.project(p.air_position,p.distance,p.air_travel*1.35+100.)
-	var n:Dictionary=hit.node
-	var surface:=Track.surface_frame(n,hit.lateral)
-	var height:float=(p.air_position-Track.point(n,hit.lateral)).dot(surface.y)-HOVER
-	var descent:float=-p.air_velocity.dot(surface.y)
-	var legal:bool=hit.distance-p.distance<=p.air_travel*1.05+25.
-	if p.landing_assist<=0.:
-		if p.air_time<=.10 or not Track.supported(n,hit.lateral,5.8) or not legal: return false
-		if height<=0. or height>80. or descent<=2. or height/descent>.30: return false
-		engage_landing_assist(p)
-	p.landing_assist=maxf(0.,p.landing_assist-dt)
-	if not Track.supported(n,hit.lateral,5.8) or not legal or height< -2.: return false
-	# Guidance counters rotation, lateral slip and descent with visible lift jets.
-	p.landing_fx=.65
-	p.air_frame=p.air_frame.slerp(surface,1.-exp(-dt*24.)).orthonormalized()
-	p.air_rates=Vector3.ZERO;p.trim=0.
-	var forward:=clampf(p.air_velocity.dot(surface.z),80.,AIR_SPEED)
-	var vertical:float=minf(-8.,-maxf(0.,height)*8.)
-	var target_velocity:=surface.z*forward+surface.y*vertical
-	p.air_velocity=p.air_velocity.lerp(target_velocity,1.-exp(-dt*30.))
-	p.air_position+=p.air_velocity*dt
-	p.speed=p.air_velocity.length()
-	return true
-
 static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float,throttle:float,brake:float)->void:
 	p.air_time+=dt
 	var previous:Vector3=p.air_position
-	if not guide_landing(p,track,dt): integrate_air(p,dt,strafe,steer,throttle,brake)
+	integrate_air(p,dt,strafe,steer,throttle,brake)
 	var position:Vector3=p.air_position
 	if track.get("obstacles")!=null:
 		var contact:Dictionary=track.obstacles.trace(previous,position)
@@ -200,13 +169,6 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 	var inside:=Track.supported(n,nearest.lateral,5.8)
 	var legal_progress:bool=nearest.distance-p.distance<=p.air_travel*1.05+25.
 	if p.air_time>.10 and inside and before>0 and after<=0:
-		# A swept crossing catches a very fast approach or a deck starting this tick.
-		if legal_progress and p.get("weapon","")=="landing" and p.get("emp_time",0.)<=0.: engage_landing_assist(p)
-		var assisted:bool=p.get("landing_assist",0.)>0. and legal_progress
-		if assisted:
-			frame=surface;p.air_frame=surface;p.air_rates=Vector3.ZERO
-			velocity=surface.z*clampf(velocity.dot(surface.z),80.,AIR_SPEED)
-			p.air_velocity=velocity;p.lift_speed=0.;p.landing_assist=0.;p.landing_fx=.65
 		var nose_alignment:float=frame.z.dot(surface.z)
 		var upright:float=frame.y.dot(surface.y)
 		var approach:float=velocity.dot(surface.z)
@@ -215,7 +177,7 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 		# touchdown still costs speed/energy; steep or misaligned impacts crash.
 		var descent_limit:=140. if landing_pad else 115.
 		if nose_alignment>.4 and upright>.4 and p.lift_speed> -descent_limit and approach>45 and legal_progress:
-			var damage:=0. if assisted else touchdown_damage(frame,surface,velocity)
+			var damage:=touchdown_damage(frame,surface,velocity)
 			p.landing_damage=damage
 			p.energy=maxf(0.,p.energy-damage)
 			p.flash=maxf(p.flash,minf(.4,damage*.015))

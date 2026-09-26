@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ds83m8hwss34r"
-path.s3tc="res://.godot/imported/LeafSet014_1K-JPG_NormalGL.jpg-433d91d1b890ed2d8ccbbeaf0941a9cb.s3tc.ctex"
-path.etc2="res://.godot/imported/LeafSet014_1K-JPG_NormalGL.jpg-433d91d1b890ed2d8ccbbeaf0941a9cb.etc2.ctex"
+uid="uid://bctumuuwgkoph"
+path.s3tc="res://.godot/imported/Tree_1Mat_metallicRoughness.png-f30d2c325711f53bb0fe77e9fdf6faca.s3tc.ctex"
+path.etc2="res://.godot/imported/Tree_1Mat_metallicRoughness.png-f30d2c325711f53bb0fe77e9fdf6faca.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/forest/LeafSet014_1K-JPG_NormalGL.jpg"
-dest_files=["res://.godot/imported/LeafSet014_1K-JPG_NormalGL.jpg-433d91d1b890ed2d8ccbbeaf0941a9cb.s3tc.ctex", "res://.godot/imported/LeafSet014_1K-JPG_NormalGL.jpg-433d91d1b890ed2d8ccbbeaf0941a9cb.etc2.ctex"]
+source_file="res://assets/forest/authored/pine-tree-1/textures/Tree_1Mat_metallicRoughness.png"
+dest_files=["res://.godot/imported/Tree_1Mat_metallicRoughness.png-f30d2c325711f53bb0fe77e9fdf6faca.s3tc.ctex", "res://.godot/imported/Tree_1Mat_metallicRoughness.png-f30d2c325711f53bb0fe77e9fdf6faca.etc2.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
-compress/normal_map=1
+compress/normal_map=0
 compress/channel_pack=0
 mipmaps/generate=true
 mipmaps/limit=-1

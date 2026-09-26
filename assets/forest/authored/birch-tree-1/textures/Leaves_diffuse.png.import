@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://7gw8rbivnkas"
-path.s3tc="res://.godot/imported/Bark007_1K-JPG_Color.jpg-f8e290ba502c09dddea30100a6c6b82d.s3tc.ctex"
-path.etc2="res://.godot/imported/Bark007_1K-JPG_Color.jpg-f8e290ba502c09dddea30100a6c6b82d.etc2.ctex"
+uid="uid://smos32brl8y1"
+path.s3tc="res://.godot/imported/Leaves_diffuse.png-a840b3a26e023427ab5afc5919de2ff0.s3tc.ctex"
+path.etc2="res://.godot/imported/Leaves_diffuse.png-a840b3a26e023427ab5afc5919de2ff0.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/forest/Bark007_1K-JPG_Color.jpg"
-dest_files=["res://.godot/imported/Bark007_1K-JPG_Color.jpg-f8e290ba502c09dddea30100a6c6b82d.s3tc.ctex", "res://.godot/imported/Bark007_1K-JPG_Color.jpg-f8e290ba502c09dddea30100a6c6b82d.etc2.ctex"]
+source_file="res://assets/forest/authored/birch-tree-1/textures/Leaves_diffuse.png"
+dest_files=["res://.godot/imported/Leaves_diffuse.png-a840b3a26e023427ab5afc5919de2ff0.s3tc.ctex", "res://.godot/imported/Leaves_diffuse.png-a840b3a26e023427ab5afc5919de2ff0.etc2.ctex"]
 
 [params]
 

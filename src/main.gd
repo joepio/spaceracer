@@ -592,7 +592,7 @@ func make_menu()->void:
 		right.pressed.connect(adjust_menu.bind(id,1))
 		row.add_child(right)
 		if id=="seed": menu_button(content,"random","Random seed",randomize_menu_seed)
-	menu_button(content,"controls","Controls",func(): show_menu_controls=not show_menu_controls;make_menu())
+	menu_button(content,"controls","Controls & credits",func(): show_menu_controls=not show_menu_controls;make_menu())
 	if local_paused:
 		menu_button(content,"restart","Restart race",func(): finish_seed_edit();next_seed=selected_seed;start_local())
 	if show_menu_controls:
@@ -604,6 +604,14 @@ func make_menu()->void:
 		reference.add_child(help)
 		menu_label(help,"CONTROLS",24)
 		menu_label(help,"RT / A  Throttle     LT  Brake     B  Boost\nLeft stick  Steer / yaw\nRight stick  Strafe / roll · Grip / pitch\nY  Reset     Start  Pause\n\nKeyboard  WASD · Space · Q / E · 1",20)
+		var credits:=RichTextLabel.new()
+		credits.bbcode_enabled=true
+		credits.fit_content=true
+		credits.custom_minimum_size.x=470
+		credits.add_theme_font_size_override("normal_font_size",14)
+		credits.text="\nFOREST ART · [url=https://creativecommons.org/licenses/by/4.0/]CC BY 4.0[/url]\n[url=https://sketchfab.com/3d-models/pine-tree-d45218a3fab349e5b1de040f29e7b6f9]Pine Tree[/url] — evolveduk\n[url=https://sketchfab.com/3d-models/tree-bake-upload-4e78d13152cf4214a256230765f6d6d3]Tree Bake Upload[/url] — restlessmonkey\n[url=https://github.com/GamesNotDeveloped/godot-forest-demo]Godot forest demo[/url] — GamesNotDeveloped\nAdapted materials, textures and scale for Ion Rush."
+		credits.meta_clicked.connect(func(url:Variant): OS.shell_open(str(url)))
+		help.add_child(credits)
 	menu_label(content,"↑ ↓  Select     ‹ ›  Adjust     Start  Play",14,Color("91a8b7"))
 	refresh_menu_values()
 	for i in range(menu_rows.size()):

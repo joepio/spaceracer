@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d4gblrfrgaykl"
-path.s3tc="res://.godot/imported/LeafSet014_1K-JPG_Opacity.jpg-44a8030a12509f3dc84d68acf13e7699.s3tc.ctex"
-path.etc2="res://.godot/imported/LeafSet014_1K-JPG_Opacity.jpg-44a8030a12509f3dc84d68acf13e7699.etc2.ctex"
+uid="uid://cqdl3gclpygic"
+path.s3tc="res://.godot/imported/Tree_0Mat_normal.png-8dd2cb789f437795e1ef7fb840d9bb20.s3tc.ctex"
+path.etc2="res://.godot/imported/Tree_0Mat_normal.png-8dd2cb789f437795e1ef7fb840d9bb20.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/forest/LeafSet014_1K-JPG_Opacity.jpg"
-dest_files=["res://.godot/imported/LeafSet014_1K-JPG_Opacity.jpg-44a8030a12509f3dc84d68acf13e7699.s3tc.ctex", "res://.godot/imported/LeafSet014_1K-JPG_Opacity.jpg-44a8030a12509f3dc84d68acf13e7699.etc2.ctex"]
+source_file="res://assets/forest/authored/pine-tree-1/textures/Tree_0Mat_normal.png"
+dest_files=["res://.godot/imported/Tree_0Mat_normal.png-8dd2cb789f437795e1ef7fb840d9bb20.s3tc.ctex", "res://.godot/imported/Tree_0Mat_normal.png-8dd2cb789f437795e1ef7fb840d9bb20.etc2.ctex"]
 
 [params]
 

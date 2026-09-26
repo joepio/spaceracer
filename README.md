@@ -39,18 +39,22 @@ the code; both appear beside the seed in the HUD and results.
 **World** switches between the neon **City** and **Forest — Verdant Reach**.
 The forest has a bright blue daytime sky, soft procedural clouds and warm sunlight.
 It races over a reflective lake beneath a dense canopy dominated by 340–650 metre trees.
-Six crown shapes, independent trunk/canopy proportions, smaller 80–340 metre trees,
-mossy islands and more than 5,000 varied ferns break up repetition in the checked seeds.
-Photographed CC0 leaf and bark maps come from ambientCG; provenance is in
-`third_party/ambientcg/README.txt`. Cutout foliage uses mipmaps and two mesh detail
-levels, including simpler distant trunks. Lower ambient fill, correctly oriented leaf and trunk normals
-and directional shadows keep the shaded sides dark, including on Android.
+Authored pine and birch models replace the homemade tree generator. Random rotation,
+subtle proportions, smaller 80–340 metre trees, mossy islands and more than 5,000
+varied ferns break up repetition in the checked seeds. Models come from the
+[Godot Procedural Forest Demo](https://github.com/GamesNotDeveloped/godot-forest-demo):
+**Pine Tree by evolveduk** and **Tree Bake Upload by restlessmonkey**, both CC BY 4.0.
+Sources, original credits and license are in `third_party/forest-demo`; in-game
+credits are under Controls & credits. Modified scale, materials and textures.
+Imported meshes use Godot-generated LODs, spatial MultiMesh batches, compressed
+mipmapped textures and depth-writing alpha cutouts. Lower ambient fill and
+real directional shadows keep shaded sides dark, including on Android.
 Water uses two scrolling ripple-normal samples, low swells and a seeded 512px
 shoreline map for shallows, with existing sky/probe reflections and desktop SSR.
 It needs no extra reflection camera or per-frame CPU water simulation. Lower hills bring portions of the
 course nearer the water, while the loops and difficulty-dependent flight gaps
-remain. Foliage and ripples follow the race clock; hitting the water crashes the
-craft and waits for Y to reset. Geometry is procedural and instanced; no asset downloads are needed.
+remain. Undergrowth and ripples follow the race clock; hitting the water crashes the
+craft and waits for Y to reset. Placement is seeded and instanced; authored models are bundled for offline play.
 Selecting a world updates the menu preview without changing the chosen seed.
 GameNight exposes **World (next race)**, and standalone accepts `--biome=forest`
 or `--biome=city` after `--`.
@@ -359,7 +363,7 @@ The portable development package includes the official Godot editor executable
 as a runtime plus the game PCK, so no export templates are needed. For smaller
 release builds install Godot export templates and export the provided Windows
 Desktop preset. Code and geometric artwork are original, under this repository’s
-[MIT license](LICENSE). Godot's license and bundled dependency notices are in `third_party`.
+[MIT license](LICENSE). Authored forest models use CC BY 4.0 (see credits above). Godot's license and bundled dependency notices are in `third_party`.
 
 To launch through a local Windows GameNight host, point the daemon at the shelf
 emitted for this build (keep that build directory in place):

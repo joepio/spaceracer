@@ -1,57 +1,53 @@
-# Forest foliage, water and lighting pass — 2026-09-26
+# Authored forest replacement — 2026-09-26
 
-Seed 31, Forest/Hard. Static view at 7% of the circuit, 100 warm-up frames and
-180 sampled frames. RTX 5070 Ti, Ryzen 9 5900X; existing playtest/background work
-left running. These are desktop measurements, not Samsung Tab S9+ results.
-VSync limits whole-frame timings to about 8.33 ms, so compare measured viewport
-GPU/CPU times and geometry rather than claiming an FPS improvement.
+The rejected procedural branch/crown meshes are removed. Forest now instances the
+Pine Tree (evolveduk) and Tree Bake Upload birch (restlessmonkey) from the existing
+GamesNotDeveloped Godot Procedural Forest Demo, pinned to commit
+623212ffeb4efbf4c95323a4a6a57e726be4f6e9. Both models are CC BY 4.0; original
+licenses, source links and adaptation details are in third_party/forest-demo.
+Credits are also available in the game on Windows and Android.
 
-| Renderer | Before GPU | After GPU | Before CPU | After CPU | Before primitives | After primitives | Before / after draws |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Forward+, 1600×1000 | 1.298 ms | 1.654 ms | 1.241 ms | 0.821 ms | 2,089,156 | 2,107,104 | 385 / 438 |
-| Mobile, 1280×800 | 0.356 ms | 0.789 ms | 0.644 ms | 0.566 ms | 1,606,560 | 1,830,096 | 305 / 385 |
+Imported scene transforms are preserved and normalized to unit height. Authored
+meshes and generated Godot LODs are cached, then shared in spatial MultiMeshes.
+No runtime mesh generation or asset downloads. The seeded layout mixes 70% pine
+and 30% birch, varied rotation, modest width variation, and 80–650 metre heights.
+Seed 31 contains 929 trees and 5,025 ferns; seed 421 contains 942 and 5,152.
+Actual transformed mesh envelopes protect track and jump corridors. Trunk
+sections remain solid collision obstacles; foliage cards remain flyable.
 
-After: 971 trees (up from 865) and 5,319 ferns. Most trees are 340–650 metres tall;
-six silhouettes and an 80–340 metre lower layer add variation without losing the
-huge-forest theme. Photographed CC0 leaf/bark textures are bundled with provenance.
-Distant foliage has under half the vertices; distant wood uses a third of the
-near mesh's longitudinal divisions. Smooth trunk/crown normals, lower ambient
-fill and short-range mobile shadows address washed-out shaded sides.
+Textures are capped at 1024px, VRAM compressed for desktop and Android, with
+mipmaps. Foliage writes depth with alpha scissor, receives directional light and
+casts shadows. No emissive or backlight hack. Birch materials were converted from
+the old specular/gloss workflow to rough nonmetallic PBR; pine needles receive a
+muted green tint. Existing reflective water and sky remain.
 
-The intermediate dense version cost 2.801 ms GPU and 3,350,580 primitives in the
-same desktop view; mipmaps, simpler distant meshes and removing unnecessary
-trunk segments brought that to the final values above. GPU cost remains higher
-than the old sparse, untextured forest, especially with mobile shadows enabled.
-The water uses dielectric shading, two mipmapped ripple samples, shallow swells,
-a baked shoreline field and the existing three once-captured reflection probes.
+## Fixed native benchmark
 
-Reproduce the final view with Godot 4.5.2:
+Same seed 31, hard Forest, fixed 7%-of-track camera from tests/forest_render.gd.
+100 warmup frames, 180 samples. RTX 5070 Ti / Ryzen 5900X, live playtest and other
+background processes left running. Timings are scene viewport render cost,
+not a tablet FPS guarantee. Vsync caps median frame interval around 8.33 ms.
+
+| Renderer | Internal resolution | GPU median | CPU render median | Draws | Primitives |
+| --- | --- | --- | --- | --- | --- |
+| Forward+ | 1600×1000 | 1.631 ms | 0.620 ms | 305 | 3,510,841 |
+| Mobile on desktop GPU | 1280×800 | 0.617 ms | 0.390 ms | 269 | 2,841,471 |
+
+The first uncompressed/unmipmapped authored-tree pass cost ~2.945 ms GPU. The final
+textures reduce bandwidth and foliage shimmer without replacing the tree meshes.
+Actual Samsung Tab S9+ timing remains unmeasured.
+
+Validation: tests/forest.gd checks density, shared meshes, normalized transforms,
+seed determinism, course clearance and water/reset behavior: 2,555 checks, no
+failures, 72/72 bot finishers. tests/world_jumps.gd: 40 checks, no failures.
+The foliage material lighting fixture verifies a dark underside (17.5% of lit-top
+luminance on Forward+). Native screenshots verify complete imported trees.
+
+Reproduce:
 
 ```powershell
 godot --path . --audio-driver Dummy --resolution 1600x1000 --script tests/forest_render.gd -- --demo --seed=31 --difficulty=hard --biome=forest --tag=desktop
 godot --path . --rendering-method mobile --audio-driver Dummy --resolution 1600x1000 --script tests/forest_render.gd -- --demo --touch --seed=31 --difficulty=hard --biome=forest --tag=mobile
 ```
 
-Screenshots default to `build/forest-<tag>.png`; `--output=<absolute path>` overrides
-this. Actual tablet thermals/frame rate still require device testing.
-
-Validation: `tests/forest.gd` checks determinism, dominant giant-tree density,
-variation, LOD clearance identity, race-clock animation, route clearance and
-water crashes, then runs 72 AI finishers across worlds' difficulty/seed cases.
-`tests/world_jumps.gd` covers actual scenery collision on both forest and city jumps.
-
-## Leaf underside correction
-
-The initial pass still had inverted winding on canopy interiors and trunks,
-and radial crown normals on flat leaf cards. With two-sided rendering these
-could turn the underside toward the sun. The corrected geometry uses clockwise
-faces with matching outward normals, and leaf normals follow each card plane.
-Artificial leaf/fern backlighting is removed. Canopy filler has darker, occluded
-interior shading and no specular highlight. Ambient/sun settings are unchanged.
-
-`tests/foliage_lighting.gd` checks winding/normal agreement across all six models
-and both detail levels, then renders the same leaf from above and below under
-one overhead light. On Forward+ the underside/top luminance ratio is 0.156;
-on Mobile it is 0.146 (required below 0.35). Both checks passed. Run natively
-with `--script tests/foliage_lighting.gd`; add `--rendering-method mobile` for Mobile.
-Headless mode runs only the geometry checks.
+Screenshots default to build/forest-<tag>.png; --output=<absolute path> overrides.

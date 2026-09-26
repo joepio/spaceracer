@@ -11,11 +11,13 @@ func check(ok:bool,message:String)->void:
 		if failures<12: push_error(message)
 func _initialize()->void: call_deferred("run")
 func run()->void:
-	for variant in range(6):
-		var near_model:=Forest.model(variant)
-		var far_model:=Forest.model(variant,true)
-		check(near_model.bounds==far_model.bounds,"LOD preserves exact crown placement and clearance")
-		check(far_model.leaves.surface_get_array_len(0)<near_model.leaves.surface_get_array_len(0)*.5,"Distant foliage cuts vertex work by at least half")
+	for variant in range(Forest.Assets.PATHS.size()):
+		var model:=Forest.Assets.model(variant)
+		check(not model.solids.is_empty(),"Authored trees retain solid trunk collision")
+		for part in model.parts:
+			var bounds:AABB=part.transform*part.mesh.get_aabb()
+			check(bounds.position.y>=-.001 and bounds.end.y<=1.001,"Imported scene hierarchy normalizes to one metre tall")
+			check(part.mesh==Forest.Assets.model(variant).parts[model.parts.find(part)].mesh,"Instances share cached imported meshes")
 	for seed_value in [31,421]:
 		var race:=Race.new([{"slot":0}],seed_value,1,"hard","forest")
 		var stage:=Node3D.new();root.add_child(stage)
@@ -33,7 +35,7 @@ func run()->void:
 		for tree in forest.trees:
 			variants[tree.variant]=true
 			smallest=minf(smallest,tree.height);tallest=maxf(tallest,tree.height)
-		check(variants.size()==6 and tallest/smallest>5.,"Six silhouettes and a broad height spread")
+		check(variants.size()==Forest.Assets.PATHS.size() and tallest/smallest>5.,"Both authored species and a broad height spread")
 		check(forest.shore_image.get_width()==512,"Shoreline baking uses a bounded texture budget")
 		var vegetation:Array[AABB]=[]
 		for tree in forest.trees:
@@ -52,7 +54,7 @@ func run()->void:
 					if bounds.has_point(p): blocked=true;break
 				check(not blocked,"Trees, crowns and ferns keep the complete route clear")
 		forest.animate(3.5)
-		check(forest.water.get_shader_parameter("race_time")==3.5 and forest.foliage.get_shader_parameter("race_time")==3.5,"Water and foliage use the pausable race clock")
+		check(forest.water.get_shader_parameter("race_time")==3.5 and forest.understory.get_shader_parameter("race_time")==3.5,"Water and undergrowth use the pausable race clock")
 		var pilot:Dictionary=race.racers[0]
 		pilot.airborne=true;pilot.air_time=.5;pilot.distance=100.
 		pilot.air_position=race.track.sample(100.).p;pilot.air_position.y=forest.water_level-1.

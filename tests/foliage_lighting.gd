@@ -26,20 +26,10 @@ func luminance(viewport:SubViewport)->float:
 	return sum/(56.*56.)
 
 func run()->void:
-	# Winding and authored normals must agree before the renderer flips backsides.
-	for variant in range(6):
-		for low_detail in [false,true]:
-			var model:=Forest.model(variant,low_detail)
-			for part in ["wood","leaves"]:
-				var arrays:Array=model[part].surface_get_arrays(0)
-				var points:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
-				var normals:PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
-				var invalid:=0
-				for i in range(0,points.size(),3):
-					var clockwise:Vector3=(points[i+2]-points[i]).cross(points[i+1]-points[i])
-					if clockwise.length_squared()<1.e-16: continue
-					if clockwise.dot(normals[i]+normals[i+1]+normals[i+2])<=0.: invalid+=1
-				check(invalid==0,"%s variant %d low=%s has %d inverted faces"%[part,variant,low_detail,invalid])
+	for variant in range(Forest.Assets.PATHS.size()):
+		for part in Forest.Assets.model(variant).parts:
+			check(not part.material.backlight_enabled and not part.material.emission_enabled,"Authored foliage must not emit or glow through its underside")
+			if part.leaves: check(part.material.transparency==BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR,"Leaves use depth-writing cutouts")
 	if DisplayServer.get_name()=="headless":
 		print("FOLIAGE_GEOMETRY ",failures," failures (render contrast requires native renderer)")
 		quit(1 if failures else 0)
@@ -61,17 +51,17 @@ func run()->void:
 	sun.rotation_degrees.x=-90.
 	sun.light_energy=1.65
 	viewport.add_child(sun)
-	var surface:=SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	Forest.leaf_card(surface,Vector3.ZERO,Vector3.RIGHT,Vector3.BACK,0,Color.WHITE)
-	surface.generate_tangents()
 	var leaf:=MeshInstance3D.new()
-	leaf.mesh=surface.commit()
-	var material:=ShaderMaterial.new()
-	material.shader=load("res://src/forest_leaves.gdshader")
-	material.set_shader_parameter("leaf_color",solid_texture(Color(.5,.7,.2)))
-	material.set_shader_parameter("leaf_mask",solid_texture(Color.WHITE))
-	material.set_shader_parameter("leaf_normal",solid_texture(Color(.5,.5,1.)))
+	leaf.mesh=PlaneMesh.new()
+	# Test the actual imported foliage material settings with a uniform albedo
+	# fixture, isolating top/bottom light response from leaf texture coverage.
+	var material:StandardMaterial3D
+	for part in Forest.Assets.model(0).parts:
+		if part.leaves: material=part.material.duplicate()
+	material.albedo_texture=solid_texture(Color(.5,.7,.2))
+	material.albedo_color=Color.WHITE
+	material.normal_enabled=false
+	material.roughness_texture=null
 	leaf.material_override=material
 	viewport.add_child(leaf)
 	var camera:=Camera3D.new()

@@ -238,11 +238,16 @@ func build_jump_markers()->void:
 			for side in [-1.,1.]:
 				box(frame,Vector3(side*(n.width-1.),3.,0.),Vector3(.7,6.,.7),metal)
 				box(frame,Vector3(side*(n.width-1.),5.5,0.),Vector3(.9,1.2,.9),marker[1])
-				box(frame,Vector3(side*n.width*.65,.09,0.),Vector3(n.width*.55,.16,1.),marker[1])
+				var stripe:=box(frame,Vector3(side*n.width*.65,.09,0.),Vector3(n.width*.55,.16,1.),marker[1])
+				stripe.set_meta("track_surface",true)
 		for distance in [jump.takeoff,jump.landing]:
 			var n:Dictionary=race.track.sample(distance)
 			var cap:=box(self,n.p-n.frame.y*.7,Vector3(n.width*2.,1.4,.35),metal)
 			cap.basis=n.frame
+			# Deck/lip impacts are resolved by Flight against the track ribbon.
+			# An expanded scenery box would extend above hover height and catch
+			# every launch/touchdown as if a wall crossed the road.
+			cap.set_meta("track_surface",true)
 
 func fork_strip(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,height:float,distance:float)->void:
 	var left_a:float=-a.width if side<0 else a.split_gap

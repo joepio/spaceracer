@@ -333,6 +333,7 @@ godot --headless --path . --script res://tests/city.gd
 godot --headless --path . --script res://tests/lighting.gd
 godot --headless --path . --script res://tests/track_features.gd
 godot --headless --path . --script res://tests/jumps.gd
+godot --headless --path . --script res://tests/world_jumps.gd
 godot --headless --path . --script res://tests/difficulty_soak.gd
 godot --headless --path . --script res://tests/speed_feel.gd
 godot --headless --path . --script res://tests/forest.gd

@@ -54,3 +54,14 @@ Four-player Forest/Hard moving benchmark, seed 31, 1920×1080 total output
 GPU mean **4.38 ms**, GPU p95 **4.91 ms**; wall mean **16.68 ms**, wall p95
 **19.73 ms**. Background runner jobs were left active. These are observed frame
 times under contention, not an isolated CPU benchmark or a universal FPS promise.
+
+## Jump fixture collision correction
+
+The full-world jump regression found a gap in the physics-only jump tests:
+automatic scenery registration included the metal deck end caps and flush runway
+stripes. Expanding these boxes by the craft collision radius made them project
+above hover height, so every takeoff hit an invisible wall. Those pieces now use
+the existing track surface/lip collision logic; upright beacons and other solid
+scenery still collide. The full-world test on seed 31 changed from 36 failed
+landings to 36 successful landings (six-craft packs, Normal and Hard, City and
+Forest), with 40 checks passing. The separate scenery crash tests still pass.

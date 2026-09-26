@@ -15,7 +15,7 @@ func add_box(frame:Transform3D,bounds:AABB=AABB(Vector3.ONE*-.5,Vector3.ONE))->v
 		buckets[cell].append(id)
 
 func add_visual_boxes(node:Node)->void:
-	if node is MeshInstance3D and node.mesh is BoxMesh and (node.layers&5)!=0:
+	if node is MeshInstance3D and node.mesh is BoxMesh and (node.layers&5)!=0 and not node.get_meta("track_surface",false):
 		add_box(node.global_transform,node.mesh.get_aabb())
 	for child in node.get_children(): add_visual_boxes(child)
 

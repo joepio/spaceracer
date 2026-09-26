@@ -6,6 +6,8 @@ const Bump=preload("res://src/bump.gd")
 const TOP_SPEED := 265.0
 const BOOST_SPEED := 390.0
 const CRASH_RESPAWN_DELAY := 2.0
+const ENERGY_REFILL_RATE := 1.5
+const ENERGY_REFILL_DELAY := 2.0
 # Full visible hull, including swept wings; local nose is slightly ahead of origin.
 const HULL_HALF_WIDTH := 4.7
 const HULL_HALF_LENGTH := 4.45
@@ -33,6 +35,7 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 			"time": INF, "best_lap": INF, "lap_start": 0.0, "drifting": false, "on_pad": false}, true)
 		Weapons.initialize(p)
 		Bump.initialize(p)
+		p.energy_previous=p.energy;p.energy_refill_delay=ENERGY_REFILL_DELAY
 		racers.append(p)
 	weapons=Weapons.new(track)
 
@@ -284,12 +287,23 @@ func step(dt: float, inputs: Array) -> void:
 			Flight.crash(p)
 	resolve_contacts()
 	weapons.end_step(self,dt)
+	for p in racers: refill_energy(p,dt)
 	var ordered := standings()
 	var all_finished := not racers.is_empty()
 	for i in range(ordered.size()):
 		ordered[i].rank = i + 1
 		all_finished = all_finished and ordered[i].finished
 	over = all_finished or clock >= finish_deadline or clock >= 240
+
+static func refill_energy(p:Dictionary,dt:float)->void:
+	# The shared shield/boost reserve recovers slowly between bursts and hits.
+	if p.energy<p.energy_previous or p.boost>0. or p.warp_time>0. or p.emp_time>0. or p.crashed or p.recovery>0. or p.finished:
+		p.energy_refill_delay=ENERGY_REFILL_DELAY
+	else:
+		var refill_time:=maxf(0.,dt-p.energy_refill_delay)
+		p.energy_refill_delay=maxf(0.,p.energy_refill_delay-dt)
+		if p.energy>0.: p.energy=minf(100.,p.energy+ENERGY_REFILL_RATE*refill_time)
+	p.energy_previous=p.energy
 
 func update_lap(p:Dictionary)->void:
 	var lap:=int(p.distance/track.length)+1

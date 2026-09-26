@@ -117,6 +117,11 @@ Standalone assigns connected controllers at race start and fills disconnected se
 
 ## Energy batteries
 
+The shared shield/boost bar automatically refills at **1.5 energy per second**,
+after two seconds without boosting or taking damage. Refill also waits during
+warp, EMP shutdown and recovery. A spent boost takes about 15 seconds of refill;
+batteries and repair lanes remain much faster ways to recharge.
+
 Small amber batteries with white plus signs float above the road between weapon
 stations. Drive through one to restore **25 shield/boost energy**, up to 100.
 They work while carrying a weapon and do not occupy the item slot. A golden

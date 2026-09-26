@@ -22,7 +22,7 @@ void fragment(){
     slope+=cos(dot(uv,vec2(.008,.006))+race_time*.48)*vec2(.002,.0015);
     vec3 n=normalize(vec3(-slope.x,1.,-slope.y));
     NORMAL=normalize(mat3(VIEW_MATRIX)*n);
-    float shore=texture(shore_map,uv/6000.+.5).r;
+    float shore=texture(shore_map,uv/7680.+.5).r;
     // Dielectric water: absorption below, sky/probe Fresnel reflections above.
     ALBEDO=mix(vec3(.004,.022,.027),vec3(.025,.095,.068),shore*shore);
     float foam=smoothstep(.88,.99,shore)*(1.-smoothstep(.99,1.,shore));

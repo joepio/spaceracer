@@ -1,6 +1,7 @@
 extends RefCounted
-## Seeded giant-tree archipelago. Spatially batched meshes and swept-road clearance.
+## Seeded forest landscape. Spatially batched meshes and swept-road clearance.
 const Cells=preload("res://src/city_layout.gd")
+const Terrain=preload("res://src/forest_terrain.gd")
 const Assets=preload("res://src/forest_assets.gd")
 const Batch=preload("res://src/scenery.gd")
 var layout:Dictionary={"billboards":[]}
@@ -16,6 +17,7 @@ var water:ShaderMaterial
 var understory:ShaderMaterial
 var shore_image:Image
 var water_level:float
+var terrain:RefCounted
 
 func clear(bounds:AABB)->bool:
 	for cell in Cells.cells(bounds):
@@ -54,20 +56,29 @@ func build(parent:Node3D,race:RefCounted)->void:
 			if not corridor.has(cell): corridor[cell]=[]
 			corridor[cell].append(bounds)
 	understory=ShaderMaterial.new();understory.shader=load("res://src/forest_understory.gdshader")
-	var rock:=ShaderMaterial.new();rock.shader=load("res://src/forest_rock.gdshader")
+	terrain=Terrain.new(track)
+	terrain.build(parent)
+	if track.obstacles: track.obstacles.terrain=terrain
 	var models:Array=[]
 	for i in range(Assets.PATHS.size()): models.append(Assets.model(i))
 	var groups:Dictionary={}
-	var islands:Dictionary={}
 	var undergrowth:Dictionary={}
 	var rng:=RandomNumberGenerator.new();rng.seed=track.seed_value+80441
-	for x in range(-17,18):
-		for z in range(-17,18):
+	for x in range(-20,21):
+		for z in range(-20,21):
 			if rng.randf()<.12: continue
 			var age:=rng.randf()
 			var height:=rng.randf_range(340.,650.) if age>.32 else (rng.randf_range(190.,340.) if age>.1 else rng.randf_range(80.,190.))
 			var variant:=0 if rng.randf()<.7 else 1
-			var center:=Vector3(x*145.+rng.randf_range(-62.,62.),water_level+8.,z*145.+rng.randf_range(-62.,62.))
+			var center:=Vector3(x*125.+rng.randf_range(-62.,62.),water_level+8.,z*125.+rng.randf_range(-62.,62.))
+			center.y=terrain.height_at(center.x,center.z)
+			if center.y<water_level+4.: continue
+			# Sink the root slightly into the lowest nearby ground rather than float on slopes.
+			var root_width:=height*.022
+			for offset in [Vector2(root_width,0),Vector2(-root_width,0),Vector2(0,root_width),Vector2(0,-root_width)]:
+				center.y=minf(center.y,terrain.height_at(center.x+offset.x,center.z+offset.y))
+			if center.y<water_level+2.: continue
+			center.y-=.5
 			var transform:=Transform3D(Basis(Vector3.UP,rng.randf()*TAU).scaled(Vector3(rng.randf_range(.92,1.08),1.,rng.randf_range(.92,1.08))*height),center)
 			var safe:=true
 			var world_bounds:Array[AABB]=[]
@@ -75,23 +86,21 @@ func build(parent:Node3D,race:RefCounted)->void:
 				var bounds:AABB=transform*local
 				world_bounds.append(bounds)
 				if not clear(bounds): safe=false;break
-			var island:=AABB(center-Vector3(height*.14,30.,height*.14),Vector3(height*.28,42.,height*.28))
-			if not safe or not clear(island): continue
+			if not safe: continue
 			var tint:=Color(rng.randf_range(.88,1.),rng.randf_range(.92,1.03),rng.randf_range(.86,.98))
-			trees.append({"transform":transform,"variant":variant,"bounds":world_bounds,"height":height,"island":island})
+			trees.append({"transform":transform,"variant":variant,"bounds":world_bounds,"height":height})
 			if track.obstacles:
 				# Solid trunk sections collide; loose foliage remains flyable.
 				for solid:AABB in models[variant].solids: track.obstacles.add_box(transform,solid)
-				track.obstacles.add_box(Transform3D.IDENTITY,island)
 			var key:=Vector3i(floori(center.x/800.),variant,floori(center.z/800.))
 			if not groups.has(key): groups[key]=[]
 			groups[key].append({"transform":transform,"color":tint})
 			var tile:=Vector2i(key.x,key.z)
-			if not islands.has(tile): islands[tile]=[]
-			islands[tile].append(Transform3D(Basis.IDENTITY.scaled(island.size),island.get_center()))
 			for plant in range(rng.randi_range(3,8)):
 				var angle:float=plant*TAU/5.+rng.randf()
 				var position:=center+Vector3(cos(angle)*height*.065,4.,sin(angle)*height*.065)
+				position.y=terrain.height_at(position.x,position.z)-.15
+				if position.y<water_level+1.5: continue
 				var size:=rng.randf_range(2.,18.)
 				var plant_bounds:=AABB(position-Vector3(size*1.4,0.,size*1.4),Vector3(size*2.8,size*1.4,size*2.8)).grow(1.)
 				if not clear(plant_bounds): continue
@@ -107,10 +116,6 @@ func build(parent:Node3D,race:RefCounted)->void:
 			for i in range(records.size()):
 				data.set_instance_transform(i,records[i].transform*part.transform)
 				data.set_instance_color(i,records[i].color)
-	var island_mesh:=SphereMesh.new();island_mesh.radius=.5;island_mesh.height=1.;island_mesh.radial_segments=16;island_mesh.rings=8
-	for tile in islands:
-		var data:=Batch.batch(parent,island_mesh,rock,islands[tile].size())
-		for i in range(islands[tile].size()): data.set_instance_transform(i,islands[tile][i]);data.set_instance_color(i,Color.WHITE)
 	var fern:=fern_mesh()
 	for tile in undergrowth:
 		var data:=Batch.batch(parent,fern,understory,undergrowth[tile].size())
@@ -144,22 +149,15 @@ func animate(time:float)->void:
 	understory.set_shader_parameter("race_time",time)
 
 func make_shore_map()->ImageTexture:
-	# Bake nearby island shallows once. No per-frame depth pass or CPU water simulation.
+	# Shore colors follow the same terrain that intersects the water surface.
 	const RES:=512
-	const SPAN:=6000.
+	const SPAN:=7680.
 	shore_image=Image.create(RES,RES,false,Image.FORMAT_RF)
-	shore_image.fill(Color(0,0,0,1))
-	for tree in trees:
-		var bounds:AABB=tree.island
-		var center:=Vector2(bounds.get_center().x,bounds.get_center().z)
-		var radius:=Vector2(bounds.size.x,bounds.size.z)*.5
-		var lo:=Vector2i(((center-radius-Vector2.ONE*48.)/SPAN+Vector2.ONE*.5)*RES)
-		var hi:=Vector2i(((center+radius+Vector2.ONE*48.)/SPAN+Vector2.ONE*.5)*RES)
-		for y in range(maxi(0,lo.y),mini(RES,hi.y+1)):
-			for x in range(maxi(0,lo.x),mini(RES,hi.x+1)):
-				var point:Vector2=(Vector2(x,y)/RES-Vector2.ONE*.5)*SPAN
-				var distance:float=((point-center)/radius).length()-1.
-				var shore:=clampf(1.-distance*minf(radius.x,radius.y)/45.,0.,1.)
-				if shore>shore_image.get_pixel(x,y).r: shore_image.set_pixel(x,y,Color(shore,0,0,1))
+	for z in range(RES):
+		for x in range(RES):
+			var p:Vector2=((Vector2(x,z)+Vector2.ONE*.5)/RES-Vector2.ONE*.5)*SPAN
+			var depth:float=maxf(0.,water_level-terrain.height_at(p.x,p.y))
+			var shore:=exp(-depth/14.)
+			shore_image.set_pixel(x,z,Color(shore,0,0,1))
 	shore_image.generate_mipmaps()
 	return ImageTexture.create_from_image(shore_image)

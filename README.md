@@ -38,10 +38,13 @@ the code; both appear beside the seed in the HUD and results.
 
 **World** switches between the neon **City** and **Forest — Verdant Reach**.
 The forest has a bright blue daytime sky, soft procedural clouds and warm sunlight.
-It races over a reflective lake beneath a dense canopy dominated by 340–650 metre trees.
+It races through rolling grassy hills, wooded banks and connected lakes beneath a dense canopy dominated by 340–650 metre trees.
 Authored pine and birch models replace the homemade tree generator. Random rotation,
-subtle proportions, smaller 80–340 metre trees, mossy islands and more than 5,000
-varied ferns break up repetition in the checked seeds. Models come from the
+subtle proportions, smaller 80–340 metre trees and more than 4,000
+varied ferns break up repetition in the checked seeds. Trees and ferns are planted
+on dry terrain. The seeded height field creates connected land, shallow banks and
+submerged valleys; hills are carved below the full track and jump corridors.
+Ground collisions and shoreline colors use the same surface as the visible mesh. Models come from the
 [Godot Procedural Forest Demo](https://github.com/GamesNotDeveloped/godot-forest-demo):
 **Pine Tree by evolveduk** and **Tree Bake Upload by restlessmonkey**, both CC BY 4.0.
 Sources, original credits and license are in `third_party/forest-demo`; in-game
@@ -196,7 +199,7 @@ Approach the track from above, line up with its direction and banking, and touch
 down without excessive descent speed to reconnect. Missing the road, a hard or
 misaligned impact, hitting its underside, falling below the world, or remaining
 in the air for ten seconds crashes the craft. Buildings, solid tree parts,
-islands, traffic and track fixtures can also be hit while flying. A crash produces
+hills, traffic and track fixtures can also be hit while flying. A crash produces
 an explosion that breaks the craft into 16 hull, wing, engine and tail pieces.
 They carry impact momentum, tumble under gravity, bounce off scenery and the road,
 then settle. Steering, throttle, braking and movable fins are disabled until

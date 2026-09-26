@@ -37,10 +37,12 @@ func run()->void:
 			smallest=minf(smallest,tree.height);tallest=maxf(tallest,tree.height)
 		check(variants.size()==Forest.Assets.PATHS.size() and tallest/smallest>5.,"Both authored species and a broad height spread")
 		check(forest.shore_image.get_width()==512,"Shoreline baking uses a bounded texture budget")
+		check(forest.terrain.maximum-forest.terrain.minimum>60.,"Landscape has rolling hills and submerged valleys")
+		check(forest.terrain.heights==replica.terrain.heights,"Landscape height map is seed deterministic")
 		var vegetation:Array[AABB]=[]
 		for tree in forest.trees:
 			check(tree.height>=80 and tree.height<=650,"Trees retain the bounded young-to-giant size range")
-			vegetation.append_array(tree.bounds);vegetation.append(tree.island)
+			vegetation.append_array(tree.bounds)
 		vegetation.append_array(forest.plants)
 		# Independently audit sampled racing points, including pipe walls and flight
 		# corridors, against the actual recorded vegetation envelopes.
@@ -49,6 +51,7 @@ func run()->void:
 			check(n.p.y>forest.water_level+20.,"Water never intersects the driving surface")
 			for lateral in [-.95,0.,.95]:
 				var p:=Track.point(n,n.width*lateral,2.)
+				check(forest.terrain.height_at(p.x,p.z)<p.y-8.,"Landscape stays below the full road cross-section")
 				var blocked:=false
 				for bounds in vegetation:
 					if bounds.has_point(p): blocked=true;break

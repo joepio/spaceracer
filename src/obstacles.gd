@@ -4,6 +4,7 @@ const Cells=preload("res://src/city_layout.gd")
 var buckets:Dictionary={}
 var shapes:Array[Dictionary]=[]
 var moving:Array[Transform3D]=[]
+var terrain:RefCounted
 
 func add_box(frame:Transform3D,bounds:AABB=AABB(Vector3.ONE*-.5,Vector3.ONE))->void:
 	var world:AABB=frame*bounds
@@ -46,6 +47,9 @@ func trace(from:Vector3,to:Vector3,radius:float=3.6)->Dictionary:
 	var seen:Dictionary={}
 	var nearest:Dictionary={}
 	var best:=INF
+	if terrain!=null:
+		nearest=terrain.trace(from,to,radius)
+		if not nearest.is_empty(): best=from.distance_squared_to(nearest.position)
 	for cell in Cells.cells(AABB(from,Vector3.ZERO).expand(to).grow(radius)):
 		for id in buckets.get(cell,[]):
 			if seen.has(id): continue

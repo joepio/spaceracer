@@ -11,7 +11,8 @@ Imported scene transforms are preserved and normalized to unit height. Authored
 meshes and generated Godot LODs are cached, then shared in spatial MultiMeshes.
 No runtime mesh generation or asset downloads. The seeded layout mixes 70% pine
 and 30% birch, varied rotation, modest width variation, and 80–650 metre heights.
-Seed 31 contains 929 trees and 5,025 ferns; seed 421 contains 942 and 5,152.
+After adding the landscape, seed 31 contains 768 trees and 4,132 ferns; seed 421
+contains 791 and 4,251. Trees only occupy dry ground, with roots seated into slopes.
 Actual transformed mesh envelopes protect track and jump corridors. Trunk
 sections remain solid collision obstacles; foliage cards remain flyable.
 
@@ -20,6 +21,13 @@ mipmaps. Foliage writes depth with alpha scissor, receives directional light and
 casts shadows. No emissive or backlight hack. Birch materials were converted from
 the old specular/gloss workflow to rough nonmetallic PBR; pine needles receive a
 muted green tint. Existing reflective water and sky remain.
+
+The landscape replaces all individual tree-island spheres with a 7.68 km square
+height field (24 metre grid, 204,800 triangles, spatially culled in 384 metre tiles).
+Broad seeded hills form connected land and submerged valleys. Road clearance
+includes a grid-cell safety margin and smooth side slopes. The mesh, plant heights,
+shore-depth map and swept flight/debris collisions share the same triangulated
+height data. Ground uses a grass/earth/stone material with damp shoreline banks.
 
 ## Fixed native benchmark
 
@@ -30,16 +38,19 @@ not a tablet FPS guarantee. Vsync caps median frame interval around 8.33 ms.
 
 | Renderer | Internal resolution | GPU median | CPU render median | Draws | Primitives |
 | --- | --- | --- | --- | --- | --- |
-| Forward+ | 1600×1000 | 1.631 ms | 0.620 ms | 305 | 3,510,841 |
-| Mobile on desktop GPU | 1280×800 | 0.617 ms | 0.390 ms | 269 | 2,841,471 |
+| Forward+ | 1600×1000 | 1.342 ms | 0.680 ms | 395 | 2,271,334 |
+| Mobile on desktop GPU | 1280×800 | 0.523 ms | 0.572 ms | 361 | 1,801,699 |
 
 The first uncompressed/unmipmapped authored-tree pass cost ~2.945 ms GPU. The final
 textures reduce bandwidth and foliage shimmer without replacing the tree meshes.
 Actual Samsung Tab S9+ timing remains unmeasured.
 
 Validation: tests/forest.gd checks density, shared meshes, normalized transforms,
-seed determinism, course clearance and water/reset behavior: 2,555 checks, no
+seed determinism, course clearance and water/reset behavior: 2,730 checks, no
 failures, 72/72 bot finishers. tests/world_jumps.gd: 40 checks, no failures.
+tests/forest_terrain.gd: 39,700 checks across nine seed/difficulty combinations,
+including water/land balance, track clearance, swept impacts, nearest-hit ordering,
+mesh/sampler agreement and face winding.
 The foliage material lighting fixture verifies a dark underside (17.5% of lit-top
 luminance on Forward+). Native screenshots verify complete imported trees.
 

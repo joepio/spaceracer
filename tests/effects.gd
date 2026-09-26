@@ -74,6 +74,12 @@ func run()->void:
 	check(ship.get_node("EngineLight").light_energy>cruise_energy*3. and ship.get_node("EngineLight").omni_range>25.,"Boost lights strongly reach nearby road and rivals")
 	check(ship.get_node("EngineFlare-1").material_override.get_shader_parameter("boost_amount")==1. and ship.get_node("EngineHeat-1").material_override.get_shader_parameter("boost_amount")==1.,"Boost strengthens flare and heat distortion together")
 	check(ship.get_node("BoostArcs-1").visible and ship.get_node("BoostArcs1").visible,"Both boosting nozzles emit branching spikes")
+	var strike:ShaderMaterial=ship.get_node("BoostArcs-1").material_override
+	var previous_strike:float=strike.get_shader_parameter("strike_frame")
+	await process_frame
+	await process_frame # Leave the deferred initialization frame before sampling again.
+	Ship.animate_effects(ship,p,warm.vfx_clock,0)
+	check(strike.get_shader_parameter("strike_frame")!=previous_strike,"A new rendered frame changes the strike even without a physics tick")
 	var frozen_light:float=ship.get_node("EngineLight").light_energy
 	var frozen_jet:Vector3=ship.get_node("ExhaustL").scale
 	Ship.animate_effects(ship,p,warm.vfx_clock,0)

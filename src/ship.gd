@@ -213,18 +213,15 @@ static func build(tint:Color)->Node3D:
 	root.add_child(right_light)
 	var wake:=MultiMeshInstance3D.new()
 	wake.name="EngineWake"
+	wake.custom_aabb=AABB(Vector3(-6.,-3.,-70.),Vector3(12.,6.,72.))
 	var particles:=MultiMesh.new()
 	particles.transform_format=MultiMesh.TRANSFORM_3D
 	particles.use_colors=true
-	particles.mesh=BoxMesh.new()
+	particles.mesh=QuadMesh.new()
 	particles.instance_count=20
 	wake.multimesh=particles
-	var trail:=StandardMaterial3D.new()
-	trail.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
-	trail.vertex_color_use_as_albedo=true
-	trail.blend_mode=BaseMaterial3D.BLEND_MODE_ADD
-	trail.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
-	trail.no_depth_test=false
+	var trail:=ShaderMaterial.new()
+	trail.shader=load("res://src/exhaust_particle.gdshader")
 	wake.material_override=trail
 	wake.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(wake)
@@ -287,6 +284,9 @@ static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)
 		var arcs:MeshInstance3D=root.get_node("BoostArcs%d"%side)
 		arcs.visible=burning and power>.015
 		arcs.material_override.set_shader_parameter("race_time",time+p.slot*.71+side*.379)
+		# One shape per presented frame, even when rendering faster than physics.
+		# Paused scenes skip this update, preserving the frozen effect snapshot.
+		arcs.material_override.set_shader_parameter("strike_frame",float(Engine.get_process_frames()%4096))
 		arcs.material_override.set_shader_parameter("power",power)
 		arcs.material_override.set_shader_parameter("surge",surge)
 		for effect_name in ["EngineFlare%d"%side,"EngineHeat%d"%side]:
@@ -320,7 +320,8 @@ static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)
 		var side:=1 if particle%2==0 else -1
 		var phase:=particle*2.4
 		var position:=Vector3(side*2.45+sin(phase)*age*.8,-.12+cos(phase)*age*.6,-3.8-distance)
-		# Short exposure streaks keep rapid ejection readable without more particles.
-		var size:=Vector3(.025,.025,clampf(exhaust_speed*.004,1.,4.5))*(power if countdown<=0 else 0.0)
+		# Rounded puffs expand slightly as they leave the nozzle, rather than needles.
+		var diameter:=lerpf(.48,.8,age)*(1.+.12*sin(phase))
+		var size:=Vector3(diameter,diameter,clampf(exhaust_speed*.0014,.65,1.45))*(power if countdown<=0 else 0.0)
 		wake.set_instance_transform(particle,Transform3D(Basis.IDENTITY.scaled(size),position))
 		wake.set_instance_color(particle,Color(jet_tint.r,jet_tint.g,jet_tint.b,pow(1.-age,2.)*power*.6))

@@ -10,13 +10,21 @@ extends its range from 19 to 28 metres. Core emission rises from 3 to 8–13 and
 No extra dynamic lights or shadow maps are added. Player exhaust colors persist.
 
 Boost also emits six jagged plasma bolts per nozzle, each with a secondary fork.
-Their independent bursts redraw at irregular 5–9 Hz rates, with different angles,
-reach and dark intervals. One shared mesh supplies the fixed topology; GPU vertex
+Each bolt lasts one rendered frame, with fresh angles, reach and sparse random
+gaps on the next frame. There is no multi-frame hold or fading bolt tail.
+One shared mesh supplies the fixed topology; GPU vertex
 animation supplies the movement, adding just two draws per craft. The main jet
 ribbons bend into uneven tongues and their length surges independently per engine.
 Local light, core emission and flare intensity pulse with bounded irregular
-modulation. All animation uses simulation time, never gameplay random numbers.
+modulation. Lighting uses simulation time; bolt shapes also use a render-frame
+index so they remain brief above the physics frame rate. Neither consumes gameplay
+random numbers. Pausing freezes the last effect snapshot.
 Discharges are hidden outside boost and during recovery.
+
+Normal exhaust particles are camera-facing rounded glow puffs, roughly 0.48–0.8 m
+wide with short oval trails and a smooth radial fade. They replace thin box streaks
+without extra particles or textures. Ejection speed and distance-based fading are
+unchanged, and each split-screen camera gets the correct billboard orientation.
 
 A single transparent ribbon per nozzle reads the opaque screen behind the
 exhaust and refracts it with animated turbulence. The distortion is roughly
@@ -35,10 +43,11 @@ Balanced/High quality so readable depth works. Forward+ keeps 2x MSAA.
 
 ## Validation
 
-`tests/effects.gd`: 37 checks passed for startup, throttle, boost illumination,
+`tests/effects.gd`: 39 native checks for startup, throttle, boost illumination,
 recovery cleanup, controller responses and exhaust behavior.
 `tests/jet_render.gd` verifies actual rendered pixel changes from heat, animation,
-pause, changing electrical branches, visible flares and a narrow obstacle covering only the light source.
+pause, consecutive-frame electrical branches, visible soft exhaust puffs, visible
+flares and a narrow obstacle covering only the light source.
 Forward+, Mobile and OpenGL passed; none leaked flare pixels around the obstacle.
 Touch and menu checks also pass.
 

@@ -356,10 +356,10 @@ vertical loops, crossings and camera clearance. Mounted screens stay inside thei
 clear the road and buildings. The opening skyline preserves views of the loop.
 
 Ships have beveled hulls, swept wings, cockpit glass and animated tapered plasma
-jets, bright engine cores, and instanced exhaust streaks. The engine socket glow
+jets, bright engine cores, and soft, rounded exhaust particles. The engine socket glow
 responds to throttle; plume length grows with actual acceleration and boost.
 Exhaust sparks move backward relative to the craft at vehicle speed plus
-220–380 m/s (another 220 m/s during boost), with short exposure streaks. Their
+220–380 m/s (another 220 m/s during boost), with wider glow puffs and feathered edges. Their
 distance is integrated from the effects clock, so throttle changes cannot jump
 the trail and pausing freezes it. The particle count remains fixed at 20 per craft.
 Each craft has two short-range dynamic exhaust lights, one per nozzle. Throttle and boost
@@ -372,7 +372,8 @@ behind each jet; it intensifies during boost and freezes with pause. Flares
 are hidden when their source is occluded. See [boost effects](docs/boost-effects.md)
 for render checks and measured split-screen performance.
 During boost, uneven plasma tongues and short, forked electrical spikes erupt
-from each nozzle. The two engines surge independently, pulsing their cores,
+from each nozzle. Each bolt lasts one rendered frame, with fresh shapes and gaps
+on the next frame instead of a lingering fade. The two engines surge independently, pulsing their cores,
 flares and nearby lighting; normal throttle retains a steadier exhaust.
 HDR bloom complements the localized engine halos in Forward+. The OpenGL fallback
 retains the local halos. Road panels, metallic shading,

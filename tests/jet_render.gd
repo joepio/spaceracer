@@ -52,14 +52,19 @@ func run()->void:
 	check(difference(animated,paused)==0,"Heat stops moving when simulation time is paused")
 	heat.visible=false
 	var arcs:MeshInstance3D=ship.get_node("BoostArcs-1");arcs.visible=true
+	arcs.material_override.set_shader_parameter("strike_frame",10.)
 	var electric:=await capture()
 	var arc_pixels:=difference(clean,electric)
 	check(arc_pixels>20,"Boost discharges draw multiple luminous spikes")
-	arcs.material_override.set_shader_parameter("race_time",10.17)
+	arcs.material_override.set_shader_parameter("strike_frame",11.)
 	var next_strike:=await capture()
-	check(difference(electric,next_strike)>20,"Electrical branches strike in different positions over time")
+	check(difference(electric,next_strike)>20,"Electrical branches change on the next render frame, even at the same physics time")
 	check(difference(next_strike,await capture())==0,"Electrical branches freeze while paused")
 	arcs.visible=false
+	var wake:MultiMeshInstance3D=ship.get_node("EngineWake");wake.visible=true
+	var soft_wake:=await capture()
+	check(difference(clean,soft_wake)>20,"Soft exhaust puffs render visibly")
+	wake.visible=false
 	var flare:MeshInstance3D=ship.get_node("EngineFlare-1");flare.visible=true
 	var lit:=await capture()
 	var flare_pixels:=difference(clean,lit)

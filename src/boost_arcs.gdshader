@@ -1,6 +1,7 @@
 shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never;
 uniform float race_time=0.;
+uniform float strike_frame=0.;
 uniform float power=0.;
 uniform float surge=0.;
 uniform vec3 jet_tint : source_color=vec3(.1,.6,1.);
@@ -17,10 +18,8 @@ void vertex(){
     float id=floor(COLOR.r*12.+.5);
     float branch=mod(id,6.);
     float fork=step(5.5,id);
-    float pulse=race_time*(5.3+hash(branch+4.)*4.)+branch*.719;
-    float epoch=floor(pulse);
-    float phase=fract(pulse);
-    float seed=branch*83.+epoch*17.;
+    // A fresh strike every render frame; no multi-frame hold or fading tail.
+    float seed=branch*83.+strike_frame*17.+floor(race_time*19.)*3.;
     float angle=branch*1.0472+(hash(seed)-.5)*1.5;
     float reach=4.+hash(seed+1.)*7.;
     float spread=.8+hash(seed+2.)*1.8;
@@ -35,9 +34,8 @@ void vertex(){
     float width=mix(.13,.075,fork)*(1.-t*.8)*(1.+surge*.35);
     VERTEX=center+vec3(across*(UV.x*2.-1.)*width,0.);
     MODELVIEW_MATRIX=mat4(1.);
-    // Every fork has its own short burst, then goes dark before the next strike.
-    intensity=smoothstep(0.,.045,phase)*(1.-smoothstep(.2,.75,phase));
-    intensity*=step(.18,hash(seed+6.))*(1.-smoothstep(.65,1.,t))*mix(1.,.7,fork);
+    // Sparse flashes leave gaps instead of forming a continuous electrical cage.
+    intensity=step(.68,hash(seed+6.))*(1.-smoothstep(.65,1.,t))*mix(1.,.7,fork);
 }
 void fragment(){
     float across=abs(UV.x*2.-1.);

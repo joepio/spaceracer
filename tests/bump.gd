@@ -49,7 +49,7 @@ func run()->void:
 	check(a.bump_time==0.,"Countdown hold does not prefire an attack")
 	Bump.initialize(a);Bump.begin(a,{"right":true},.01,0.);b.bump_guard=0.;b.energy=10.
 	Bump.strike(race,a,b,Vector2.RIGHT)
-	check(b.crashed and b.wreck_wait and b.speed==0.,"Lethal side hit creates a stopped wreck requiring manual reset")
+	check(b.crashed and b.wreck_wait and b.speed==0.,"Lethal side hit creates a stopped wreck before automatic recovery")
 	var healthy:float=a.energy
 	Bump.strike(race,b,a,Vector2.LEFT)
 	check(a.energy==healthy,"A wreck cannot deal a return bump")

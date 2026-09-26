@@ -25,11 +25,11 @@ func run()->void:
 	race.track.obstacles=Field.new()
 	race.track.obstacles.add_box(Transform3D(n.frame.scaled(Vector3(25,25,1)),p.air_position+n.frame.z*20.))
 	race.step(.15,[{"throttle":1.}])
-	check(p.crashed and p.wreck_wait and p.recovery==0 and p.energy==75.,"Scenery impact creates a paid wreck awaiting Y")
+	check(p.crashed and p.wreck_wait and p.recovery==0 and p.energy==75.,"Scenery impact creates a paid wreck before automatic recovery")
 	var impact:Vector3=p.air_position
 	var id:int=p.crash_id
-	for tick in range(600): race.step(1./120.,[{}])
-	check(p.air_position==impact and p.crash_id==id and p.wreck_wait,"Five seconds without input cannot auto-reset or repeat explosions")
+	for tick in range(120): race.step(1./120.,[{}])
+	check(p.air_position==impact and p.crash_id==id and p.wreck_wait,"Explosion remains at impact during the first second without repeating")
 	var passing:Dictionary=Race.new([{"slot":1}],31).racers[0]
 	passing.distance=p.distance;passing.x=p.x
 	race.racers.append(passing)
@@ -43,10 +43,30 @@ func run()->void:
 	check(effect.visible and effect.flash.light_energy>0.,"Impact displays debris and a short light flash")
 	effect.update(p,.2)
 	check(effect.debris.get_instance_transform(0)==debris,"Paused clock freezes explosion motion")
-	race.step(.01,[{"reset":true}]);race.step(2.1,[{}])
-	check(not p.crashed and not p.wreck_wait and p.recovery==0 and p.energy==75.,"Y returns the wreck to track once without charging twice")
+	check(not race.can_reset(p),"Wreck hides the manual-reset prompt and touch button")
+	race.step(.5,[{"reset":true}])
+	check(p.crashed and p.wreck_time<2.,"Y cannot skip or restart the automatic wreck delay")
+	race.step(.51,[{}])
+	check(not p.crashed and not p.wreck_wait and p.recovery==0 and p.energy==75.,"Crash returns to track automatically after two seconds without charging twice")
 	check(p.distance<=500. and Race.Track.supported(race.track.sample(p.distance),p.x),"Recovery cannot advance race progress")
+	check(p.speed==90. and p.weapon_guard==2. and p.crash_id==id,"Automatic recovery restores momentum and protection without another explosion")
+	effect.update(p,race.vfx_clock)
+	check(not effect.visible,"Automatic recovery hides the explosion")
 	effect.queue_free()
+	# Two racers recover independently; a depleted hull gets the existing reserve.
+	var pair:=Race.new([{"slot":2},{"slot":7}],31,1,"hard")
+	pair.countdown=0.
+	var depleted:Dictionary=pair.racers[0]
+	depleted.distance=pair.track.jumps[0].takeoff+10.;depleted.energy=0.
+	Race.Flight.crash(depleted)
+	pair.step(1.,[{},{}])
+	Race.Flight.crash(pair.racers[1])
+	pair.step(1.01,[{},{}])
+	check(not depleted.crashed and depleted.energy==25.,"Empty shields automatically rebuild with a survival reserve")
+	check(pair.racers[1].crashed,"Each racer has its own crash timer")
+	check(depleted.distance<pair.track.jumps[0].takeoff and Race.Track.supported(pair.track.sample(depleted.distance),depleted.x,5.8),"Missed jump automatically recovers to supported approach road")
+	pair.step(1.01,[{},{}])
+	check(not pair.racers[1].crashed and pair.racers[1].energy==75.,"Second racer recovers on its own schedule without a reset press")
 	# Fast response and reduced cruise, while launch momentum has time to settle.
 	var flyer:=Race.new([{"slot":0}],31).racers[0]
 	flyer.air_velocity=Vector3(0,0,390);flyer.air_entry_speed=390.;flyer.air_frame=Basis.IDENTITY

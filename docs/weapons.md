@@ -26,7 +26,7 @@ odds interpolate from 18/28/54% at the front to 30/36/34% at the back.
 A leader's missile roll becomes a drone. Inventory survives an
 invalid activation, but crashes discard it. Heavy hits give 1.1 seconds of
 protection against stacked attacks; respawning gives two seconds. Empty shields
-use the existing crash, debris and manual Y recovery system.
+use the existing crash, debris and automatic two-second recovery system.
 
 Unassisted landing damage uses the local deck frame: normal descent above 18 m/s,
 attitude error beyond 12 degrees and lateral speed above 18 m/s contribute, capped

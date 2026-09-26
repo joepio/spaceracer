@@ -46,7 +46,7 @@ func run()->void:
 	check(not p.airborne and not p.crashed and p.energy>82.,"Recoverable steep tilted touchdown no longer triggers an abrupt wreck")
 	p=approach(race,.2,55.,.35);p.energy=2.
 	Flight.step(p,race.track,.01,0.,0.,0.,0.)
-	check(p.crashed and p.wreck_wait and p.energy==0.,"Fatal landing becomes a manual-reset wreck")
+	check(p.crashed and p.wreck_wait and p.energy==0.,"Fatal landing becomes a wreck before automatic recovery")
 	for dt in [1./30.,1./60.,1./120.]:
 		race=fresh();p=approach(race,12.,65.,1.6,"landing")
 		Flight.step(p,race.track,dt,1.,1.,0.,1.)

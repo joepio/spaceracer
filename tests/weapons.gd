@@ -116,7 +116,7 @@ func run()->void:
 	check(not race.weapons.activate(race,2) and owner.weapon=="warp","Warp cannot rescue an off-track flight by teleporting to the road")
 	owner.airborne=false;owner.energy=3.
 	race.weapons.damage(race,owner,4.,1.)
-	check(owner.crashed and owner.wreck_wait and owner.recovery==0.,"Shield depletion uses normal crash and manual Y recovery")
+	check(owner.crashed and owner.wreck_wait and owner.recovery==0.,"Shield depletion uses normal crash and automatic recovery")
 	race.weapons.begin_step(race,.01,neutral())
 	check(owner.weapon.is_empty() and owner.drone_time==0. and owner.warp_time==0.,"Crashing clears carried and active items")
 	var bridge:=Bridge.new()

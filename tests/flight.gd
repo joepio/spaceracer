@@ -177,7 +177,7 @@ func run()->void:
 	approach(p,n,500)
 	p.air_frame=n.frame*Basis(Vector3.BACK,PI)
 	Flight.step(p,race.track,.05,0,0,0,0)
-	check(p.crashed and p.wreck_wait and p.recovery==0,"Inverted impact waits for Y instead of auto-resetting")
+	check(p.crashed and p.wreck_wait and p.recovery==0,"Inverted impact enters the wreck animation before automatic recovery")
 	approach(p,n,500)
 	p.air_position=Track.point(n,0,-2)
 	p.air_velocity=n.frame.z*220+n.frame.y*50
@@ -188,10 +188,9 @@ func run()->void:
 	p.air_time=10.1
 	Flight.step(p,race.track,1.0/120,0,0,0,0)
 	check(p.crashed and not p.airborne,"Unrecovered flight times out into respawn")
-	race.step(3.,[{}])
-	check(p.crashed and p.wreck_wait and p.recovery==0,"Wreck stays put indefinitely without a reset press")
-	race.step(.01,[{"reset":true}])
-	race.step(2.1,[{}])
+	race.step(1.,[{}])
+	check(p.crashed and p.wreck_wait and p.recovery==0,"Wreck stays visible during the automatic recovery delay")
+	race.step(1.01,[{}])
 	check(p.recovery==0 and not p.crashed and p.speed==90 and p.x==0,"Crash respawns on last safe track position")
 	check(p.launch_cooldown>0,"Respawn cannot immediately relaunch from a held stick")
 	var beyond:Dictionary=race.track.sample(race.track.length+20)

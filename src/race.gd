@@ -5,6 +5,7 @@ const Flight=preload("res://src/flight.gd")
 const Bump=preload("res://src/bump.gd")
 const TOP_SPEED := 265.0
 const BOOST_SPEED := 390.0
+const CRASH_RESPAWN_DELAY := 2.0
 # Full visible hull, including swept wings; local nose is slightly ahead of origin.
 const HULL_HALF_WIDTH := 4.7
 const HULL_HALF_LENGTH := 4.45
@@ -36,7 +37,7 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 	weapons=Weapons.new(track)
 
 func bot(p: Dictionary) -> Dictionary:
-	if p.wreck_wait: return {"reset":p.wreck_time>.8}
+	if p.crashed: return {}
 	if p.airborne: return air_bot(p)
 	var n:Dictionary=track.sample(p.distance)
 	var peak:=absf(n.curve)
@@ -88,7 +89,14 @@ func air_bot(p:Dictionary)->Dictionary:
 		"strafe":clampf(-atan2(aim.frame.y.dot(frame.x),aim.frame.y.dot(frame.y))*1.37,-1.,1.)}
 
 static func can_reset(p:Dictionary)->bool:
-	return (p.wreck_wait or (p.airborne and p.air_time>.3)) and p.recovery<=0 and not p.finished
+	return p.airborne and p.air_time>.3 and not p.crashed and p.recovery<=0 and not p.finished
+
+static func begin_recovery(p:Dictionary,delay:float)->void:
+	# Crashing already charged the penalty; preserve it during either recovery path.
+	p.energy=maxf(1.,p.energy)
+	p.manual_reset=true
+	p.wreck_wait=false
+	p.recovery=delay
 
 func step(dt: float, inputs: Array) -> void:
 	if over:
@@ -103,11 +111,7 @@ func step(dt: float, inputs: Array) -> void:
 		var reset_pressed:bool=input.get("reset",false)
 		if countdown<=0 and reset_pressed and not pilot.reset_held and can_reset(pilot):
 			Flight.crash(pilot)
-			# Leave one energy so recovery cannot immediately cause another wreck.
-			pilot.energy=maxf(1.,pilot.energy)
-			pilot.manual_reset=true
-			pilot.wreck_wait=false
-			pilot.recovery=2.
+			begin_recovery(pilot,CRASH_RESPAWN_DELAY)
 		pilot.reset_held=reset_pressed
 		# Only recovery and pause remain available once the craft is destroyed.
 		if pilot.crashed:
@@ -142,7 +146,9 @@ func step(dt: float, inputs: Array) -> void:
 		if p.wreck_wait:
 			p.wreck_time+=dt
 			p.speed=0.;p.thrust=0.
-			continue
+			if p.wreck_time<CRASH_RESPAWN_DELAY: continue
+			# Complete recovery this tick after the explosion/debris have played.
+			begin_recovery(p,dt)
 		if p.warp_time>0.:
 			p.boost_held=c.get("boost",false)
 			weapons.step_warp(self,p,dt)
@@ -195,6 +201,7 @@ func step(dt: float, inputs: Array) -> void:
 			p.landing_blend=0.0
 			if p.recovery == 0:
 				p.crashed=false
+				p.wreck_time=0.
 				p.wreck=null
 				p.launch_cooldown=1.0
 				p.weapon_guard=2.

@@ -57,7 +57,7 @@ shoreline map for shallows, with existing sky/probe reflections and desktop SSR.
 It needs no extra reflection camera or per-frame CPU water simulation. Lower hills bring portions of the
 course nearer the water, while the loops and difficulty-dependent flight gaps
 remain. Undergrowth and ripples follow the race clock; hitting the water crashes the
-craft and waits for Y to reset. Placement is seeded and instanced; authored models are bundled for offline play.
+craft and respawns it automatically after two seconds. Placement is seeded and instanced; authored models are bundled for offline play.
 Selecting a world updates the menu preview without changing the chosen seed.
 GameNight exposes **World (next race)**, and standalone accepts `--biome=forest`
 or `--biome=city` after `--`.
@@ -88,7 +88,7 @@ flight controls as manual takeoff, carrying velocity and attitude without a kick
 or camera switch. Pitch, roll and yaw to line up with the landing. The gap has no
 road surface or hidden collision bridge. Purpose-built landing decks absorb a
 firm touchdown with a speed/energy penalty; steep or misaligned impacts crash.
-After a missed jump, Y resets 260 metres before the lip, leaving room to accelerate again.
+After a missed jump, recovery returns 260 metres before the lip, leaving room to accelerate again.
 Buildings and ambient traffic leave an expanded corridor around these sections.
 
 The same difficulty is available as a GameNight **Track difficulty (next race)**
@@ -108,7 +108,7 @@ bar. A small route map appears in single-player; split-screen keeps that space c
 | Strafe / roll | Right stick left / right | — | — |
 | Side bump | LB / RB | Q / E | Comma / Period |
 | Grip / speed trim | Right stick forward / backward | Controller only | Controller only |
-| Reset when airborne or crashed | Y | 1 | 2 |
+| Reset while airborne | Y | 1 | 2 |
 | Pause / resume | Start | Escape | Escape |
 
 Keyboard P3: IJKL, U boost, Y/O bump. P4: TFGH, R boost, V/B bump.
@@ -173,7 +173,7 @@ Catch-up bias affects only random item odds. Front-to-back odds interpolate from
 chance, EMP 16% and Jammer 14%; the remaining 52% uses that pool. A missile rolled by the leader becomes
 a drone. There is no hidden handling or engine-speed penalty for leading.
 Damage uses the existing shield/boost-energy bar; depletion produces the normal
-wreck and manual **Y** recovery. Respawning grants two seconds of weapon protection.
+wreck and automatic recovery after two seconds. Respawning grants two seconds of weapon protection.
 
 ## Android tablet
 
@@ -266,14 +266,13 @@ hills, traffic and track fixtures can also be hit while flying. A crash produces
 an explosion that breaks the craft into 16 hull, wing, engine and tail pieces.
 They carry impact momentum, tumble under gravity, bounce off scenery and the road,
 then settle. Steering, throttle, braking and movable fins are disabled until
-recovery; **Y to reset** and pause remain available. The camera coasts briefly,
+recovery. After two seconds the craft respawns automatically; pause remains available. The camera coasts briefly,
 eases its aim toward the debris and keeps some distance from rebounding parts.
 Y also initiates recovery while airborne: two seconds of downtime, loss of
 momentum and up to 25 energy (leaving at least one). A crash already charges the
-energy cost; resetting the wreck does not charge it twice. Recovery
+energy cost; automatic recovery does not charge it twice. Recovery
 returns to the last safe track position, before a mandatory jump when applicable,
-without awarding progress. Holding Y cannot trigger repeated resets. Manual
-recovery does not refill energy.
+without awarding progress. Holding Y cannot trigger repeated resets. Recovery preserves remaining energy; a depleted hull is rebuilt with a 25-point reserve.
 Progress is awarded when landing, so simply flying past the finish does not win.
 
 Hinged wing elevons and twin tail rudders respond directly to pitch, steering,
@@ -289,7 +288,7 @@ Sound is temporarily disabled for playtesting, including managed pause/resume.
 Cruising speed is roughly 950 km/h; boost reaches roughly 1,400 km/h. Boost
 unlocks on lap two, costs 22 energy, and lasts 1.25 seconds. Release and press
 again to retrigger. Wall impacts also consume energy. Green lanes repair;
-amber chevrons give a free boost. Empty energy crashes the craft; Y starts its
+amber chevrons give a free boost. Empty energy crashes the craft and starts its automatic
 two-second recovery. Rotated hull-sized contact
 boxes separate wings and noses, transfer impact speed, and keep crowded packs
 inside the rails. Six machines start in two rows of three.

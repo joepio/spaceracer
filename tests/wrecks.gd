@@ -40,10 +40,10 @@ func run()->void:
 	var paused:Transform3D=p.wreck.pieces[0].frame
 	world.update_ships();world.update_ships()
 	check(p.wreck.pieces[0].frame==paused,"Rendering cannot move wrecks while simulation is paused")
-	check(p.wreck_wait and p.recovery==0. and p.energy==75.,"Breakup neither auto-resets nor charges repeated damage")
-	for tick in range(600): race.step(1./120.,[{}])
+	check(p.wreck_wait and p.recovery==0. and p.energy==75.,"Breakup stays visible during recovery delay without repeated damage")
+	for tick in range(600): reference.step(1./120.,race.track,p.distance)
 	var grounded:=0
-	for piece in p.wreck.pieces:
+	for piece in reference.pieces:
 		var road:Dictionary=race.track.project(piece.frame.origin,piece.distance,45.)
 		if Race.Track.supported(road.node,road.lateral):
 			var height:float=(piece.frame.origin-Race.Track.point(road.node,road.lateral)).dot(road.node.frame.y)
@@ -72,10 +72,9 @@ func run()->void:
 	before=camera.transform
 	Chase.update_crash(camera,pose.origin,pose.origin+Vector3.UP*10.,1,0.)
 	check(before==camera.transform,"Paused crash camera is motionless")
-	race.step(.01,[{"reset":true}])
-	for tick in range(241): race.step(1./120.,[{"steer":1.,"throttle":1.}])
+	for tick in range(61): race.step(1./120.,[{}])
 	world.update_ships()
-	check(not p.crashed and p.wreck==null and world.ships[0].visible and not world.crashes[0].visible,"Y recovery hides pooled fragments and restores the craft")
+	check(not p.crashed and p.wreck==null and world.ships[0].visible and not world.crashes[0].visible,"Automatic recovery hides pooled fragments and restores the craft")
 	world.free();camera.free()
 	print("WRECK_TESTS ",checks," checks, ",failures," failures")
 	quit(1 if failures else 0)

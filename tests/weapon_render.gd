@@ -61,6 +61,19 @@ func run()->void:
 		race.racers[0].bump_time=.12
 		race.resolve_contacts()
 		assert(race.racers[1].energy==86.)
+	if "--battery-showcase" in OS.get_cmdline_user_args():
+		race.weapons.missiles.clear();race.weapons.shots.clear()
+		var battery:Dictionary=race.weapons.batteries[1]
+		for i in range(race.racers.size()):
+			var p:Dictionary=race.racers[i]
+			p.distance=battery.distance+[3.,-18.,-45.,400.,500.,600.][i];p.x=0.
+			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.speed=180.
+		var collector:Dictionary=race.racers[0]
+		collector.energy=35.;collector.weapon="missile"
+		collector.weapon_before=battery.distance-4.;collector.weapon_x_before=battery.x;collector.x=battery.x
+		race.weapons.collect_energy(race,collector)
+		assert(collector.energy==60. and collector.weapon=="missile")
+		if "--pickup-respawn" in OS.get_cmdline_user_args(): race.weapons.begin_step(race,2.2,[{},{},{},{},{},{}])
 	for view in game.views: game.world.update_camera(view.camera,view.index,0.,true)
 	for view in game.views: RenderingServer.viewport_set_measure_render_time(view.viewport.get_viewport_rid(),true)
 	var gpu:Array[float]=[]
@@ -92,6 +105,11 @@ func run()->void:
 		assert(game.world.weapon_vfx.bump_jets[0].visible and not game.world.weapon_vfx.bump_jets[1].visible)
 		assert(game.world.weapon_vfx.shields[1].visible)
 		print("BUMP_RENDER contact damage and opposing thruster verified")
+	if "--battery-showcase" in OS.get_cmdline_user_args():
+		var respawn:bool="--pickup-respawn" in OS.get_cmdline_user_args()
+		assert(game.world.weapon_vfx.battery_batches[0].get_instance_transform(1).basis.determinant()>0. if respawn else game.world.weapon_vfx.battery_batches[0].get_instance_transform(1).basis.determinant()==0.)
+		assert(game.world.weapon_vfx.pickup_lights[0].visible!=respawn)
+		print("BATTERY_RENDER respawn=",respawn," energy=",race.racers[0].energy)
 	var output:="C:/dev/ion-rush-captures/controls/weapons-showcase.png"
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--output="): output=arg.trim_prefix("--output=")

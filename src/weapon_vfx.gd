@@ -2,6 +2,7 @@ extends Node3D
 const Weapons=preload("res://src/weapons.gd")
 var race:RefCounted
 var cores:MultiMesh
+var battery_batches:Array[MultiMesh]=[]
 var missile_nodes:Dictionary={}
 var drones:Array[Node3D]=[]
 var shields:Array[MeshInstance3D]=[]
@@ -50,6 +51,14 @@ static func ring(inner:float,outer:float)->TorusMesh:
 static func cylinder(radius:float,height:float,tip:bool=false)->CylinderMesh:
 	var shape:=CylinderMesh.new();shape.bottom_radius=radius;shape.top_radius=0. if tip else radius;shape.height=height;shape.radial_segments=12;return shape
 
+func battery_batch(parts:Array,mat:Material)->void:
+	var surface:=SurfaceTool.new();surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for part in parts: surface.append_from(box(part[0]),0,Transform3D(Basis.IDENTITY,part[1]))
+	var instances:=MultiMesh.new();instances.transform_format=MultiMesh.TRANSFORM_3D;instances.mesh=surface.commit()
+	instances.instance_count=race.weapons.batteries.size();battery_batches.append(instances)
+	var batch:=MultiMeshInstance3D.new();batch.multimesh=instances;batch.material_override=mat
+	batch.layers=2;batch.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(batch)
+
 func configure(state:RefCounted)->void:
 	race=state
 	steel=material(Color("283b50"));mint=material(Color("59ffda"),1.8)
@@ -58,6 +67,15 @@ func configure(state:RefCounted)->void:
 	guidance_material.set_shader_parameter("jet_tint",Vector3(.08,.9,.7))
 	bump_material=guidance_material.duplicate() as ShaderMaterial
 	bump_material.set_shader_parameter("jet_tint",Vector3(1.,.35,.06))
+	# Three instanced materials for every battery: housing, charge bars, white +.
+	battery_batch([[Vector3(2.8,3.9,1.8),Vector3.ZERO],[Vector3(1.1,.45,1.),Vector3(0,2.15,0)]],material(Color("263342")))
+	var cells:Array=[];var symbols:Array=[]
+	for side in [-1.,1.]:
+		for y in [-1.1,-.4,.3]: cells.append([Vector3(2.,.44,.1),Vector3(0,y,side*.95)])
+		symbols.append([Vector3(.9,.19,.12),Vector3(0,1.2,side*.96)])
+		symbols.append([Vector3(.19,.9,.12),Vector3(0,1.2,side*.96)])
+	battery_batch(cells,material(Color("ffbf38"),1.7))
+	battery_batch(symbols,material(Color("fff4c9"),2.))
 	cores=MultiMesh.new();cores.transform_format=MultiMesh.TRANSFORM_3D;cores.mesh=box(Vector3.ONE*3.5)
 	cores.instance_count=race.weapons.pickups.size()
 	var batch:=MultiMeshInstance3D.new();batch.multimesh=cores;batch.material_override=mint
@@ -176,6 +194,13 @@ func update()->void:
 	var time:float=race.vfx_clock
 	guidance_material.set_shader_parameter("race_time",time)
 	bump_material.set_shader_parameter("race_time",time)
+	for i in range(race.weapons.batteries.size()):
+		var battery:Dictionary=race.weapons.batteries[i]
+		var frame:Transform3D=battery.pose
+		frame.origin+=frame.basis.y*sin(time*2.3+i)*.45
+		frame.basis=frame.basis*Basis(Vector3.UP,sin(time*.9+i)*.3)
+		frame.basis=frame.basis.scaled(Vector3.ONE*(battery.reveal if battery.cooldown<=0. else 0.))
+		for batch in battery_batches: batch.set_instance_transform(i,frame)
 	for i in range(emp_fields.size()):
 		emp_fields[i].visible=i<race.weapons.pulses.size()
 		emp_rings[i].visible=i<race.weapons.pulses.size()
@@ -227,6 +252,9 @@ func update()->void:
 		pickup_echoes[i].transform=p.pickup_pose*Transform3D(Basis.IDENTITY.scaled(Vector3.ONE*pickup_radius),Vector3.ZERO)
 		pickup_halos[i].transform=frame.scaled_local(Vector3(5.+(1.-flash)*2.,.6,6.+(1.-flash)*2.))
 		pickup_halos[i].material_override.set_shader_parameter("strength",flash)
+		var pickup_tint:=Color("ffd369") if p.pickup_energy else Color("b4ffac")
+		pickup_halos[i].material_override.set_shader_parameter("tint",Vector3(pickup_tint.r,pickup_tint.g,pickup_tint.b))
+		pickup_lights[i].light_color=pickup_tint
 		pickup_lights[i].visible=flash>0. and not p.crashed
 		pickup_lights[i].position=frame.origin+frame.basis.y*3.
 		pickup_lights[i].light_energy=flash*3.

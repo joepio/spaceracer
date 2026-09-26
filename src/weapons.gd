@@ -9,8 +9,10 @@ const JAMMER_HALF_ANGLE:=28.
 const EMP_RADIUS:=220.
 const EMP_EXPAND:=.65
 const EMP_DURATION:=2.2
+const BATTERY_ENERGY:=25.
 var pulses:Array[Dictionary]=[]
 var pickups:Array[Dictionary]=[]
+var batteries:Array[Dictionary]=[]
 var missiles:Array[Dictionary]=[]
 var shots:Array[Dictionary]=[]
 var bursts:Array[Dictionary]=[]
@@ -28,6 +30,9 @@ func _init(track:RefCounted)->void:
 			if station%3==0:
 				for lane in [-.58,0.,.58]:
 					pickups.append({"distance":distance,"x":n.width*lane,"claimed":{},"cooldown":0.,"reveal":1.,"pose":Transform3D(n.frame,Track.point(n,n.width*lane,5.))})
+			elif station%3==1:
+				for lane in [-.58,0.,.58]:
+					batteries.append({"distance":distance,"x":n.width*lane,"claimed":{},"cooldown":0.,"reveal":1.,"pose":Transform3D(n.frame,Track.point(n,n.width*lane,4.))})
 			station+=1
 			distance+=760.
 		else: distance+=35.
@@ -37,7 +42,8 @@ static func initialize(p:Dictionary)->void:
 		"drone_time":0.,"drone_cooldown":0.,"drone_target":-1,"shield_hit":0.,"weapon_guard":0.,
 		"missile_warning":0.,"evade_notice":0.,"last_jink":-10.,"jinking":false,"combat_g":0.,
 		"landing_assist":0.,"landing_fx":0.,"landing_damage":0.,"emp_time":0.,"emp_guard":0.,
-		"jammer_time":0.,"jammer_deploy":0.,"jam_strength":0.,"pickup_fx":0.,"pickup_pose":Transform3D.IDENTITY},true)
+		"jammer_time":0.,"jammer_deploy":0.,"jam_strength":0.,"pickup_fx":0.,"pickup_pose":Transform3D.IDENTITY,
+		"pickup_energy":false,"energy_fx":0.,"energy_gained":0.},true)
 
 static func available(p:Dictionary)->bool:
 	return not p.finished and not p.crashed and p.recovery<=0.
@@ -60,7 +66,7 @@ func choose(rank:int,count:int)->String:
 	return "missile" if roll<odds.x else ("warp" if roll<odds.x+odds.y else "drone")
 
 func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
-	for pickup in pickups:
+	for pickup in pickups+batteries:
 		pickup.cooldown=maxf(0.,pickup.cooldown-dt)
 		if pickup.cooldown<=0.: pickup.reveal=minf(1.,pickup.reveal+dt*6.)
 	for i in range(race.racers.size()):
@@ -72,6 +78,7 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 		p.evade_notice=maxf(0.,p.evade_notice-dt)
 		p.landing_fx=maxf(0.,p.landing_fx-dt)
 		p.pickup_fx=maxf(0.,p.pickup_fx-dt)
+		p.energy_fx=maxf(0.,p.energy_fx-dt)
 		p.emp_time=maxf(0.,p.emp_time-dt)
 		p.emp_guard=maxf(0.,p.emp_guard-dt)
 		p.jammer_time=maxf(0.,p.jammer_time-dt)
@@ -216,9 +223,30 @@ func collect(race:RefCounted,p:Dictionary)->void:
 		p.weapon_acquired=race.clock
 		pickup.cooldown=2.;pickup.reveal=0.
 		p.pickup_fx=.45;p.pickup_pose=pickup.pose
+		p.pickup_energy=false
 		# Only this lane disappears globally; one item per row/lap for each racer.
 		for other in pickups:
 			if other.distance==pickup.distance: other.claimed[p.slot]=circuit
+		return
+
+func collect_energy(race:RefCounted,p:Dictionary)->void:
+	if not available(p) or p.airborne or p.warp_time>0. or p.warp_fx>.05 or p.energy>=100.: return
+	var start:float=p.weapon_before
+	var end:float=p.distance
+	if end<=start or end-start>120.: return
+	for battery in batteries:
+		if battery.cooldown>0.: continue
+		var circuit:=floori((end-battery.distance)/race.track.length)
+		var crossing:float=battery.distance+circuit*race.track.length
+		if circuit<0 or crossing<start or crossing>end or battery.claimed.get(p.slot,-1)>=circuit: continue
+		var lateral:=lerpf(p.weapon_x_before,p.x,(crossing-start)/maxf(.001,end-start))
+		if absf(lateral-battery.x)>5.: continue
+		p.energy_gained=minf(BATTERY_ENERGY,100.-p.energy)
+		p.energy+=p.energy_gained;p.energy_fx=.8
+		p.pickup_fx=.45;p.pickup_pose=battery.pose;p.pickup_energy=true
+		battery.cooldown=2.;battery.reveal=0.
+		for other in batteries:
+			if other.distance==battery.distance: other.claimed[p.slot]=circuit
 		return
 
 func damage(race:RefCounted,p:Dictionary,amount:float,slowdown:float)->bool:
@@ -264,6 +292,7 @@ func end_step(race:RefCounted,dt:float)->void:
 		var jink:bool=available(p) and p.combat_g>=24. and sharp_input and (p.slide>.4 or p.airborne)
 		if jink and not p.jinking: p.last_jink=race.clock
 		p.jinking=jink
+		collect_energy(race,p)
 		collect(race,p)
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]

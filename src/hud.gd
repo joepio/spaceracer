@@ -56,8 +56,10 @@ func _draw() -> void:
 	right_label(str(roundi(p.speed*3.6)),Vector2(w-60,h-35),32)
 	right_label("km/h",Vector2(w-20,h-37),11,Color("a0b2bf"))
 	var energy_color:=Color("ff6e84") if p.energy<25 else tint
+	if p.energy_fx>0.: energy_color=energy_color.lerp(Color("ffd369"),minf(1.,p.energy_fx*2.))
 	draw_rect(Rect2(w-176,h-25,156,3),Color(1,1,1,.13))
 	draw_rect(Rect2(w-176,h-25,156*p.energy/100,3),energy_color)
+	if p.energy_fx>0.: label("+%d"%roundi(p.energy_gained),Vector2(w-200,h-23-(.8-p.energy_fx)*10.),11,Color(1.,.83,.41,minf(1.,p.energy_fx*3.)))
 	for i in range(1,5):
 		draw_rect(Rect2(w-176+156*(i*22.0/100),h-25,1,3),Color(.015,.03,.05,.75))
 	var status:="Boost on lap 2" if p.lap<2 else "Boost ready"
@@ -80,7 +82,8 @@ func _draw() -> void:
 	elif p.jammer_time>0.: item="JAMMER  %.1f"%p.jammer_time
 	elif p.weapon=="landing": item="AUTO · Landing assist"
 	elif not item.is_empty(): item=("" if OS.has_feature("android") else "X · ")+item
-	if not item.is_empty(): centered(item,w,h-25,14 if p.pickup_fx>0. else 12,Color("d8ffac") if p.pickup_fx>0. else Color("97ffdf"))
+	var item_flash:bool=p.pickup_fx>0. and not p.pickup_energy
+	if not item.is_empty(): centered(item,w,h-25,14 if item_flash else 12,Color("d8ffac") if item_flash else Color("97ffdf"))
 	if p.missile_warning>0.: centered("DODGE!" if p.missile_warning>1. else "MISSILE LOCK",w,108,14,Color("ff6c86"))
 	elif p.evade_notice>0.: centered("EVADED",w,108,12,Color("97ffdf"))
 	if p.emp_time>0.: centered("ENGINE OFF  %.1f"%p.emp_time,w,132,13,Color("a6caff"))

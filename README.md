@@ -115,6 +115,16 @@ Keyboard P3: IJKL, U boost, Y/O bump. P4: TFGH, R boost, V/B bump.
 Keyboard recovery uses 3 for P3 and 4 for P4. Pickup use is P for P3 and C for P4.
 Standalone assigns connected controllers at race start and fills disconnected seats when a controller is paired later. Other connected players keep their seats. Keyboard controls also work.
 
+## Energy batteries
+
+Small amber batteries with white plus signs float above the road between weapon
+stations. Drive through one to restore **25 shield/boost energy**, up to 100.
+They work while carrying a weapon and do not occupy the item slot. A golden
+flash and a brief +25 beside the energy bar confirm collection (less near full).
+Each battery disappears for everyone for two seconds, then returns. Full-energy
+racers leave it available for others; each racer can collect once per station
+per lap. Battery rows are seeded and avoid jumps, gaps and tight corners.
+
 ## Pickup weapons
 
 Fly through the cyan pickup rows and press **X** to activate the carried item

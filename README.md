@@ -141,6 +141,12 @@ Use buttons, timers and effects pause with the race; crashes discard items.
   craft, cancel sideways slip and cushion its next touchdown in the final moment
   above supported deck. No button press needed. You still have to reach the road;
   it cannot rescue a missed deck, underside impact or collision with scenery.
+- **EMP:** an expanding blue-violet electrical sphere reaches 220 metres in
+  0.65 seconds, cutting every rival's engines inside it for 2.2 seconds. Your own
+  engines are unaffected. Rivals coast and can steer/brake, but lose throttle,
+  boost and powered landing guidance. Warp is interrupted too, including a smooth
+  transition into flight above gaps. Engines restart automatically; brief reboot
+  and respawn protection prevent repeated shutdowns. No direct shield damage.
 
 Unassisted touchdowns damage shields according to descent speed, attitude against
 the deck and sideways slip. Clean, gentle landings are free; rough landings also
@@ -150,7 +156,7 @@ reset to prevent an unavoidable repeat crash at the next jump.
 
 Catch-up bias affects only random item odds. Front-to-back odds interpolate from
 18/28/54 to 30/36/34 within the missile/warp/drone pool. Landing assist has an 18%
-chance; the remaining 82% uses that pool. A missile rolled by the leader becomes
+chance and EMP 16%; the remaining 66% uses that pool. A missile rolled by the leader becomes
 a drone. There is no hidden handling or engine-speed penalty for leading.
 Damage uses the existing shield/boost-energy bar; depletion produces the normal
 wreck and manual **Y** recovery. Respawning grants two seconds of weapon protection.

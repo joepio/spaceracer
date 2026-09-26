@@ -64,6 +64,7 @@ static func launch(p:Dictionary,n:Dictionary,clock:float=0.0)->void:
 	p.landing_damage=0.
 
 static func integrate_air(p:Dictionary,dt:float,roll_input:float,yaw_input:float,throttle:float,brake:float)->void:
+	if p.get("emp_time",0.)>0.: throttle=0.
 	var frame:Basis=p.air_frame
 	var velocity:Vector3=p.air_velocity
 	var speed:=velocity.length()
@@ -120,6 +121,7 @@ static func crash(p:Dictionary,normal:Vector3=Vector3.ZERO)->void:
 	p.thrust=0.;p.engine_power=0.;p.acceleration=0.;p.braking=0.
 	p.input_throttle=0.;p.input_steer=0.;p.input_pitch=0.;p.input_strafe=0.;p.input_brake=0.
 	p.landing_assist=0.;p.landing_fx=0.
+	p.emp_time=0.
 
 static func touchdown_damage(frame:Basis,surface:Basis,velocity:Vector3)->float:
 	# Relative to the actual banked deck, not world-up or total racing speed.
@@ -133,6 +135,7 @@ static func engage_landing_assist(p:Dictionary)->void:
 	p.weapon="";p.landing_assist=1.;p.landing_fx=.65
 
 static func guide_landing(p:Dictionary,track:RefCounted,dt:float)->bool:
+	if p.get("emp_time",0.)>0.: return false
 	if p.get("weapon","")!="landing" and p.get("landing_assist",0.)<=0.: return false
 	var hit:Dictionary=track.project(p.air_position,p.distance,p.air_travel*1.35+100.)
 	var n:Dictionary=hit.node
@@ -189,7 +192,7 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 	var legal_progress:bool=nearest.distance-p.distance<=p.air_travel*1.05+25.
 	if p.air_time>.10 and inside and before>0 and after<=0:
 		# A swept crossing catches a very fast approach or a deck starting this tick.
-		if legal_progress and p.get("weapon","")=="landing": engage_landing_assist(p)
+		if legal_progress and p.get("weapon","")=="landing" and p.get("emp_time",0.)<=0.: engage_landing_assist(p)
 		var assisted:bool=p.get("landing_assist",0.)>0. and legal_progress
 		if assisted:
 			frame=surface;p.air_frame=surface;p.air_rates=Vector3.ZERO

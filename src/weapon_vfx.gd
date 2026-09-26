@@ -10,6 +10,9 @@ var tracers:Array[MeshInstance3D]=[]
 var explosions:Array[MeshInstance3D]=[]
 var guidance:Array[Node3D]=[]
 var guidance_material:ShaderMaterial
+var emp_fields:Array[MeshInstance3D]=[]
+var emp_rings:Array[MeshInstance3D]=[]
+var emp_arcs:Array[MeshInstance3D]=[]
 var laser_material:StandardMaterial3D
 var steel:StandardMaterial3D
 var mint:StandardMaterial3D
@@ -54,6 +57,13 @@ func configure(state:RefCounted)->void:
 		var base:=mesh(self,hoop,mint)
 		base.transform=pickup.pose;base.position-=pickup.pose.basis.y*3.
 	for p in race.racers:
+		var pulse_mat:=ShaderMaterial.new();pulse_mat.shader=load("res://src/emp.gdshader")
+		var pulse_shape:=sphere(1.);pulse_shape.radial_segments=64;pulse_shape.rings=32
+		emp_fields.append(mesh(self,pulse_shape,pulse_mat))
+		emp_rings.append(mesh(self,ring(.991,1.),material(Color("6fcaff"),2.5)))
+		var arc_mat:=pulse_mat.duplicate() as ShaderMaterial
+		arc_mat.set_shader_parameter("shutdown",true)
+		emp_arcs.append(mesh(self,sphere(1.),arc_mat))
 		var boosters:=Node3D.new();add_child(boosters);guidance.append(boosters)
 		for side in [-1.,1.]:
 			for end in [-1.,1.]:
@@ -109,6 +119,16 @@ func make_missile()->Node3D:
 func update()->void:
 	var time:float=race.vfx_clock
 	guidance_material.set_shader_parameter("race_time",time)
+	for i in range(emp_fields.size()):
+		emp_fields[i].visible=i<race.weapons.pulses.size()
+		emp_rings[i].visible=i<race.weapons.pulses.size()
+		if i<race.weapons.pulses.size():
+			var pulse:Dictionary=race.weapons.pulses[i]
+			var radius:float=maxf(.1,pulse.radius)
+			emp_fields[i].transform=Transform3D(Basis.IDENTITY.scaled(Vector3.ONE*radius),pulse.frame.origin)
+			emp_fields[i].material_override.set_shader_parameter("age",pulse.age)
+			emp_rings[i].transform=pulse.frame*Transform3D(Basis.IDENTITY.scaled(Vector3.ONE*radius),Vector3.ZERO)
+			emp_rings[i].visible=pulse.age<.7
 	for i in range(race.weapons.pickups.size()):
 		var pickup:Dictionary=race.weapons.pickups[i]
 		var frame:Transform3D=pickup.pose
@@ -135,6 +155,11 @@ func update()->void:
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
 		var frame:=Weapons.pose(race,p)
+		var arcs:=emp_arcs[i]
+		arcs.visible=p.emp_time>0. and not p.crashed
+		arcs.transform=frame.scaled_local(Vector3(5.3,2.3,5.8))
+		arcs.material_override.set_shader_parameter("age",time+p.slot)
+		arcs.material_override.set_shader_parameter("strength",minf(1.,p.emp_time*4.))
 		var boosters:=guidance[i]
 		boosters.visible=p.landing_fx>0. and not p.crashed
 		boosters.transform=frame

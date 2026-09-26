@@ -111,10 +111,12 @@ func step(dt: float, inputs: Array) -> void:
 			pilot.thrust=0.;pilot.engine_power=0.;pilot.acceleration=0.;pilot.braking=0.
 			continue
 		pilot.input_throttle=clampf(float(input.get("throttle",0.0)),0,1)
+		if pilot.emp_time>0.: pilot.input_throttle=0.
 		var brake_input:=clampf(float(input.get("brake",0.0)),0,1)
 		pilot.thrust=pilot.input_throttle*(1-brake_input) if pilot.recovery==0 and not pilot.finished and not pilot.crashed else 0.0
 		pilot.engine_power=lerpf(pilot.engine_power,pilot.thrust,1-exp(-dt*16))
 		pilot.brake_vfx=move_toward(pilot.brake_vfx,brake_input,dt*(18 if brake_input>pilot.brake_vfx else 3))
+		if pilot.emp_time>0.: pilot.engine_power=0.;pilot.brake_vfx=0.
 		if pilot.input_throttle>.05: pilot.ignited=true
 		if pilot.ignited: pilot.startup=move_toward(pilot.startup,1.0,dt*(.8 if countdown>0 else 5.0))
 		racers[i].input_steer=clampf(input.get("steer",0.0),-1,1)
@@ -146,10 +148,12 @@ func step(dt: float, inputs: Array) -> void:
 		p.landing_blend=maxf(0,p.landing_blend-dt*3)
 		var steer := clampf(c.get("steer", 0), -1, 1)
 		var throttle := clampf(c.get("throttle", 0), 0, 1)
+		if p.emp_time>0.: throttle=0.
 		var brake:=clampf(float(c.get("brake",0.0)),0,1)
 		p.braking=brake
 		p.thrust=throttle*(1-brake) if p.recovery==0 else 0.0
 		var strafe:=clampf(float(c.get("strafe",0.0))+int(c.get("right",false))-int(c.get("left",false)),-1,1)
+		if p.emp_time>0. and not p.airborne: strafe=0.
 		var pitch_input:=clampf(float(c.get("trim",0.0)),-1,1)
 		if p.crashed:
 			steer=0.;throttle=0.;brake=0.;strafe=0.;pitch_input=0.;p.braking=0.
@@ -170,7 +174,7 @@ func step(dt: float, inputs: Array) -> void:
 				var countersteer:=.6 if steer*p.heading<-.015 else 0.0
 				p.slide=move_toward(p.slide,0.0,dt*(.65+planted*2.8+countersteer))
 		p.drifting=p.slide>.18
-		if c.get("boost", false) and not p.boost_held and p.lap > 1 and p.energy > 22 and p.recovery == 0 and brake<.05 and not p.airborne:
+		if c.get("boost", false) and not p.boost_held and p.lap > 1 and p.energy > 22 and p.recovery == 0 and brake<.05 and not p.airborne and p.emp_time<=0.:
 			p.energy -= 22
 			p.boost = 1.25
 		p.boost_held = c.get("boost", false)
@@ -209,7 +213,7 @@ func step(dt: float, inputs: Array) -> void:
 			p.acceleration=maxf(0,(p.speed-previous_speed)/dt)
 			if not p.airborne and p.recovery==0: update_lap(p)
 			continue
-		p.on_pad = n.zone == "boost" and absf(p.x) < n.width * .35 and brake<.05 and p.lift<1
+		p.on_pad = n.zone == "boost" and absf(p.x) < n.width * .35 and brake<.05 and p.lift<1 and p.emp_time<=0.
 		var fast: bool = (p.boost > 0 or p.on_pad) and brake<.05
 		var target:float=(BOOST_SPEED if fast else TOP_SPEED)+loose*60-planted*35
 		var acceleration: float = throttle * (1-brake*.9) * 125 * (1 - pow(p.speed / target, 2))

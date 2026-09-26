@@ -2,8 +2,12 @@ extends RefCounted
 ## Race-owned, deterministic combat. No rendering or wall-clock dependencies.
 const Track=preload("res://src/track.gd")
 const Flight=preload("res://src/flight.gd")
-const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry drone","landing":"Landing assist"}
+const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry drone","landing":"Landing assist","emp":"EMP"}
 const WARP_DURATION:=2.8
+const EMP_RADIUS:=220.
+const EMP_EXPAND:=.65
+const EMP_DURATION:=2.2
+var pulses:Array[Dictionary]=[]
 var pickups:Array[Dictionary]=[]
 var missiles:Array[Dictionary]=[]
 var shots:Array[Dictionary]=[]
@@ -26,7 +30,7 @@ static func initialize(p:Dictionary)->void:
 	p.merge({"weapon":"","fire_held":false,"weapon_acquired":0.,"warp_time":0.,"warp_age":0.,"warp_fx":0.,
 		"drone_time":0.,"drone_cooldown":0.,"drone_target":-1,"shield_hit":0.,"weapon_guard":0.,
 		"missile_warning":0.,"evade_notice":0.,"last_jink":-10.,"jinking":false,"combat_g":0.,
-		"landing_assist":0.,"landing_fx":0.,"landing_damage":0.},true)
+		"landing_assist":0.,"landing_fx":0.,"landing_damage":0.,"emp_time":0.,"emp_guard":0.},true)
 
 static func available(p:Dictionary)->bool:
 	return not p.finished and not p.crashed and p.recovery<=0.
@@ -43,7 +47,8 @@ func choose(rank:int,count:int)->String:
 	var odds:=weights(rank,count)
 	var roll:=rng.randf()
 	if roll<.18: return "landing"
-	roll=(roll-.18)/.82
+	if roll<.34: return "emp"
+	roll=(roll-.34)/.66
 	return "missile" if roll<odds.x else ("warp" if roll<odds.x+odds.y else "drone")
 
 func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
@@ -55,6 +60,8 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 		p.weapon_guard=maxf(0.,p.weapon_guard-dt)
 		p.evade_notice=maxf(0.,p.evade_notice-dt)
 		p.landing_fx=maxf(0.,p.landing_fx-dt)
+		p.emp_time=maxf(0.,p.emp_time-dt)
+		p.emp_guard=maxf(0.,p.emp_guard-dt)
 		p.missile_warning=0.
 		p.warp_fx=move_toward(p.warp_fx,1. if p.warp_time>0. else 0.,dt*4.)
 		var fire:bool=inputs[i].get("fire",false)
@@ -62,11 +69,16 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 		p.fire_held=fire
 		if not available(p):
 			p.weapon="";p.warp_time=0.;p.drone_time=0.;p.drone_target=-1;p.landing_assist=0.
+			p.emp_time=0.
 
 func activate(race:RefCounted,index:int)->bool:
 	var p:Dictionary=race.racers[index]
 	if not available(p) or p.warp_time>0. or p.drone_time>0. or race.over: return false
 	match p.weapon:
+		"emp":
+			if pulses.any(func(pulse):return pulse.owner==index): return false
+			serial+=1
+			pulses.append({"id":serial,"owner":index,"frame":pose(race,p),"age":0.,"radius":0.,"hit":{}})
 		"missile":
 			var leader:Dictionary=race.standings()[0]
 			if leader==p or not available(leader) or leader.warp_time>0.: return false
@@ -76,13 +88,33 @@ func activate(race:RefCounted,index:int)->bool:
 			missiles.append({"id":serial,"owner":index,"target":race.racers.find(leader),"distance":p.distance,
 				"position":frame.origin+frame.basis.y*7.,"velocity":frame.basis.z*620.,"age":0.,"terminal":-1.,"evaded":false,"fade":.7})
 		"warp":
-			if p.airborne: return false
+			if p.airborne or p.emp_time>0.: return false
 			p.warp_time=WARP_DURATION;p.warp_age=0.;p.boost=0.;p.slide=0.;p.slip=0.;p.heading=0.
 		"drone":
 			p.drone_time=8.;p.drone_cooldown=.25
 		_: return false
 	p.weapon=""
 	return true
+
+func step_emp(race:RefCounted,dt:float)->void:
+	for pulse in pulses.duplicate():
+		pulse.age+=dt
+		pulse.radius=EMP_RADIUS*minf(1.,pulse.age/EMP_EXPAND)
+		if pulse.age<=EMP_EXPAND+dt:
+			for i in range(race.racers.size()):
+				var p:Dictionary=race.racers[i]
+				if i==pulse.owner or pulse.hit.has(i) or not available(p): continue
+				if pose(race,p).origin.distance_to(pulse.frame.origin)>pulse.radius: continue
+				pulse.hit[i]=true
+				if p.emp_guard>0. or p.weapon_guard>0.: continue
+				# Warp loses propulsion too; over a gap, retain real flight momentum.
+				if p.warp_time>0. and race.track.sample(p.distance).air_gap:
+					Flight.launch(p,race.track.sample(p.distance),race.clock)
+				p.emp_time=EMP_DURATION;p.emp_guard=EMP_DURATION+2.
+				p.warp_time=0.;p.boost=0.;p.on_pad=false
+				p.landing_assist=0.;p.landing_fx=0.
+				p.engine_power=0.;p.thrust=0.;p.acceleration=0.;p.input_throttle=0.;p.brake_vfx=0.
+		if pulse.age>1.05: pulses.erase(pulse)
 
 func step_warp(race:RefCounted,p:Dictionary,dt:float)->void:
 	var before:=pose(race,p)
@@ -162,6 +194,7 @@ func drone_target(race:RefCounted,owner:int)->int:
 	return nearest
 
 func end_step(race:RefCounted,dt:float)->void:
+	step_emp(race,dt)
 	for p in race.racers:
 		var velocity:Vector3=p.air_velocity if p.airborne else p.ground_velocity
 		var change:Vector3=(velocity-p.weapon_velocity)/maxf(dt,.001)

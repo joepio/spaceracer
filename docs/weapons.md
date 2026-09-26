@@ -14,8 +14,9 @@ its HUD label says AUTO and it does not need or show a Use button.
 | Warp drive | 2.8 seconds of course autopilot, up to 530 m/s. Phases through traffic and attacks; extends across a gap to hand control back on solid track. Tapers speed for the upcoming bend. Ground activation only. |
 | Sentry drone | Eight-second escort. Shoots the nearest rival ahead within 220 m of progress and 190 m spatial distance, with a forward cone and scenery occlusion. Four shield damage every 400 ms. |
 | Landing assist | Single-use automatic guidance during the final 300 ms of a predicted top-side touchdown. Levels attitude and damps lateral/descent velocity with four visible thrusters. The assisted touchdown is perfectly aligned and damage-free. Does not teleport across gaps or bypass scenery/underside collisions. |
+| EMP | World-space spherical pulse, expanding to 220 m over 650 ms. Rivals inside lose engines for 2.2 seconds; the emitter is exempt. Momentum and aerodynamic steering remain, while throttle, boost, ground strafe and landing guidance are disabled. Cancels warp; a warp interrupted above missing deck becomes real flight. No shield damage. Two-second reboot protection prevents chain locks. |
 
-Landing assist takes 18% of rolls. Within the remaining 82%, missile/warp/drone
+Landing assist takes 18% of rolls and EMP 16%. Within the remaining 66%, missile/warp/drone
 odds interpolate from 18/28/54% at the front to 30/36/34% at the back.
 A leader's missile roll becomes a drone. Inventory survives an
 invalid activation, but crashes discard it. Heavy hits give 1.1 seconds of
@@ -30,6 +31,18 @@ so it cannot be trapped at a mandatory jump; ordinary resets retain their cost.
 
 ## Validation (2026-09-26)
 
+- EMP: `tests/emp.gd` passes 23 checks covering propagation, owner exemption, spatial radius,
+  airborne targets, coasting, boost blocking, automatic reboot, protection,
+  warp interruption over gaps, landing guidance and input/countdown handling.
+  Visuals use pooled sphere/ring meshes, a shared procedural electrical shader
+  and per-player screen interference; no extra shadow lights or reflection passes.
+  `tests/weapon_render.gd -- --emp-showcase` selects the repeatable EMP scene.
+  Weapon (41) and landing (31) checks pass; the full forest suite passes 2,730
+  checks with 72/72 finishers. Three-view EMP captures measured 1.377 ms total
+  view GPU time in the city at 960 × 540 per view, and 1.198 ms in the Mobile
+  forest renderer at 640 × 360 per view, both on the desktop RTX 5070 Ti.
+  These are whole-scene GPU measurements, not tablet frame rates or isolated
+  EMP overhead; parallel CPU simulations affected frame-time measurements.
 - Landing extension: `tests/landing.gd` passes 31 checks, including increasing
   impact/angle/slip damage, guidance at 30/60/120 Hz, single-use consumption,
   withheld activation over gaps, scenery and underside collision, fatal damage

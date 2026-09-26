@@ -22,6 +22,14 @@ func run()->void:
 	race.racers[1].warp_time=1.8;race.racers[1].warp_fx=1.;race.racers[1].warp_age=1.;race.racers[1].speed=510.
 	race.racers[2].drone_time=6.5;race.racers[2].drone_target=3
 	race.weapons.shots.append({"from":race.Weapons.drone_position(race,race.racers[2]),"to":race.Weapons.pose(race,race.racers[3]).origin,"life":.1})
+	if "--emp-showcase" in OS.get_cmdline_user_args():
+		race.weapons.missiles.clear();race.weapons.shots.clear()
+		for i in range(race.racers.size()):
+			var p:Dictionary=race.racers[i]
+			p.distance=start+[0.,65.,-75.,400.,500.,600.][i]
+			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.speed=240.
+		race.racers[0].weapon="emp";race.weapons.activate(race,0)
+		race.weapons.step_emp(race,.3)
 	for view in game.views: game.world.update_camera(view.camera,view.index,0.,true)
 	for view in game.views: RenderingServer.viewport_set_measure_render_time(view.viewport.get_viewport_rid(),true)
 	var gpu:Array[float]=[]

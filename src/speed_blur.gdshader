@@ -2,6 +2,7 @@ shader_type canvas_item;
 render_mode unshaded;
 uniform float amount=0.;
 uniform float warp=0.;
+uniform float emp=0.;
 uniform float race_time=0.;
 void fragment(){
     vec4 original=texture(TEXTURE,UV);
@@ -34,5 +35,13 @@ void fragment(){
         float rings=pow(max(0.,sin(radius*28.-race_time*7.)),12.)*peripheral;
         vec3 prism=.5+.5*cos(angle+race_time*.7+vec3(0.,2.,4.));
         COLOR.rgb=mix(COLOR.rgb,refracted,warp*.85)+prism*rings*warp*.22;
+    }
+    if(emp>.001){
+        float edge=smoothstep(.2,.7,length(UV-vec2(.5)));
+        float band=pow(max(0.,sin(UV.y*61.-race_time*17.)),18.);
+        float glitch=sin(race_time*89.)*band*emp*.004;
+        vec2 at=clamp(UV+vec2(glitch,0.),vec2(.002),vec2(.998));
+        vec3 split=vec3(texture(TEXTURE,at+vec2(.0015*emp,0.)).r,texture(TEXTURE,at).g,texture(TEXTURE,at-vec2(.0015*emp,0.)).b);
+        COLOR.rgb=mix(COLOR.rgb,split,.35*emp)+vec3(.07,.16,.3)*edge*emp*(.35+band);
     }
 }

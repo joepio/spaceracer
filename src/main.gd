@@ -296,7 +296,7 @@ func _process(dt: float) -> void:
 			new_race()
 	if is_instance_valid(touch_controls):
 		touch_controls.visible=running and not in_menu
-		touch_controls.weapon_available=race!=null and not race.racers[0].weapon.is_empty() and not race.racers[0].crashed
+		touch_controls.weapon_available=race!=null and race.racers[0].weapon not in ["","landing"] and not race.racers[0].crashed
 		touch_controls.reset_available=race!=null and race.can_reset(race.racers[0])
 	navigate_menu(dt)
 	process_pause(dt)

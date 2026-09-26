@@ -8,6 +8,8 @@ var shields:Array[MeshInstance3D]=[]
 var rings:Array[Array]=[]
 var tracers:Array[MeshInstance3D]=[]
 var explosions:Array[MeshInstance3D]=[]
+var guidance:Array[Node3D]=[]
+var guidance_material:ShaderMaterial
 var laser_material:StandardMaterial3D
 var steel:StandardMaterial3D
 var mint:StandardMaterial3D
@@ -41,6 +43,8 @@ func configure(state:RefCounted)->void:
 	race=state
 	steel=material(Color("283b50"));mint=material(Color("59ffda"),1.8)
 	flame=material(Color("ffac42"),3.);laser_material=material(Color("ff385e"),2.8)
+	guidance_material=ShaderMaterial.new();guidance_material.shader=load("res://src/plasma.gdshader")
+	guidance_material.set_shader_parameter("jet_tint",Vector3(.08,.9,.7))
 	cores=MultiMesh.new();cores.transform_format=MultiMesh.TRANSFORM_3D;cores.mesh=box(Vector3.ONE*3.5)
 	cores.instance_count=race.weapons.pickups.size()
 	var batch:=MultiMeshInstance3D.new();batch.multimesh=cores;batch.material_override=mint
@@ -50,6 +54,15 @@ func configure(state:RefCounted)->void:
 		var base:=mesh(self,hoop,mint)
 		base.transform=pickup.pose;base.position-=pickup.pose.basis.y*3.
 	for p in race.racers:
+		var boosters:=Node3D.new();add_child(boosters);guidance.append(boosters)
+		for side in [-1.,1.]:
+			for end in [-1.,1.]:
+				var nozzle:=Vector3(side*3.4,-.4,end*2.2)
+				mesh(boosters,sphere(.35),material(Color("dfffff"),4.),nozzle)
+				for angle in [0.,PI*.5]:
+					var ribbon:=QuadMesh.new();ribbon.size=Vector2(1.4,4.6)
+					var jet:=mesh(boosters,ribbon,guidance_material,nozzle+Vector3.DOWN*2.3)
+					jet.rotation.y=angle
 		var drone:=Node3D.new();add_child(drone);drones.append(drone)
 		mesh(drone,box(Vector3(1.5,.65,2.)),steel)
 		mesh(drone,sphere(.35),mint,Vector3(0,.05,1.))
@@ -95,6 +108,7 @@ func make_missile()->Node3D:
 
 func update()->void:
 	var time:float=race.vfx_clock
+	guidance_material.set_shader_parameter("race_time",time)
 	for i in range(race.weapons.pickups.size()):
 		var pickup:Dictionary=race.weapons.pickups[i]
 		var frame:Transform3D=pickup.pose
@@ -121,6 +135,10 @@ func update()->void:
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
 		var frame:=Weapons.pose(race,p)
+		var boosters:=guidance[i]
+		boosters.visible=p.landing_fx>0. and not p.crashed
+		boosters.transform=frame
+		boosters.scale=Vector3(1.,clampf(p.landing_fx/.5,0.,1.)*(1.+sin(time*67.)*.12),1.)
 		var drone:=drones[i];drone.visible=p.drone_time>0. and not p.crashed
 		drone.transform=Transform3D(frame.basis.scaled(Vector3.ONE*1.35),Weapons.drone_position(race,p))
 		if drone.visible:

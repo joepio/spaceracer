@@ -63,7 +63,7 @@ func bot(p: Dictionary) -> Dictionary:
 	var jump:Dictionary=track.jump_at(p.distance,180.)
 	if not jump.is_empty() and fposmod(p.distance,track.length)<jump.takeoff: brake=0.
 	return {"steer":turn,"throttle":1.0,"brake":brake,"left":false,"right":false,
-		"fire":not p.weapon.is_empty() and clock-p.weapon_acquired>.9 and not p.fire_held,"boost":p.lap>1 and p.energy>40 and peak<.0025 and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
+		"fire":p.weapon not in ["","landing"] and clock-p.weapon_acquired>.9 and not p.fire_held,"boost":p.lap>1 and p.energy>40 and peak<.0025 and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
 
 func air_bot(p:Dictionary)->Dictionary:
 	var hit:Dictionary=track.project(p.air_position,p.distance,p.air_travel*1.35+100.)
@@ -191,6 +191,7 @@ func step(dt: float, inputs: Array) -> void:
 				p.launch_cooldown=1.0
 				p.weapon_guard=2.
 				if not p.manual_reset: p.energy=65.
+				elif p.energy<=1.: p.energy=25. # Rebuilt hull must survive the next mandatory landing.
 				p.manual_reset=false
 				p.x = 0.0
 				p.route=0.

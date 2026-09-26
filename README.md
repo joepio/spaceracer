@@ -116,7 +116,8 @@ Standalone assigns connected controllers at race start and fills disconnected se
 
 ## Pickup weapons
 
-Fly through the cyan pickup rows and press **X** to activate the carried item.
+Fly through the cyan pickup rows and press **X** to activate the carried item
+(Landing assist triggers automatically).
 One inventory slot, one pickup per row per lap per player: someone ahead cannot
 remove all pickups for the rest of the pack. Bots also collect and use items.
 Use buttons, timers and effects pause with the race; crashes discard items.
@@ -136,9 +137,20 @@ Use buttons, timers and effects pause with the race; crashes discard items.
 - **Sentry drone:** a quadcopter escorts the craft for eight seconds and fires at
   the nearest valid rival ahead, within 190 metres in space / 220 along the course.
   Bursts deal 4 shield damage every 0.4 seconds. Buildings/terrain block its shots.
+- **Landing assist:** a single-use automatic pickup. Guidance thrusters level the
+  craft, cancel sideways slip and cushion its next touchdown in the final moment
+  above supported deck. No button press needed. You still have to reach the road;
+  it cannot rescue a missed deck, underside impact or collision with scenery.
+
+Unassisted touchdowns damage shields according to descent speed, attitude against
+the deck and sideways slip. Clean, gentle landings are free; rough landings also
+lose speed, and severe impacts still wreck the craft. Banked tracks use their own
+surface orientation. A depleted hull rebuilds with 25 shield points after manual
+reset to prevent an unavoidable repeat crash at the next jump.
 
 Catch-up bias affects only random item odds. Front-to-back odds interpolate from
-18/28/54% to 30/36/34% (missile/warp/drone); a missile rolled by the leader becomes
+18/28/54 to 30/36/34 within the missile/warp/drone pool. Landing assist has an 18%
+chance; the remaining 82% uses that pool. A missile rolled by the leader becomes
 a drone. There is no hidden handling or engine-speed penalty for leading.
 Damage uses the existing shield/boost-energy bar; depletion produces the normal
 wreck and manual **Y** recovery. Respawning grants two seconds of weapon protection.

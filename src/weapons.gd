@@ -2,7 +2,7 @@ extends RefCounted
 ## Race-owned, deterministic combat. No rendering or wall-clock dependencies.
 const Track=preload("res://src/track.gd")
 const Flight=preload("res://src/flight.gd")
-const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry drone"}
+const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry drone","landing":"Landing assist"}
 const WARP_DURATION:=2.8
 var pickups:Array[Dictionary]=[]
 var missiles:Array[Dictionary]=[]
@@ -25,7 +25,8 @@ func _init(track:RefCounted)->void:
 static func initialize(p:Dictionary)->void:
 	p.merge({"weapon":"","fire_held":false,"weapon_acquired":0.,"warp_time":0.,"warp_age":0.,"warp_fx":0.,
 		"drone_time":0.,"drone_cooldown":0.,"drone_target":-1,"shield_hit":0.,"weapon_guard":0.,
-		"missile_warning":0.,"evade_notice":0.,"last_jink":-10.,"jinking":false,"combat_g":0.},true)
+		"missile_warning":0.,"evade_notice":0.,"last_jink":-10.,"jinking":false,"combat_g":0.,
+		"landing_assist":0.,"landing_fx":0.,"landing_damage":0.},true)
 
 static func available(p:Dictionary)->bool:
 	return not p.finished and not p.crashed and p.recovery<=0.
@@ -41,6 +42,8 @@ static func weights(rank:int,count:int)->Vector3:
 func choose(rank:int,count:int)->String:
 	var odds:=weights(rank,count)
 	var roll:=rng.randf()
+	if roll<.18: return "landing"
+	roll=(roll-.18)/.82
 	return "missile" if roll<odds.x else ("warp" if roll<odds.x+odds.y else "drone")
 
 func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
@@ -51,13 +54,14 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 		p.shield_hit=maxf(0.,p.shield_hit-dt)
 		p.weapon_guard=maxf(0.,p.weapon_guard-dt)
 		p.evade_notice=maxf(0.,p.evade_notice-dt)
+		p.landing_fx=maxf(0.,p.landing_fx-dt)
 		p.missile_warning=0.
 		p.warp_fx=move_toward(p.warp_fx,1. if p.warp_time>0. else 0.,dt*4.)
 		var fire:bool=inputs[i].get("fire",false)
 		if race.countdown<=0. and fire and not p.fire_held: activate(race,i)
 		p.fire_held=fire
 		if not available(p):
-			p.weapon="";p.warp_time=0.;p.drone_time=0.;p.drone_target=-1
+			p.weapon="";p.warp_time=0.;p.drone_time=0.;p.drone_target=-1;p.landing_assist=0.
 
 func activate(race:RefCounted,index:int)->bool:
 	var p:Dictionary=race.racers[index]

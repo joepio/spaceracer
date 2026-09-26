@@ -225,7 +225,7 @@ func run()->void:
 		for tick in range(30): test.step(1./120.,[{control:1.,"throttle":1.}])
 		if control=="steer": check(pilot_air.air_rates.y<-.5 and absf(pilot_air.air_rates.z)<.001,"Left-stick input yaws without rolling")
 		else: check(pilot_air.air_rates.z>1.5 and absf(pilot_air.air_rates.y)<.001,"Right-stick input rolls without yawing")
-	# Reset cannot heal energy, repeat while held, or skip a flight section.
+	# Reset preserves its cost except a depleted hull gets a small survival reserve.
 	var reset_race:=Race.new([{"slot":0}],31,1,"normal")
 	reset_race.countdown=0
 	var reset_p:Dictionary=reset_race.racers[0]
@@ -245,7 +245,7 @@ func run()->void:
 	approach(reset_p,reset_race.track.sample(500.),500.)
 	reset_race.step(.01,[{"reset":true}])
 	for tick in range(239): reset_race.step(.01,[{}])
-	check(reset_p.energy==1. and reset_p.recovery==0,"Low-energy reset does not chain into a second wreck")
+	check(reset_p.energy==25. and reset_p.recovery==0,"Depleted hull rebuild has enough reserve to survive a mandatory landing")
 	var input_bridge=load("res://src/bridge.gd").new()
 	input_bridge.frames={"owned":{"buttons":8},"other":{"buttons":0}}
 	input_bridge.frame_at=Time.get_ticks_msec()

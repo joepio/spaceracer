@@ -61,6 +61,7 @@ static func launch(p:Dictionary,n:Dictionary,clock:float=0.0)->void:
 	p.on_pad=false
 	p.slide=0.0
 	p.drifting=false
+	p.landing_damage=0.
 
 static func integrate_air(p:Dictionary,dt:float,roll_input:float,yaw_input:float,throttle:float,brake:float)->void:
 	var frame:Basis=p.air_frame
@@ -118,11 +119,49 @@ static func crash(p:Dictionary,normal:Vector3=Vector3.ZERO)->void:
 	p.unload=0.0
 	p.thrust=0.;p.engine_power=0.;p.acceleration=0.;p.braking=0.
 	p.input_throttle=0.;p.input_steer=0.;p.input_pitch=0.;p.input_strafe=0.;p.input_brake=0.
+	p.landing_assist=0.;p.landing_fx=0.
+
+static func touchdown_damage(frame:Basis,surface:Basis,velocity:Vector3)->float:
+	# Relative to the actual banked deck, not world-up or total racing speed.
+	var impact:=maxf(0.,-velocity.dot(surface.y)-8.)
+	var angle:=maxf(acos(clampf(frame.y.dot(surface.y),-1.,1.)),acos(clampf(frame.z.dot(surface.z),-1.,1.)))
+	var tilt:=maxf(0.,angle-deg_to_rad(5.))/deg_to_rad(40.)
+	var sideways:=maxf(0.,absf(velocity.dot(surface.x))-8.)
+	return minf(65.,impact*.28+pow(tilt,1.35)*18.+sideways*.10)
+
+static func engage_landing_assist(p:Dictionary)->void:
+	p.weapon="";p.landing_assist=1.;p.landing_fx=.65
+
+static func guide_landing(p:Dictionary,track:RefCounted,dt:float)->bool:
+	if p.get("weapon","")!="landing" and p.get("landing_assist",0.)<=0.: return false
+	var hit:Dictionary=track.project(p.air_position,p.distance,p.air_travel*1.35+100.)
+	var n:Dictionary=hit.node
+	var surface:=Track.surface_frame(n,hit.lateral)
+	var height:float=(p.air_position-Track.point(n,hit.lateral)).dot(surface.y)-HOVER
+	var descent:float=-p.air_velocity.dot(surface.y)
+	var legal:bool=hit.distance-p.distance<=p.air_travel*1.05+25.
+	if p.landing_assist<=0.:
+		if p.air_time<=.10 or not Track.supported(n,hit.lateral,5.8) or not legal: return false
+		if height<=0. or height>80. or descent<=2. or height/descent>.30: return false
+		engage_landing_assist(p)
+	p.landing_assist=maxf(0.,p.landing_assist-dt)
+	if not Track.supported(n,hit.lateral,5.8) or not legal or height< -2.: return false
+	# Guidance counters rotation, lateral slip and descent with visible lift jets.
+	p.landing_fx=.65
+	p.air_frame=p.air_frame.slerp(surface,1.-exp(-dt*24.)).orthonormalized()
+	p.air_rates=Vector3.ZERO;p.trim=0.
+	var forward:=clampf(p.air_velocity.dot(surface.z),80.,AIR_SPEED)
+	var vertical:float=minf(-8.,-maxf(0.,height)*8.)
+	var target_velocity:=surface.z*forward+surface.y*vertical
+	p.air_velocity=p.air_velocity.lerp(target_velocity,1.-exp(-dt*30.))
+	p.air_position+=p.air_velocity*dt
+	p.speed=p.air_velocity.length()
+	return true
 
 static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float,throttle:float,brake:float)->void:
 	p.air_time+=dt
 	var previous:Vector3=p.air_position
-	integrate_air(p,dt,strafe,steer,throttle,brake)
+	if not guide_landing(p,track,dt): integrate_air(p,dt,strafe,steer,throttle,brake)
 	var position:Vector3=p.air_position
 	if track.get("obstacles")!=null:
 		var contact:Dictionary=track.obstacles.trace(previous,position)
@@ -149,6 +188,13 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 	var inside:=Track.supported(n,nearest.lateral,5.8)
 	var legal_progress:bool=nearest.distance-p.distance<=p.air_travel*1.05+25.
 	if p.air_time>.10 and inside and before>0 and after<=0:
+		# A swept crossing catches a very fast approach or a deck starting this tick.
+		if legal_progress and p.get("weapon","")=="landing": engage_landing_assist(p)
+		var assisted:bool=p.get("landing_assist",0.)>0. and legal_progress
+		if assisted:
+			frame=surface;p.air_frame=surface;p.air_rates=Vector3.ZERO
+			velocity=surface.z*clampf(velocity.dot(surface.z),80.,AIR_SPEED)
+			p.air_velocity=velocity;p.lift_speed=0.;p.landing_assist=0.;p.landing_fx=.65
 		var nose_alignment:float=frame.z.dot(surface.z)
 		var upright:float=frame.y.dot(surface.y)
 		var approach:float=velocity.dot(surface.z)
@@ -157,16 +203,21 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 		# touchdown still costs speed/energy; steep or misaligned impacts crash.
 		var descent_limit:=100. if landing_pad else 75.
 		if nose_alignment>.65 and upright>.65 and p.lift_speed> -descent_limit and approach>65 and legal_progress:
-			var impact:=clampf((-p.lift_speed-45.)/55.,0.,1.) if landing_pad else 0.
+			var damage:=0. if assisted else touchdown_damage(frame,surface,velocity)
+			p.landing_damage=damage
+			p.energy=maxf(0.,p.energy-damage)
+			p.flash=maxf(p.flash,minf(.4,damage*.015))
+			p.shield_hit=maxf(float(p.get("shield_hit",0.)),minf(.28,damage*.02))
+			if p.energy<=0.:
+				crash(p,surface.y)
+				return
 			p.airborne=false
 			p.distance=nearest.distance
 			p.x=nearest.lateral
 			p.route=signf(p.x) if float(n.get("split_gap",0.))>.01 else 0.
 			p.heading=clampf(atan2(-frame.z.dot(surface.x),frame.z.dot(surface.z)),-.7,.7)
 			p.slip=clampf(-velocity.dot(surface.x),-70,70)
-			p.speed=clampf(approach/maxf(.55,cos(p.heading)),65,440)*(1.-impact*.18)
-			p.energy=maxf(0.,p.energy-impact*6.)
-			p.flash=maxf(p.flash,impact*.15)
+			p.speed=clampf(approach/maxf(.55,cos(p.heading)),65,440)*(1.-damage*.004)
 			p.lift=maxf(0,after)
 			p.lift_speed=0.0
 			p.unload=0.0

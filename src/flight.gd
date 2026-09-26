@@ -73,6 +73,15 @@ static func integrate_air(p:Dictionary,dt:float,roll_input:float,yaw_input:float
 	# +Z is the nose, -X is pilot-right; back stick gives negative X pitch.
 	var desired:=Vector3(p.trim*1.8,-yaw_input*1.65,roll_input*3.8)*authority
 	p.air_rates=p.air_rates.lerp(desired,1-exp(-dt*24))
+	# Arcade jet turning: at flying speed, pitch/yaw bend the flight path with
+	# the nose instead of letting it rotate away from nearly unchanged momentum.
+	# Roll alone still banks the wings. Slow or stalled craft must regain airspeed.
+	var forward_speed:=maxf(0.,velocity.dot(frame.z))
+	var alignment:=frame.z.dot(velocity.normalized()) if speed>1. else 0.
+	var turn_grip:=smoothstep(80.,180.,forward_speed)*smoothstep(.25,.8,alignment)*.95
+	var path_rotation:Vector3=frame*Vector3(p.air_rates.x,p.air_rates.y,0.)*dt*turn_grip
+	if path_rotation.length_squared()>.000000001:
+		velocity=velocity.rotated(path_rotation.normalized(),path_rotation.length())
 	var rotation:Vector3=p.air_rates*dt
 	if rotation.length_squared()>.000000001:
 		frame=(frame*Basis(Quaternion(rotation.normalized(),rotation.length()))).orthonormalized()

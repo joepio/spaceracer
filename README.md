@@ -241,7 +241,10 @@ ailerons. The same fin mapping is visible while driving. These are
 independent body-axis controls: roll sets bank, with no forced levelling or hidden
 yaw. Bank and pull back to turn like a fighter. LT acts as an air brake. Angular
 rates build and stop quickly with stick input; wing lift, bank, angle of attack,
-side-slip and gravity bend the flight path rather than instantly redirecting it.
+side-slip and gravity still affect flight. At flying speed, pitch and yaw also
+bend velocity with the nose, so hard turns redirect travel immediately instead
+of letting the hull spin away from its momentum. This assistance fades below
+180 m/s and disappears at stall speeds; roll alone continues to bank the wings.
 Lift falls sharply at low forward airspeed. Slow flight sinks under gravity;
 use throttle to regain speed and a moderate nose-up attitude to arrest the sink.
 Pulling too far still stalls, and even full throttle cannot hover vertically.

@@ -80,7 +80,9 @@ func air_bot(p:Dictionary)->Dictionary:
 	var aim:Dictionary=track.sample(destination)
 	var frame:Basis=p.air_frame
 	# Lead the displaced landing centre and cancel drift before reaching the deck.
-	var target:Vector3=Track.point(aim,0.,1.3)
+	# Aim through the hover plane so direct jet steering completes touchdown
+	# instead of asymptotically skimming just above it until flight times out.
+	var target:Vector3=Track.point(aim,0.,-.5)
 	var desired:Vector3=(target-p.air_position).normalized()*220.
 	var goal:Vector3=desired+(desired-p.air_velocity)*.8
 	return {"throttle":.85,"brake":clampf((p.speed-235.)/100.,0.,.25),

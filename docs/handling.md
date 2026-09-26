@@ -114,3 +114,21 @@ The 15-check airspeed/turning regression covers gravity, power/pitch recovery,
 stalling, two stationary rotations in both directions, released-stick heading,
 reverse/sideways travel and head-on contacts. The 54 flight checks, 18,058 jump
 checks across 44 seeds, and 196,078 core simulation checks pass (48/48 finishers).
+
+
+## Direct jet flight turns
+
+Pitch and yaw now rotate the travel vector alongside the craft at flying speed.
+The turn assistance preserves speed rather than adding thrust, and fades with
+forward airspeed (80–180 m/s) and poor nose/airflow alignment. Roll continues to
+bank the wings independently. Existing gravity, aerodynamic lift, drag, engine
+power and the lower flight speed limit still apply. Launch keeps its measured
+velocity and attitude without a snap.
+
+At 235 m/s, a one-second full pull-up previously turned travel only 14.7 degrees,
+leaving 84.5 degrees between the nose and movement. It now turns travel 99.8
+degrees with 0.5 degrees of lag. Full yaw improves from 61.6 to 89.7 degrees,
+with lag reduced from 27.8 to 1.3 degrees. These are isolated 120 Hz simulations.
+The jet-turn regression also checks 30/60 Hz behavior, banked pitch, releasing
+controls, retained speed, and low-speed falling. Bots aim through the hover plane
+on landing so the more direct response does not leave them skimming above it.

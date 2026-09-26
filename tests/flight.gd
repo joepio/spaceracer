@@ -52,7 +52,9 @@ func guided_return(seed_value:int)->void:
 		var n:Dictionary=hit.node
 		var height:float=(p.air_position-n.p).dot(n.frame.y)
 		var aim:Dictionary=race.track.sample(hit.distance+100)
-		var goal:Vector3=aim.frame.z*230+n.frame.y*clampf((1.3-height)*2,-45,25)+n.frame.x*clampf(hit.lateral*4,-100,100)
+		# Climb first, then command the approach; direct flight can land much sooner.
+		var target_height:=30. if p.air_time<.8 else 1.3
+		var goal:Vector3=aim.frame.z*230+n.frame.y*clampf((target_height-height)*2,-45,25)+n.frame.x*clampf(hit.lateral*4,-100,100)
 		var frame:Basis=p.air_frame
 		var pitch:=clampf(-atan2(goal.dot(frame.y),goal.dot(frame.z))*2,-1,1)
 		var yaw:=clampf(-atan2(goal.dot(frame.x),goal.dot(frame.z))*5,-1,1)

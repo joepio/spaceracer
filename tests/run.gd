@@ -221,8 +221,9 @@ func run() -> void:
 	check(not airborne.airborne and airborne.recovery==0,"Aligned downward crossing lands on track")
 	airborne.airborne=true
 	airborne.air_time=10.1
+	airborne.air_position=Vector3(0,1100,100)
 	Race.Flight.step(airborne,risky.track,1.0/120,0,0,0,0)
-	check(airborne.wreck_wait and airborne.crashed and airborne.recovery==0,"Runaway flight enters the automatic crash delay")
+	check(airborne.airborne and not airborne.crashed,"Long flight far above the road remains under pilot control")
 	var analog_strafe:=handling_race()
 	for tick in range(24): analog_strafe.step(1.0/120,[{"strafe":.6,"throttle":1.0}])
 	check(analog_strafe.racers[0].slip>20 and analog_strafe.racers[0].heading==0,"Right stick strafes without steering nose")

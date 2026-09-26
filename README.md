@@ -158,8 +158,10 @@ per player. Bots also collect and use items.
 Use buttons, timers and effects pause with the race; crashes discard items.
 
 - **Cruise missile:** a large finned rocket follows the track at **1,500 km/h**,
-  including banks, loops and jump routes. It locks onto the leader at launch, shows a red targeting laser
-  and an incoming warning, then deals 38 shield damage and a speed hit. A fresh
+  including banks, loops and jump routes. It locks onto the leader at launch,
+  marking the plane with four blinking red corners. The targeting laser appears
+  only in the estimated final two seconds and grows brighter toward impact.
+  A hit deals 38 shield damage and a speed hit. A fresh
   high-G turn in the last 230 ms breaks the lock. Brake hard and steer sharply on
   the road, or make a sharp flying manoeuvre. Early held turns do not automatically
   evade. A successful dodge sends the missile past; consecutive heavy hits get a
@@ -313,7 +315,11 @@ momentum and up to 25 energy (leaving at least one). A crash already charges the
 energy cost; automatic recovery does not charge it twice. Recovery
 returns to the last safe track position, before a mandatory jump when applicable,
 without awarding progress. Holding Y cannot trigger repeated resets. Recovery preserves remaining energy; a depleted hull is rebuilt with a 25-point reserve.
-Progress is awarded when landing, so simply flying past the finish does not win.
+Flight has no hidden time or distance limit. Impacts with scenery, road undersides,
+city ground or water still cause crashes; Y remains available when lost off course.
+Ordinary flight progress is credited on landing. Flying forward through the lap
+line over the road also counts immediately, up to 120 m above the deck. The
+travelled-distance check still rejects shortcuts that skip untravelled course.
 
 Hinged wing elevons and twin tail rudders respond directly to pitch, steering,
 strafing and braking, including during the starting countdown. Input deflection

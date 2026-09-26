@@ -141,6 +141,7 @@ static func touchdown_damage(frame:Basis,surface:Basis,velocity:Vector3)->float:
 	return minf(18.,impact*.10+pow(tilt,1.35)*5.+sideways*.035)
 
 static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float,throttle:float,brake:float)->void:
+	p.air_gate_crossed=false
 	p.air_time+=dt
 	var previous:Vector3=p.air_position
 	integrate_air(p,dt,strafe,steer,throttle,brake)
@@ -154,7 +155,7 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 	var velocity:Vector3=p.air_velocity
 	var frame:Basis=p.air_frame
 	p.air_travel+=previous.distance_to(position)
-	# Distance/race progress stays at launch until an actual legal track landing.
+	# Ordinary route progress is credited on landing; lap gates also work in air.
 	var nearest:Dictionary=track.project(position,p.distance,p.air_travel*1.35+100)
 	var previous_hit:Dictionary=track.project(previous,p.distance,p.air_travel*1.35+100)
 	var n:Dictionary=nearest.node
@@ -205,5 +206,25 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 		crash(p,-surface.y) # Hitting the underside cannot attach to the road.
 	elif p.air_time>.10 and inside and after< -2 and previous_hit.node.get("air_gap",false):
 		crash(p) # A low approach hits the exposed landing lip; never flies through it.
-	elif p.air_time>10 or position.y< -179.5 or position.distance_to(n.p)>850 or (track.has_method("hits_water") and track.hits_water(position)):
+	elif (track.get("biome")=="city" and absf(position.x)<6000. and absf(position.z)<6000. and position.y< -179.5) or (track.has_method("hits_water") and track.hits_water(position)):
 		crash(p)
+	if p.airborne and not p.crashed:
+		cross_lap_gate(p,track,previous,position)
+
+static func cross_lap_gate(p:Dictionary,track:RefCounted,previous:Vector3,position:Vector3)->void:
+	var distance:float=p.lap*track.length
+	# Same travelled-distance check as landing: cutting across a whole circuit
+	# cannot award its untravelled length just by passing the finish structure.
+	if distance-p.distance>p.air_travel*1.05+25.: return
+	var gate:Dictionary=track.sample(distance)
+	var before:float=(previous-gate.p).dot(gate.frame.z)
+	var after:float=(position-gate.p).dot(gate.frame.z)
+	if before>=0. or after<0.: return
+	var fraction:=clampf(-before/(after-before),0.,1.)
+	var crossing:=previous.lerp(position,fraction)-Vector3(gate.p)
+	var height:float=crossing.dot(gate.frame.y)
+	if absf(crossing.dot(gate.frame.x))>gate.width+5. or height<0. or height>120.: return
+	p.air_gate_crossed=true
+	p.air_gate_fraction=fraction
+	p.distance=distance+maxf(0.,after)
+	p.air_travel=position.distance_to(previous.lerp(position,fraction))

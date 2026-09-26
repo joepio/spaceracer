@@ -215,6 +215,7 @@ func new_race() -> void:
 		viewport.add_child(camera)
 		camera.current = true
 		var hud := Hud.new()
+		hud.camera=camera
 		hud.race = race
 		hud.player_index = index
 		hud.show_map = indices.size() == 1

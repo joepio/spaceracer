@@ -231,7 +231,9 @@ func step(dt: float, inputs: Array) -> void:
 			var previous_speed:float=p.speed
 			Flight.step(p,track,dt,steer,strafe,throttle,brake)
 			p.acceleration=maxf(0,(p.speed-previous_speed)/dt)
-			if not p.airborne and p.recovery==0: update_lap(p)
+			if not p.crashed and p.recovery==0 and (not p.airborne or p.get("air_gate_crossed",false)):
+				update_lap(p)
+				if p.finished and p.get("air_gate_crossed",false): p.time=clock-dt*(1.-p.air_gate_fraction)
 			continue
 		p.on_pad = n.zone == "boost" and absf(p.x) < n.width * .35 and brake<.05 and p.lift<1 and p.emp_time<=0.
 		var fast: bool = (p.boost > 0 or p.on_pad) and brake<.05

@@ -189,7 +189,11 @@ func run()->void:
 	p.air_position=Track.point(n,0,150)
 	p.air_time=10.1
 	Flight.step(p,race.track,1.0/120,0,0,0,0)
-	check(p.crashed and not p.airborne,"Unrecovered flight times out into respawn")
+	check(not p.crashed and p.airborne,"Flight does not explode after a hidden ten-second timeout")
+	p.air_position=Track.point(n,0,1100.)
+	Flight.step(p,race.track,1.0/120,0,0,0,0)
+	check(not p.crashed and p.airborne,"Flying far from the road does not trigger an invisible explosion")
+	Flight.crash(p)
 	race.step(1.,[{}])
 	check(p.crashed and p.wreck_wait and p.recovery==0,"Wreck stays visible during the automatic recovery delay")
 	race.step(1.01,[{}])

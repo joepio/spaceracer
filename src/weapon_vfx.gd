@@ -188,7 +188,9 @@ func make_missile()->Node3D:
 		var ribbon:=QuadMesh.new();ribbon.size=Vector2(3.,10.)
 		var plume:=mesh(root,ribbon,bump_material,Vector3(0,0,-9.))
 		plume.basis=Basis(Vector3.BACK,angle)*Basis(Vector3.RIGHT,PI*.5)
-	var beam:=mesh(self,cylinder(1.,1.),laser_material);root.set_meta("laser",beam)
+	var beam_material:StandardMaterial3D=laser_material.duplicate()
+	beam_material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+	var beam:=mesh(self,cylinder(1.,1.),beam_material);root.set_meta("laser",beam)
 	return root
 
 func puff(position_value:Vector3,radius:float,opacity:float,heat:float,seed_value:float)->void:
@@ -240,8 +242,14 @@ func update()->void:
 			if absf(forward.dot(up))>.98: up=Vector3.UP if absf(forward.y)<.98 else Vector3.RIGHT
 			node.basis=Basis.looking_at(forward,up,true)
 		var beam:MeshInstance3D=node.get_meta("laser")
-		if m.evaded: beam.visible=false
-		else: line(beam,m.position,Weapons.pose(race,race.racers[m.target]).origin,.085)
+		var warning:=1.-clampf(Weapons.missile_eta(race,m)/2.,0.,1.)
+		beam.visible=warning>0.
+		if warning>0.:
+			var intensity:=smoothstep(0.,1.,warning)
+			var beam_material:StandardMaterial3D=beam.material_override
+			beam_material.albedo_color=Color(1.,.08,.16,intensity)
+			beam_material.emission_energy_multiplier=.2+intensity*6.
+			line(beam,m.position,Weapons.pose(race,race.racers[m.target]).origin,lerpf(.025,.11,intensity))
 	for id in missile_nodes.keys():
 		if active.has(id): continue
 		missile_nodes[id].get_meta("laser").queue_free()

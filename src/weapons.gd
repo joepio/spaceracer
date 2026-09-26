@@ -318,6 +318,19 @@ func end_step(race:RefCounted,dt:float)->void:
 			if effect.life<=0.: list.erase(effect)
 	while bursts.size()>24: bursts.pop_front()
 
+static func missile_eta(race:RefCounted,m:Dictionary)->float:
+	if m.evaded: return INF
+	var target:Dictionary=race.racers[m.target]
+	if not available(target): return INF
+	var offset:Vector3=pose(race,target).origin-Vector3(m.position)
+	if m.terminal>=0.:
+		var velocity:Vector3=target.air_velocity if target.airborne else target.ground_velocity
+		return maxf(0.,offset.length()-4.)/maxf(1.,MISSILE_SPEED-velocity.dot(offset.normalized()))
+	var progress:float=target.distance
+	if target.airborne: progress=race.track.project(target.air_position,target.distance,target.air_travel*1.35+100.).distance
+	var closing:=maxf(1.,MISSILE_SPEED-target.speed*cos(target.heading))
+	return maxf(0.,progress-m.distance)/closing
+
 func step_missile(race:RefCounted,m:Dictionary,dt:float)->void:
 	var target:Dictionary=race.racers[m.target]
 	m.age+=dt

@@ -13,7 +13,7 @@ Touch shows a Use button when carrying an item.
 
 | Item | Behaviour |
 | --- | --- |
-| Cruise missile | Locks the leader at launch, with a straight red targeting laser. Follows the track at 1,500 km/h, then homes at the same speed within close range. A fresh turn above 24 lateral G in the final 230 ms evades it; road turns also require a brake slide. Hit: 38 shield damage and 34% speed loss. |
+| Cruise missile | Locks the leader at launch, with four blinking red corners around the targeted craft in each camera. A red laser fades in over the estimated last two seconds before impact. Follows the track at 1,500 km/h, then homes at the same speed within close range. A fresh turn above 24 lateral G in the final 230 ms evades it; road turns also require a brake slide. Hit: 38 shield damage and 34% speed loss. |
 | Warp drive | 2.8 seconds of course autopilot, up to 530 m/s. Phases through traffic and attacks; extends across a gap to hand control back on solid track. Tapers speed for the upcoming bend. Ground activation only. |
 | Sentry drone | Eight-second escort. Shoots the nearest rival ahead within 220 m of progress and 190 m spatial distance, with a forward cone and scenery occlusion. Four shield damage every 400 ms. |
 | EMP | World-space spherical pulse, expanding to 220 m over 650 ms. Rivals inside lose engines for 2.2 seconds; the emitter is exempt. Momentum and aerodynamic steering remain, while throttle, boost, ground strafe are disabled. Cancels warp; a warp interrupted above missing deck becomes real flight. No shield damage. Two-second reboot protection prevents chain locks. |

@@ -1,6 +1,7 @@
 extends Control
 const World = preload("res://src/world.gd")
 var race: RefCounted
+var camera:Camera3D
 var player_index := 0
 var font: Font = ThemeDB.fallback_font
 var avatar_key: String = ""
@@ -51,6 +52,7 @@ func _draw() -> void:
 		right_label("%05d"%race.track.seed_value,Vector2(w-24,h-18),10)
 		return
 	# Soft edge contrast keeps the road open; no floating instrument panels.
+	draw_missile_targets(w,h)
 	draw_texture_rect(top_fade,Rect2(0,0,w,64),false)
 	draw_texture_rect(bottom_fade,Rect2(0,h-64,w,64),false)
 	portrait(p,Vector2(28,30),10)
@@ -88,8 +90,7 @@ func _draw() -> void:
 	elif not item.is_empty(): item=("" if OS.has_feature("android") else "X · ")+item
 	var item_flash:bool=p.pickup_fx>0. and not p.pickup_energy
 	if not item.is_empty(): centered(item,w,h-25,14 if item_flash else 12,Color("d8ffac") if item_flash else Color("97ffdf"))
-	if p.missile_warning>0.: centered("DODGE!" if p.missile_warning>1. else "MISSILE LOCK",w,108,14,Color("ff6c86"))
-	elif p.evade_notice>0.: centered("EVADED",w,108,12,Color("97ffdf"))
+	if p.evade_notice>0.: centered("EVADED",w,108,12,Color("97ffdf"))
 	if p.emp_time>0.: centered("ENGINE OFF  %.1f"%p.emp_time,w,132,13,Color("a6caff"))
 	elif p.jam_strength>.03: centered("SIGNAL JAMMED",w,132,12,Color("ffc58a"))
 	label("%05d · %s · %s"%[race.track.seed_value,race.track.difficulty.to_upper(),race.track.biome.to_upper()],Vector2(20,h-8),8,Color("98aebb"))
@@ -108,6 +109,34 @@ func _draw() -> void:
 		centered("Boost unlocked",w,84,13,tint)
 	if p.flash>0:
 		draw_rect(Rect2(0,0,w,h),Color(1,.2,.25,p.flash*.5),false,3)
+
+func draw_missile_targets(w:float,h:float)->void:
+	if not is_instance_valid(camera) or int(race.vfx_clock*4.)%2!=0: return
+	var marked:={}
+	for missile in race.weapons.missiles:
+		if missile.evaded or marked.has(missile.target): continue
+		var eta:float=race.Weapons.missile_eta(race,missile)
+		if not is_finite(eta) or eta<2.: continue
+		marked[missile.target]=true
+		var pose:Transform3D=race.Weapons.pose(race,race.racers[missile.target])
+		var low:=Vector2(INF,INF)
+		var high:=Vector2(-INF,-INF)
+		var behind:=false
+		for x in [-5.,5.]:
+			for y in [-.7,2.]:
+				for z in [-4.5,5.]:
+					var point:=pose*Vector3(x,y,z)
+					if camera.is_position_behind(point): behind=true;continue
+					var screen:=camera.unproject_position(point)/Vector2(camera.get_viewport().size)*Vector2(w,h)
+					low=low.min(screen);high=high.max(screen)
+		if behind or high.x<0. or low.x>w or high.y<0. or low.y>h: continue
+		low-=Vector2.ONE*4.;high+=Vector2.ONE*4.
+		var length:=clampf(minf(high.x-low.x,high.y-low.y)*.24,5.,15.)
+		var red:=Color(1.,.12,.2,.95)
+		for corner in [low,Vector2(high.x,low.y),high,Vector2(low.x,high.y)]:
+			var inward:=Vector2(1. if corner.x==low.x else -1.,1. if corner.y==low.y else -1.)
+			draw_line(corner,corner+Vector2(inward.x*length,0.),red,1.8,true)
+			draw_line(corner,corner+Vector2(0.,inward.y*length),red,1.8,true)
 
 func right_label(value:String,at:Vector2,size_value:int,color:Color=Color("e1eef6"))->void:
 	label(value,at-Vector2(font.get_string_size(value,HORIZONTAL_ALIGNMENT_LEFT,-1,size_value).x,0),size_value,color)

@@ -3,6 +3,7 @@ render_mode unshaded;
 uniform float amount=0.;
 uniform float warp=0.;
 uniform float emp=0.;
+uniform float jam=0.;
 uniform float race_time=0.;
 void fragment(){
     vec4 original=texture(TEXTURE,UV);
@@ -43,5 +44,17 @@ void fragment(){
         vec2 at=clamp(UV+vec2(glitch,0.),vec2(.002),vec2(.998));
         vec3 split=vec3(texture(TEXTURE,at+vec2(.0015*emp,0.)).r,texture(TEXTURE,at).g,texture(TEXTURE,at-vec2(.0015*emp,0.)).b);
         COLOR.rgb=mix(COLOR.rgb,split,.35*emp)+vec3(.07,.16,.3)*edge*emp*(.35+band);
+    }
+    if(jam>.001){
+        float row=floor(UV.y*38.);
+        float tick=floor(race_time*12.);
+        float noise=fract(sin(dot(vec2(row,tick),vec2(127.1,311.7)))*43758.5453);
+        float tear=(noise-.5)*step(.65,noise)*jam*.045;
+        vec2 at=clamp(UV+vec2(tear,0.),vec2(.008),vec2(.992));
+        vec2 split=vec2(.005*jam,0.);
+        vec3 signal=vec3(texture(TEXTURE,at+split).r,texture(TEXTURE,at).g,texture(TEXTURE,at-split).b);
+        float grain=fract(sin(dot(floor(UV*vec2(640.,360.))+tick,vec2(12.9898,78.233)))*43758.5453);
+        COLOR.rgb=mix(COLOR.rgb,signal,jam*.8)+(grain-.5)*jam*.09;
+        COLOR.rgb+=vec3(.12,.05,.005)*jam*pow(max(0.,sin(UV.y*90.-race_time*14.)),12.);
     }
 }

@@ -147,6 +147,13 @@ Use buttons, timers and effects pause with the race; crashes discard items.
   boost and powered landing guidance. Warp is interrupted too, including a smooth
   transition into flight above gaps. Engines restart automatically; brief reboot
   and respawn protection prevent repeated shutdowns. No direct shield damage.
+- **Jammer:** deploys an exterior satellite dish for six seconds. A 56-degree
+  forward cone reaches 260 metres; rivals inside get signal tearing, static and
+  bounded random steering/strafe/pitch input. Interference is strongest nearby
+  and on-axis, fading with distance and at the cone edge. Escaping the cone clears
+  it. Buttons, throttle and brake remain under player control. EMP silences the
+  transmitter; warp and fresh respawn protection resist it. Amber wavefronts show
+  the dish's transmission direction.
 
 Unassisted touchdowns damage shields according to descent speed, attitude against
 the deck and sideways slip. Clean, gentle landings are free; rough landings also
@@ -156,7 +163,7 @@ reset to prevent an unavoidable repeat crash at the next jump.
 
 Catch-up bias affects only random item odds. Front-to-back odds interpolate from
 18/28/54 to 30/36/34 within the missile/warp/drone pool. Landing assist has an 18%
-chance and EMP 16%; the remaining 66% uses that pool. A missile rolled by the leader becomes
+chance, EMP 16% and Jammer 14%; the remaining 52% uses that pool. A missile rolled by the leader becomes
 a drone. There is no hidden handling or engine-speed penalty for leading.
 Damage uses the existing shield/boost-energy bar; depletion produces the normal
 wreck and manual **Y** recovery. Respawning grants two seconds of weapon protection.

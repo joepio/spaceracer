@@ -2,8 +2,10 @@ extends RefCounted
 ## Race-owned, deterministic combat. No rendering or wall-clock dependencies.
 const Track=preload("res://src/track.gd")
 const Flight=preload("res://src/flight.gd")
-const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry drone","landing":"Landing assist","emp":"EMP"}
+const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry drone","landing":"Landing assist","emp":"EMP","jammer":"Jammer"}
 const WARP_DURATION:=2.8
+const JAMMER_RANGE:=260.
+const JAMMER_HALF_ANGLE:=28.
 const EMP_RADIUS:=220.
 const EMP_EXPAND:=.65
 const EMP_DURATION:=2.2
@@ -30,7 +32,8 @@ static func initialize(p:Dictionary)->void:
 	p.merge({"weapon":"","fire_held":false,"weapon_acquired":0.,"warp_time":0.,"warp_age":0.,"warp_fx":0.,
 		"drone_time":0.,"drone_cooldown":0.,"drone_target":-1,"shield_hit":0.,"weapon_guard":0.,
 		"missile_warning":0.,"evade_notice":0.,"last_jink":-10.,"jinking":false,"combat_g":0.,
-		"landing_assist":0.,"landing_fx":0.,"landing_damage":0.,"emp_time":0.,"emp_guard":0.},true)
+		"landing_assist":0.,"landing_fx":0.,"landing_damage":0.,"emp_time":0.,"emp_guard":0.,
+		"jammer_time":0.,"jammer_deploy":0.,"jam_strength":0.},true)
 
 static func available(p:Dictionary)->bool:
 	return not p.finished and not p.crashed and p.recovery<=0.
@@ -48,7 +51,8 @@ func choose(rank:int,count:int)->String:
 	var roll:=rng.randf()
 	if roll<.18: return "landing"
 	if roll<.34: return "emp"
-	roll=(roll-.34)/.66
+	if roll<.48: return "jammer"
+	roll=(roll-.48)/.52
 	return "missile" if roll<odds.x else ("warp" if roll<odds.x+odds.y else "drone")
 
 func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
@@ -62,6 +66,7 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 		p.landing_fx=maxf(0.,p.landing_fx-dt)
 		p.emp_time=maxf(0.,p.emp_time-dt)
 		p.emp_guard=maxf(0.,p.emp_guard-dt)
+		p.jammer_time=maxf(0.,p.jammer_time-dt)
 		p.missile_warning=0.
 		p.warp_fx=move_toward(p.warp_fx,1. if p.warp_time>0. else 0.,dt*4.)
 		var fire:bool=inputs[i].get("fire",false)
@@ -70,11 +75,17 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 		if not available(p):
 			p.weapon="";p.warp_time=0.;p.drone_time=0.;p.drone_target=-1;p.landing_assist=0.
 			p.emp_time=0.
+			p.jammer_time=0.
+		p.jammer_deploy=move_toward(p.jammer_deploy,1. if p.jammer_time>0. else 0.,dt*5.)
+	step_jammers(race)
 
 func activate(race:RefCounted,index:int)->bool:
 	var p:Dictionary=race.racers[index]
-	if not available(p) or p.warp_time>0. or p.drone_time>0. or race.over: return false
+	if not available(p) or p.warp_time>0. or p.drone_time>0. or p.jammer_time>0. or race.over: return false
 	match p.weapon:
+		"jammer":
+			if p.emp_time>0.: return false
+			p.jammer_time=6.
 		"emp":
 			if pulses.any(func(pulse):return pulse.owner==index): return false
 			serial+=1
@@ -95,6 +106,44 @@ func activate(race:RefCounted,index:int)->bool:
 		_: return false
 	p.weapon=""
 	return true
+
+static func jammer_strength(source:Transform3D,target:Vector3)->float:
+	var offset:=target-source.origin
+	var distance:=offset.length()
+	if distance<.01 or distance>=JAMMER_RANGE: return 0.
+	var facing:=offset.dot(source.basis.z)/distance
+	var edge:=cos(deg_to_rad(JAMMER_HALF_ANGLE))
+	return (1.-smoothstep(15.,JAMMER_RANGE,distance))*smoothstep(edge,cos(deg_to_rad(12.)),facing)
+
+func step_jammers(race:RefCounted)->void:
+	for p in race.racers: p.jam_strength=0.
+	for owner in race.racers:
+		if not available(owner) or owner.jammer_time<=0. or owner.emp_time>0.: continue
+		var source:=pose(race,owner)
+		for target in race.racers:
+			if target==owner or not available(target) or target.warp_time>0. or target.weapon_guard>0.: continue
+			target.jam_strength=maxf(target.jam_strength,jammer_strength(source,pose(race,target).origin))
+
+static func interference_noise(time:float,seed_value:float)->float:
+	var tick:=floorf(time*8.)
+	var fraction:=smoothstep(0.,1.,fposmod(time*8.,1.))
+	var a:=fposmod(sin(tick*127.1+seed_value*311.7)*43758.5453,1.)*2.-1.
+	var b:=fposmod(sin((tick+1.)*127.1+seed_value*311.7)*43758.5453,1.)*2.-1.
+	return lerpf(a,b,fraction)
+
+func jam_inputs(race:RefCounted,inputs:Array)->Array:
+	var result:Array=inputs.duplicate()
+	for i in range(race.racers.size()):
+		var p:Dictionary=race.racers[i]
+		if p.jam_strength<=0. or race.countdown>0.: continue
+		var input:Dictionary=inputs[i].duplicate()
+		var seed_value:float=race.track.seed_value+p.slot*17.
+		for axis in ["steer","strafe","trim"]:
+			var channel:int=["steer","strafe","trim"].find(axis)
+			var disturbance:float=interference_noise(race.clock,seed_value+channel*31.)*p.jam_strength*[.38,.32,.18][channel]
+			input[axis]=clampf(float(input.get(axis,0.))+disturbance,-1.,1.)
+		result[i]=input
+	return result
 
 func step_emp(race:RefCounted,dt:float)->void:
 	for pulse in pulses.duplicate():

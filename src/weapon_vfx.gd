@@ -13,6 +13,8 @@ var guidance_material:ShaderMaterial
 var emp_fields:Array[MeshInstance3D]=[]
 var emp_rings:Array[MeshInstance3D]=[]
 var emp_arcs:Array[MeshInstance3D]=[]
+var dishes:Array[Node3D]=[]
+var radio_waves:Array[Array]=[]
 var laser_material:StandardMaterial3D
 var steel:StandardMaterial3D
 var mint:StandardMaterial3D
@@ -57,6 +59,12 @@ func configure(state:RefCounted)->void:
 		var base:=mesh(self,hoop,mint)
 		base.transform=pickup.pose;base.position-=pickup.pose.basis.y*3.
 	for p in race.racers:
+		dishes.append(make_dish())
+		var waves:Array=[]
+		for j in range(3):
+			var wave_mat:=ShaderMaterial.new();wave_mat.shader=load("res://src/jammer_wave.gdshader")
+			waves.append(mesh(self,ring(.993,1.),wave_mat))
+		radio_waves.append(waves)
 		var pulse_mat:=ShaderMaterial.new();pulse_mat.shader=load("res://src/emp.gdshader")
 		var pulse_shape:=sphere(1.);pulse_shape.radial_segments=64;pulse_shape.rings=32
 		emp_fields.append(mesh(self,pulse_shape,pulse_mat))
@@ -96,6 +104,31 @@ func configure(state:RefCounted)->void:
 		var impact:=ShaderMaterial.new();impact.shader=load("res://src/weapon_impact.gdshader")
 		explosions.append(mesh(self,sphere(1.),impact))
 	update()
+
+func make_dish()->Node3D:
+	var dish:=Node3D.new();add_child(dish)
+	mesh(dish,box(Vector3(1.2,.18,1.3)),steel)
+	mesh(dish,cylinder(.16,1.4),steel,Vector3(0,.7,0))
+	mesh(dish,sphere(.3),steel,Vector3(0,1.3,0))
+	var bowl:=SurfaceTool.new();bowl.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for row in range(6):
+		for slice in range(32):
+			var corners:Array[Vector3]=[]
+			for corner in [Vector2(row,slice),Vector2(row+1,slice),Vector2(row+1,slice+1),Vector2(row,slice+1)]:
+				var r:float=corner.x/6.*1.65;var angle:float=corner.y/32.*TAU
+				corners.append(Vector3(cos(angle)*r,sin(angle)*r+1.5,r*r*.22))
+			for index in [0,1,2,0,2,3]: bowl.add_vertex(corners[index])
+	bowl.generate_normals()
+	var alloy:=material(Color("b4c2c9"));alloy.cull_mode=BaseMaterial3D.CULL_DISABLED
+	mesh(dish,bowl.commit(),alloy)
+	var rim:=mesh(dish,ring(1.6,1.68),material(Color("ffaa51"),1.7),Vector3(0,1.5,.6))
+	rim.rotation.x=PI*.5
+	var feed:=Vector3(0,1.5,1.65)
+	for angle in [0.,TAU/3.,TAU*2./3.]:
+		var support:=mesh(dish,cylinder(1.,1.),steel)
+		line(support,Vector3(cos(angle)*1.55,1.5+sin(angle)*1.55,.53),feed,.055)
+	mesh(dish,sphere(.2),material(Color("ffcb7f"),3.),feed)
+	return dish
 
 static func line(node:MeshInstance3D,from:Vector3,to:Vector3,width:float)->void:
 	var direction:=to-from
@@ -155,6 +188,17 @@ func update()->void:
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
 		var frame:=Weapons.pose(race,p)
+		var dish:=dishes[i]
+		dish.visible=p.jammer_deploy>.01 and not p.crashed
+		dish.transform=frame*Transform3D(Basis.IDENTITY.scaled(Vector3(1.,maxf(.01,p.jammer_deploy),1.)),Vector3(0,2.,-1.5))
+		for j in range(3):
+			var wave:MeshInstance3D=radio_waves[i][j]
+			wave.visible=p.jammer_time>0. and p.emp_time<=0. and not p.crashed
+			var phase:=fposmod(time*.9+j/3.,1.)
+			var ahead:=5.+phase*Weapons.JAMMER_RANGE
+			var radius:=ahead*tan(deg_to_rad(Weapons.JAMMER_HALF_ANGLE))
+			wave.transform=frame*Transform3D(Basis(Vector3.RIGHT,PI*.5).scaled(Vector3.ONE*radius),Vector3(0,0,ahead))
+			wave.material_override.set_shader_parameter("power",(1.-phase)*p.jammer_deploy)
 		var arcs:=emp_arcs[i]
 		arcs.visible=p.emp_time>0. and not p.crashed
 		arcs.transform=frame.scaled_local(Vector3(5.3,2.3,5.8))

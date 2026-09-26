@@ -93,6 +93,7 @@ func step(dt: float, inputs: Array) -> void:
 		return
 	vfx_clock+=dt
 	weapons.begin_step(self,dt,inputs)
+	inputs=weapons.jam_inputs(self,inputs)
 	for i in range(racers.size()):
 		var input:Dictionary=inputs[i]
 		var pilot:Dictionary=racers[i]

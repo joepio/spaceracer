@@ -30,6 +30,15 @@ func run()->void:
 			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.speed=240.
 		race.racers[0].weapon="emp";race.weapons.activate(race,0)
 		race.weapons.step_emp(race,.3)
+	if "--jammer-showcase" in OS.get_cmdline_user_args():
+		race.weapons.missiles.clear();race.weapons.shots.clear()
+		for i in range(race.racers.size()):
+			var p:Dictionary=race.racers[i]
+			p.distance=start+[0.,50.,155.,400.,500.,600.][i]
+			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.speed=240.
+		race.racers[0].weapon="jammer";race.weapons.activate(race,0)
+		race.racers[0].jammer_deploy=1.
+		race.weapons.step_jammers(race)
 	for view in game.views: game.world.update_camera(view.camera,view.index,0.,true)
 	for view in game.views: RenderingServer.viewport_set_measure_render_time(view.viewport.get_viewport_rid(),true)
 	var gpu:Array[float]=[]

@@ -340,6 +340,7 @@ func update_speed_effects(view:Dictionary,dt:float)->void:
 	view.blur.set_shader_parameter("amount",amount if quality>=.8 and active else 0.)
 	view.blur.set_shader_parameter("warp",p.warp_fx if active else 0.)
 	view.blur.set_shader_parameter("emp",minf(1.,p.emp_time*4.) if active else 0.)
+	view.blur.set_shader_parameter("jam",p.jam_strength if active else 0.)
 	view.blur.set_shader_parameter("race_time",race.vfx_clock)
 	view.speed_effects.update_effects(view.camera,dt,active,quality<.8)
 

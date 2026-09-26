@@ -15,8 +15,9 @@ its HUD label says AUTO and it does not need or show a Use button.
 | Sentry drone | Eight-second escort. Shoots the nearest rival ahead within 220 m of progress and 190 m spatial distance, with a forward cone and scenery occlusion. Four shield damage every 400 ms. |
 | Landing assist | Single-use automatic guidance during the final 300 ms of a predicted top-side touchdown. Levels attitude and damps lateral/descent velocity with four visible thrusters. The assisted touchdown is perfectly aligned and damage-free. Does not teleport across gaps or bypass scenery/underside collisions. |
 | EMP | World-space spherical pulse, expanding to 220 m over 650 ms. Rivals inside lose engines for 2.2 seconds; the emitter is exempt. Momentum and aerodynamic steering remain, while throttle, boost, ground strafe and landing guidance are disabled. Cancels warp; a warp interrupted above missing deck becomes real flight. No shield damage. Two-second reboot protection prevents chain locks. |
+| Jammer | Six-second transmitter, 260 m forward range and 28-degree half-angle. Distance and angular falloff scale visual noise and random steering/strafe/pitch perturbations, capped at .38/.32/.18. Strongest source wins; effects do not add together. No buttons/throttle/brake modifications. |
 
-Landing assist takes 18% of rolls and EMP 16%. Within the remaining 66%, missile/warp/drone
+Landing assist takes 18% of rolls, EMP 16% and Jammer 14%. Within the remaining 52%, missile/warp/drone
 odds interpolate from 18/28/54% at the front to 30/36/34% at the back.
 A leader's missile roll becomes a drone. Inventory survives an
 invalid activation, but crashes discard it. Heavy hits give 1.1 seconds of
@@ -31,6 +32,20 @@ so it cannot be trapped at a mandatory jump; ordinary resets retain their cost.
 
 ## Validation (2026-09-26)
 
+- Jammer: seeded, smoothly interpolated eight-Hz control noise uses simulation
+  time and controller slot. Inputs are copied before applying interference,
+  preserving GameNight frames and local controls. `tests/jammer.gd` checks cone
+  orientation, distance/angle falloff, expiry, owner exclusion, input bounds,
+  reproducibility, EMP/warp/respawn interactions and actual race input routing.
+  `tests/weapon_render.gd -- --jammer-showcase` captures three-player output:
+  an unaffected emitter with its extending parabolic dish, a close heavily
+  disrupted rival and a distant lightly disrupted rival. The dish and amber
+  wavefronts use pooled meshes, with no added lights or reflection cameras.
+  All 27 jammer checks and 41 weapon checks pass. The forest race suite passes
+  2,730 checks with 72/72 finishers. Desktop captures measured 1.387 ms summed
+  GPU view time for three city views at 960 × 540 each, and 1.196 ms for the
+  Mobile forest renderer at 640 × 360 each. These are whole-scene measurements
+  on the RTX 5070 Ti, not measurements on the tablet.
 - EMP: `tests/emp.gd` passes 23 checks covering propagation, owner exemption, spatial radius,
   airborne targets, coasting, boost blocking, automatic reboot, protection,
   warp interruption over gaps, landing guidance and input/countdown handling.

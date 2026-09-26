@@ -77,12 +77,14 @@ func _draw() -> void:
 	if p.landing_fx>0.: item="LANDING ASSIST"
 	elif p.warp_time>0.: item="WARP  %.1f"%p.warp_time
 	elif p.drone_time>0.: item="SENTRY  %.1f"%p.drone_time
+	elif p.jammer_time>0.: item="JAMMER  %.1f"%p.jammer_time
 	elif p.weapon=="landing": item="AUTO · Landing assist"
 	elif not item.is_empty(): item=("" if OS.has_feature("android") else "X · ")+item
 	if not item.is_empty(): centered(item,w,h-25,12,Color("97ffdf"))
 	if p.missile_warning>0.: centered("DODGE!" if p.missile_warning>1. else "MISSILE LOCK",w,108,14,Color("ff6c86"))
 	elif p.evade_notice>0.: centered("EVADED",w,108,12,Color("97ffdf"))
 	if p.emp_time>0.: centered("ENGINE OFF  %.1f"%p.emp_time,w,132,13,Color("a6caff"))
+	elif p.jam_strength>.03: centered("SIGNAL JAMMED",w,132,12,Color("ffc58a"))
 	label("%05d · %s · %s"%[race.track.seed_value,race.track.difficulty.to_upper(),race.track.biome.to_upper()],Vector2(20,h-8),8,Color("98aebb"))
 	var jump:Dictionary=race.track.jump_at(p.distance,170.)
 	if not jump.is_empty() and not p.airborne and p.recovery==0 and race.countdown==0 and fposmod(p.distance,race.track.length)<jump.takeoff:

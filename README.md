@@ -36,7 +36,7 @@ to the menu keeps the current code for replay. Seeds reproduce the track and
 scenery within the same game version. Write down the difficulty and world with
 the code; both appear beside the seed in the HUD and results.
 
-**World** switches between the neon **City** and **Forest — Verdant Reach**.
+**World** switches between the neon **City**, **Forest — Verdant Reach**, and **The Cell**.
 The forest has a bright blue daytime sky, soft procedural clouds and warm sunlight.
 It races through rolling grassy hills, wooded banks and connected lakes beneath a dense canopy dominated by 340–650 metre trees.
 Authored pine and birch models replace the homemade tree generator. Random rotation,
@@ -59,8 +59,20 @@ course nearer the water, while the loops and difficulty-dependent flight gaps
 remain. Undergrowth and ripples follow the race clock; hitting the water crashes the
 craft and respawns it automatically after two seconds. Placement is seeded and instanced; authored models are bundled for offline play.
 Selecting a world updates the menu preview without changing the chosen seed.
-GameNight exposes **World (next race)**, and standalone accepts `--biome=forest`
-or `--biome=city` after `--`.
+**The Cell** races inside a teal membrane, among towering double-stranded DNA,
+folded proteins, ribbed mitochondria, pleated membrane sheets, and a giant nucleus
+with nuclear pores. Six-legged cargo organelles pace along microtubules, carrying
+vesicles with alternating footfalls and a gently bobbing body. This is a stylized
+microscopic world, not a biologically literal cell model. Coral, lilac and jade
+tissue uses glossy shaded surfaces and a subtle luminous rim.
+All geometry is generated locally and shared in spatial instance batches.
+Scenery placement and entire walking envelopes avoid the track and jump corridors;
+solid structures and moving bodies can be hit in free flight. Animation pauses
+with the race. All three difficulties, seeds, weapons and split-screen modes work
+in this setting too.
+
+GameNight exposes **World (next race)**, and standalone accepts `--biome=forest`,
+`--biome=city`, or `--biome=cell` after `--`.
 
 Adjust **Level** with left/right in either menu:
 

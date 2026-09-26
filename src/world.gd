@@ -2,6 +2,7 @@ extends Node3D
 const Track = preload("res://src/track.gd")
 const Scenery = preload("res://src/scenery.gd")
 const Forest = preload("res://src/forest.gd")
+const Cell = preload("res://src/cell.gd")
 const TurnMarkers = preload("res://src/turn_markers.gd")
 const Obstacles=preload("res://src/obstacles.gd")
 const CrashVfx=preload("res://src/crash_vfx.gd")
@@ -48,6 +49,7 @@ func build(state: RefCounted) -> void:
 	race = state
 	race.track.obstacles=Obstacles.new()
 	var forest:bool=race.track.biome=="forest"
+	var cell:bool=race.track.biome=="cell"
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
 	scene_environment=env
@@ -55,10 +57,11 @@ func build(state: RefCounted) -> void:
 	env.background_mode = Environment.BG_SKY
 	var sky := Sky.new()
 	var sky_material := ShaderMaterial.new()
-	sky_material.shader = load("res://src/forest_sky.gdshader" if forest else "res://src/sky.gdshader")
+	sky_material.shader = load("res://src/cell_sky.gdshader" if cell else ("res://src/forest_sky.gdshader" if forest else "res://src/sky.gdshader"))
 	var top:=Color("060a12")
 	var horizon:=Color("0c121c")
 	if forest: top=Color("2586d1");horizon=Color("b6e4f7")
+	if cell: top=Color("173c46");horizon=Color("426b60")
 	if RenderingServer.get_current_rendering_method()!="gl_compatibility":
 		top=top.srgb_to_linear()
 		horizon=horizon.srgb_to_linear()
@@ -85,6 +88,12 @@ func build(state: RefCounted) -> void:
 		env.fog_light_color=Color("b6dcf0")
 		env.fog_light_energy=1.
 		env.fog_density=.00004
+	if cell:
+		env.ambient_light_color=Color("9bd4cb")
+		env.ambient_light_energy=.22
+		env.fog_light_color=Color("284d4b")
+		env.fog_light_energy=.8
+		env.fog_density=.00023
 	if advanced_renderer:
 		env.ssr_enabled=true
 		env.ssr_max_steps=48
@@ -105,9 +114,9 @@ func build(state: RefCounted) -> void:
 		env.volumetric_fog_length=180.
 		env.volumetric_fog_ambient_inject=.12
 		env.volumetric_fog_temporal_reprojection_amount=.65
-		if forest:
+		if forest or cell:
 			env.volumetric_fog_enabled=false
-			env.glow_intensity=.35
+			env.glow_intensity=.35 if forest else .55
 	if RenderingServer.get_current_rendering_method()=="mobile":
 		env.glow_enabled=true
 		env.glow_intensity=.35 if forest else .7
@@ -130,17 +139,26 @@ func build(state: RefCounted) -> void:
 		night_fill.shadow_enabled=true
 		night_fill.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 		night_fill.directional_shadow_max_distance=380.
+	if cell:
+		forest_sun=night_fill
+		night_fill.rotation_degrees=Vector3(-38,-50,0)
+		night_fill.light_color=Color("ffe2ca");night_fill.light_energy=1.15;night_fill.light_specular=.65
+		night_fill.shadow_enabled=true
+		night_fill.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		night_fill.directional_shadow_max_distance=380.
+		var rim:=DirectionalLight3D.new();rim.rotation_degrees=Vector3(22,125,0)
+		rim.light_color=Color("76dfcd");rim.light_energy=.45;rim.light_specular=.45;add_child(rim)
 	add_child(night_fill)
 	road_material = ShaderMaterial.new()
 	road_material.shader = load("res://src/road.gdshader")
 	tunnel_material=ShaderMaterial.new()
 	tunnel_material.shader=load("res://src/tunnel.gdshader")
-	scenery=Forest.new() if forest else Scenery.new()
+	scenery=Cell.new() if cell else (Forest.new() if forest else Scenery.new())
 	scenery.build(self,race)
 	road_material.set_shader_parameter("billboard_art",load("res://assets/city-billboards.png"))
 	build_track()
 	showpiece=Showpiece.new()
-	if forest: showpiece.probes=scenery.probes
+	if forest or cell: showpiece.probes=scenery.probes
 	else: showpiece.build(self,race.track)
 	race.track.obstacles.add_visual_boxes(self)
 	for p in race.racers:
@@ -378,7 +396,7 @@ func set_quality(value:float,view_count:int)->void:
 		forest_sun.directional_shadow_max_distance=170. if RenderingServer.get_current_rendering_method()=="mobile" else (220. if view_count>1 else 380.)
 	if not advanced_renderer: return
 	scene_environment.ssil_enabled=false
-	scene_environment.volumetric_fog_enabled=value>=1. and race.track.biome!="forest"
+	scene_environment.volumetric_fog_enabled=value>=1. and race.track.biome=="city"
 	scene_environment.ssr_enabled=value>=.8
 	scene_environment.ssr_max_steps=32 if view_count>1 or value<1. else 48
 	scene_environment.ssao_enabled=value>=1.
@@ -402,7 +420,7 @@ func update_lighting()->void:
 	for light:Light3D in lights: light.shadow_enabled=selected.has(light)
 
 func configure_reflections(material:ShaderMaterial,position:Vector3,detailed:bool)->void:
-	if race.track.biome=="forest":
+	if race.track.biome!="city":
 		material.set_shader_parameter("box_count",0)
 		material.set_shader_parameter("sign_count",0)
 		return

@@ -75,7 +75,7 @@ func _ready() -> void:
 	bridge.declare_settings([
 		{"key":"laps","label":"Laps (next race)","kind":"number","default":3,"min":1,"max":5},
 		{"key":"difficulty","label":"Track difficulty (next race)","kind":"choice","default":"normal","options":["easy","normal","hard"]},
-		{"key":"biome","label":"World (next race)","kind":"choice","default":"city","options":["city","forest"]},
+		{"key":"biome","label":"World (next race)","kind":"choice","default":"city","options":Race.Track.BIOMES},
 		{"key":"quality","label":"Graphics","kind":"choice","default":"high","options":["performance","balanced","high"]}])
 	ui = Control.new()
 	ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -509,7 +509,7 @@ func refresh_menu_values()->void:
 		match str(row.get_meta("menu_id","")):
 			"race": row.text=("Restart" if menu_race_changed() else "Resume") if local_paused else "Race"
 			"players": row.text="Players                         %d"%human_count
-			"biome": row.text="World                           %s"%biome.capitalize()
+			"biome": row.text="World                           %s"%("The Cell" if biome=="cell" else biome.capitalize())
 			"difficulty": row.text="Level                            %s"%difficulty.capitalize()
 			"graphics": row.text="Graphics                       %s"%{.6:"Performance",.8:"Balanced",1.0:"High"}.get(quality,"Balanced")
 

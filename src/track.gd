@@ -26,7 +26,7 @@ var corner_shift:float
 var features:Array[Dictionary]=[]
 const DIFFICULTIES := ["easy","normal","hard"]
 var difficulty := "normal"
-const BIOMES := ["city","forest"]
+const BIOMES := ["city","forest","cell"]
 var biome := "city"
 var water_level:float=-INF
 var jumps:Array[Dictionary]=[]
@@ -88,6 +88,7 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 	rng.seed = track_seed
 	theme = THEMES[rng.randi_range(0,3)]
 	if biome=="forest": theme=["VERDANT REACH",Color("173c43"),Color("426a60"),Color("8bd8bd"),Color("e5b96c")]
+	if biome=="cell": theme=["THE CELL",Color("153c42"),Color("716080"),Color("83dfc6"),Color("eda3ba")]
 	radius = rng.randf_range(900,1100)
 	lobes = rng.randi_range(2,4)
 	amplitude = rng.randf_range(65,155)

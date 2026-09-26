@@ -210,6 +210,20 @@ def main():
             wait(read, lambda s: s["phase"] == "ready" and s["session"] == "ion-session-two")
             assert read()["difficulty"] == "hard"
             assert read()["biome"] == "city"
+            host.send("setting_changed", key="biome", value="cell")
+            wait(read, lambda s: s["next_biome"] == "cell")
+            assert read()["biome"] == "city", "Cell applies to the next race"
+            host.send("dispose", session="ion-session-two")
+            wait(read, lambda s: s["phase"] == "idle")
+            host.send("prepare", game="ion-rush", session="ion-session-cell", seats=seats, players=players)
+            cell_state = wait(read, lambda s: s["phase"] == "ready" and s["session"] == "ion-session-cell")
+            assert cell_state["biome"] == "cell" and cell_state["views"] == 2
+            host.send("start", session="ion-session-cell")
+            active_cell = wait(read, lambda s: s["clock"] > .3)
+            host.send("pause", session="ion-session-cell")
+            paused_cell = wait(read, lambda s: s["phase"] == "paused")
+            time.sleep(.2)
+            assert read()["city_time"] == paused_cell["city_time"], "Cell organisms freeze during pause"
             host.close()
             child.wait(timeout=8)
             assert child.returncode == 0

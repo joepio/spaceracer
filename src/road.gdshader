@@ -47,7 +47,8 @@ void fragment(){
         light+=vec3(.18,.55,.40)*(outline*.09+dash*.012);
     }
     if(zone>1.8 && lateral<.30){
-        float arrow=step(.87,fract((UV.y-lateral*24.)/18.));
+        // UV.y increases along the race: put the chevron tip ahead of its wings.
+        float arrow=step(.87,fract((UV.y+lateral*24.)/18.));
         light+=vec3(.72,.43,.13)*arrow*.36;
     }
     float start=(1.-step(9.,UV.y))*step(.5,fract(UV.x*12.+floor(UV.y/3.)*.5));

@@ -5,12 +5,18 @@ uniform vec3 jet_tint : source_color = vec3(.04,.36,1.);
 uniform float power=1.;
 uniform float boost_amount=0.;
 uniform float braking=0.;
+void vertex(){
+	// Boost bends and splits the crossed ribbons into uneven tongues of plasma.
+	float tip=UV.y*UV.y;
+	VERTEX.xy+=vec2(sin(UV.y*19.-race_time*31.+VERTEX.y*7.),cos(UV.y*23.-race_time*37.+VERTEX.x*9.))*tip*.4*boost_amount;
+}
 void fragment(){
 	float across=abs(UV.x*2.-1.);
 	float core=exp(-across*across*14.);
 	float edge=1.-smoothstep(.45,1.,across);
 	float tip=1.-smoothstep(.45,1.,UV.y);
 	float flow=.78+.22*sin(UV.y*43.-race_time*65.);
+	flow*=mix(1.,.65+.55*sin(UV.y*31.-race_time*47.)*sin(UV.y*17.+race_time*23.),boost_amount*UV.y);
 	float diamonds=pow(.5+.5*cos(UV.y*30.-race_time*8.),5.);
 	vec3 halo=mix(jet_tint,vec3(.4,.6,1.),boost_amount*.5);
 	halo=mix(halo,vec3(1.,.25,.04),braking);

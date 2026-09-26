@@ -24,6 +24,7 @@ func run()->void:
 	Ship.animate_effects(ship,p,0,warm.countdown)
 	check(not ship.get_node("EngineLight").visible,"Cold engine emits no dynamic illumination")
 	check(not ship.get_node("EngineHeat-1").visible and not ship.get_node("EngineFlare-1").visible,"Cold engines have no heat haze or optical flare")
+	check(not ship.get_node("BoostArcs-1").visible,"Electrical discharge is absent from cold engines")
 	var idle_color:Color=ship.get_node("EngineCore-1").material_override.albedo_color
 	for tick in range(45):
 		warm.step(1.0/120,[{"throttle":1.0}])
@@ -66,16 +67,26 @@ func run()->void:
 	p.on_pad=false
 	Ship.animate_effects(ship,p,warm.vfx_clock,0)
 	var cruise_energy:float=ship.get_node("EngineLight").light_energy
+	check(not ship.get_node("BoostArcs1").visible,"Normal throttle does not produce boost discharges")
 	p.boost=1.0
 	Ship.animate_effects(ship,p,warm.vfx_clock,0)
 	check(ship.get_node("EngineLight").light_energy>cruise_energy*1.5,"Boost increases dynamic exhaust illumination")
 	check(ship.get_node("EngineLight").light_energy>cruise_energy*3. and ship.get_node("EngineLight").omni_range>25.,"Boost lights strongly reach nearby road and rivals")
 	check(ship.get_node("EngineFlare-1").material_override.get_shader_parameter("boost_amount")==1. and ship.get_node("EngineHeat-1").material_override.get_shader_parameter("boost_amount")==1.,"Boost strengthens flare and heat distortion together")
+	check(ship.get_node("BoostArcs-1").visible and ship.get_node("BoostArcs1").visible,"Both boosting nozzles emit branching spikes")
+	var frozen_light:float=ship.get_node("EngineLight").light_energy
+	var frozen_jet:Vector3=ship.get_node("ExhaustL").scale
+	Ship.animate_effects(ship,p,warm.vfx_clock,0)
+	check(ship.get_node("EngineLight").light_energy==frozen_light and ship.get_node("ExhaustL").scale==frozen_jet,"Pause freezes irregular light and plume pulses")
+	Ship.animate_effects(ship,p,warm.vfx_clock+.071,0)
+	check(absf(ship.get_node("EngineLight").light_energy-frozen_light)>.01 and ship.get_node("ExhaustL").scale!=frozen_jet,"Boost power varies over time")
+	check(absf(ship.get_node("EngineLight").light_energy-ship.get_node("EngineLightR").light_energy)>.01,"Left and right engines do not pulse in lockstep")
 	p.recovery=1.0
 	Ship.animate_effects(ship,p,warm.vfx_clock,0)
 	check(not ship.get_node("EngineLight").visible and ship.get_node("EngineLight").light_energy==0,"Crashed craft cannot leave an orphan light pool")
 	check(not ship.get_node("EngineLightR").visible and ship.get_node("EngineLightR").light_energy==0,"Both nozzle lights turn off on crash")
 	check(not ship.get_node("EngineFlare-1").visible and not ship.get_node("EngineHeat1").visible,"Recovery removes flares and distortion from both engines")
+	check(not ship.get_node("BoostArcs-1").visible and not ship.get_node("BoostArcs1").visible,"Recovery clears all electrical discharge")
 	Ship.set_jet_tint(ship,Color.MAGENTA)
 	p.recovery=0
 	Ship.animate_effects(ship,p,warm.vfx_clock,0)

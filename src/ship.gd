@@ -1,5 +1,25 @@
 extends RefCounted
 ## Beveled hull, swept aerofoils, recessed cockpit and additive engine plumes.
+static var discharge_mesh:ArrayMesh
+
+static func boost_mesh()->ArrayMesh:
+	if discharge_mesh!=null: return discharge_mesh
+	var surface:=SurfaceTool.new();surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Six main bolts, each with one fork. The shader animates this fixed topology.
+	for branch in range(12):
+		for segment in range(8):
+			for corner in [[0,0],[1,0],[0,1],[0,1],[1,0],[1,1]]:
+				surface.set_color(Color(float(branch)/12.,0.,0.))
+				surface.set_uv(Vector2(corner[1],float(segment+corner[0])/8.))
+				surface.set_normal(Vector3.UP)
+				surface.add_vertex(Vector3(corner[1],0.,float(segment+corner[0])))
+	discharge_mesh=surface.commit()
+	return discharge_mesh
+
+static func boost_surge(time:float,slot:int,side:int)->float:
+	var phase:=time+slot*.713+side*.379
+	# Unequal frequencies avoid a metronomic blink; no gameplay RNG is consumed.
+	return pow(.5+.5*sin(phase*23.7+sin(phase*9.1)*2.4),4.)*.65+pow(.5+.5*sin(phase*41.3),8.)*.35
 static func metal(color:Color,roughness:float=.3)->StandardMaterial3D:
 	var material:=StandardMaterial3D.new()
 	material.albedo_color=color
@@ -104,6 +124,13 @@ static func build(tint:Color)->Node3D:
 		plume.position=Vector3(side*2.45,-.12,-3.65)
 		plume.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(plume)
+		var arcs:=MeshInstance3D.new();arcs.name="BoostArcs%d"%side
+		arcs.mesh=boost_mesh();arcs.position=plume.position
+		arcs.custom_aabb=AABB(Vector3(-5.,-5.,-19.),Vector3(10.,10.,20.))
+		arcs.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var discharge:=ShaderMaterial.new();discharge.shader=load("res://src/boost_arcs.gdshader")
+		discharge.set_shader_parameter("jet_tint",Vector3(jet_tint.r,jet_tint.g,jet_tint.b))
+		arcs.material_override=discharge;arcs.visible=false;root.add_child(arcs)
 		var reverse:=MeshInstance3D.new()
 		reverse.name="Reverse%d"%side
 		reverse.mesh=plume.mesh
@@ -210,6 +237,7 @@ static func set_jet_tint(root:Node3D,tint:Color)->void:
 		root.get_node("ExhaustL" if side<0 else "ExhaustR").material_override.set_shader_parameter("jet_tint",Vector3(color.r,color.g,color.b))
 		root.get_node("EngineHalo%d"%side).material_override.set_shader_parameter("jet_tint",Vector3(color.r,color.g,color.b))
 		root.get_node("EngineFlare%d"%side).material_override.set_shader_parameter("jet_tint",Vector3(color.r,color.g,color.b))
+		root.get_node("BoostArcs%d"%side).material_override.set_shader_parameter("jet_tint",Vector3(color.r,color.g,color.b))
 		root.get_node("EngineCore%d"%side).material_override.emission=color.lightened(.45)
 
 static func animate_controls(root:Node3D,p:Dictionary)->void:
@@ -241,22 +269,30 @@ static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)
 	right_light.omni_range=engine_light.omni_range
 	var length:=.65+power*1.4+drive*power*4.0+(5.5 if burning else 0.0)
 	for side in [-1,1]:
+		var surge:=boost_surge(time,p.slot,side) if burning else 0.
+		var nozzle_light:OmniLight3D=engine_light if side<0 else right_light
+		nozzle_light.light_energy+=power*surge*4.
 		var exhaust:MeshInstance3D=root.get_node("ExhaustL" if side<0 else "ExhaustR")
-		exhaust.scale=Vector3(.8 if burning else .6,.65 if burning else .45,length)
-		exhaust.material_override.set_shader_parameter("race_time",time+p.slot*.71)
+		exhaust.scale=Vector3(.8+surge*.2 if burning else .6,.65+surge*.15 if burning else .45,length*(.9+surge*.35 if burning else 1.))
+		exhaust.material_override.set_shader_parameter("race_time",time+p.slot*.71+side*.379)
 		exhaust.material_override.set_shader_parameter("power",power)
 		exhaust.material_override.set_shader_parameter("boost_amount",1.0 if burning else 0.0)
 		var core:MeshInstance3D=root.get_node("EngineCore%d"%side)
 		core.material_override.albedo_color=Color("152d42").lerp(Color("eeffff"),power)
-		core.material_override.emission_energy_multiplier=power*(8. if burning else 3.)
+		core.material_override.emission_energy_multiplier=power*(8.+surge*5. if burning else 3.)
 		core.scale=Vector3(1,.7,.5)*(.75+power*.5)
 		var halo:MeshInstance3D=root.get_node("EngineHalo%d"%side)
-		halo.scale=Vector3.ONE*(.6+power*.65+(.4 if burning else 0.0))
+		halo.scale=Vector3.ONE*(.6+power*.65+(.4+surge*.2 if burning else 0.0))
 		halo.material_override.set_shader_parameter("power",power)
+		var arcs:MeshInstance3D=root.get_node("BoostArcs%d"%side)
+		arcs.visible=burning and power>.015
+		arcs.material_override.set_shader_parameter("race_time",time+p.slot*.71+side*.379)
+		arcs.material_override.set_shader_parameter("power",power)
+		arcs.material_override.set_shader_parameter("surge",surge)
 		for effect_name in ["EngineFlare%d"%side,"EngineHeat%d"%side]:
 			var effect:MeshInstance3D=root.get_node(effect_name)
 			effect.visible=alive and power>.015
-			effect.material_override.set_shader_parameter("power",power)
+			effect.material_override.set_shader_parameter("power",power*(1.+surge*.3))
 			effect.material_override.set_shader_parameter("boost_amount",1. if burning else 0.)
 		var heat:ShaderMaterial=root.get_node("EngineHeat%d"%side).material_override
 		heat.set_shader_parameter("race_time",time+p.slot*.71)

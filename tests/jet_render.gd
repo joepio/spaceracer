@@ -51,6 +51,15 @@ func run()->void:
 	var paused:=await capture()
 	check(difference(animated,paused)==0,"Heat stops moving when simulation time is paused")
 	heat.visible=false
+	var arcs:MeshInstance3D=ship.get_node("BoostArcs-1");arcs.visible=true
+	var electric:=await capture()
+	var arc_pixels:=difference(clean,electric)
+	check(arc_pixels>20,"Boost discharges draw multiple luminous spikes")
+	arcs.material_override.set_shader_parameter("race_time",10.17)
+	var next_strike:=await capture()
+	check(difference(electric,next_strike)>20,"Electrical branches strike in different positions over time")
+	check(difference(next_strike,await capture())==0,"Electrical branches freeze while paused")
+	arcs.visible=false
 	var flare:MeshInstance3D=ship.get_node("EngineFlare-1");flare.visible=true
 	var lit:=await capture()
 	var flare_pixels:=difference(clean,lit)
@@ -63,6 +72,6 @@ func run()->void:
 	var blocked:=await capture()
 	var leak_pixels:=difference(occluded,blocked)
 	check(leak_pixels<5,"A small object covering the nozzle hides the entire flare")
-	print("JET_RENDER heat_pixels=%d flare_pixels=%d occluded_leak=%d failures=%d"%[heat_pixels,flare_pixels,leak_pixels,failures])
+	print("JET_RENDER heat_pixels=%d arc_pixels=%d flare_pixels=%d occluded_leak=%d failures=%d"%[heat_pixels,arc_pixels,flare_pixels,leak_pixels,failures])
 	scene.queue_free();await process_frame
 	quit(1 if failures else 0)

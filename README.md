@@ -359,6 +359,9 @@ flares and stronger core bloom. A small heat-shimmer shader refracts the road
 behind each jet; it intensifies during boost and freezes with pause. Flares
 are hidden when their source is occluded. See [boost effects](docs/boost-effects.md)
 for render checks and measured split-screen performance.
+During boost, uneven plasma tongues and short, forked electrical spikes erupt
+from each nozzle. The two engines surge independently, pulsing their cores,
+flares and nearby lighting; normal throttle retains a steadier exhaust.
 HDR bloom complements the localized engine halos in Forward+. The OpenGL fallback
 retains the local halos. Road panels, metallic shading,
 shoulder chevrons and animated energy strips communicate speed and curvature.

@@ -62,11 +62,11 @@ func run()->void:
 	var landing_race:=Race.new([{"slot":0}],31,1,"hard")
 	var deck:float=landing_race.track.jumps[0].landing+25.
 	var n:Dictionary=landing_race.track.sample(deck)
-	for descent in [65.,140.]:
+	for descent in [65.,180.]:
 		var p:Dictionary=landing_race.racers[0]
 		p.distance=deck;p.airborne=true;p.air_time=.5;p.air_travel=0.;p.crashed=false;p.recovery=0.;p.energy=100.
 		p.air_position=Track.point(n,0.,1.5);p.air_frame=n.frame;p.air_velocity=n.frame.z*230.-n.frame.y*descent;p.air_rates=Vector3.ZERO;p.trim=0.
 		Flight.step(p,landing_race.track,.01,0.,0.,.5,0.)
-		check(p.crashed if descent>100. else not p.airborne and p.energy<100.,"Landing penalty and maximum descent remain meaningful")
+		check(p.crashed if descent>140. else not p.airborne and p.energy<100.,"Landing penalty and maximum descent remain meaningful")
 	print("JUMP_TESTS %d checks, %d failures"%[checks,failures])
 	quit(1 if failures else 0)

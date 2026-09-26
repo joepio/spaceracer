@@ -118,8 +118,12 @@ Standalone assigns connected controllers at race start and fills disconnected se
 
 Fly through the cyan pickup rows and press **X** to activate the carried item
 (Landing assist triggers automatically).
-One inventory slot, one pickup per row per lap per player: someone ahead cannot
-remove all pickups for the rest of the pack. Bots also collect and use items.
+Pickup stations are spaced at one third of their original density, with three
+lanes at each station. A collected pickup vanishes for everyone for two seconds,
+then fades back in. The other lanes remain available. A short mint light pulse
+and expanding rings mark the pickup and collector, visible to all players; the
+inventory label briefly brightens. One inventory slot, one pickup per row per lap
+per player. Bots also collect and use items.
 Use buttons, timers and effects pause with the race; crashes discard items.
 
 - **Cruise missile:** locks onto the leader at launch, shows a red targeting laser
@@ -155,9 +159,11 @@ Use buttons, timers and effects pause with the race; crashes discard items.
   transmitter; warp and fresh respawn protection resist it. Amber wavefronts show
   the dish's transmission direction.
 
-Unassisted touchdowns damage shields according to descent speed, attitude against
-the deck and sideways slip. Clean, gentle landings are free; rough landings also
-lose speed, and severe impacts still wreck the craft. Banked tracks use their own
+Unassisted touchdowns mildly damage shields according to descent speed, attitude
+against the deck and sideways slip. Small imperfections are free; a typical rough
+landing costs about 4 shield points, and landing damage is capped at 18. Speed loss
+is reduced, and more steep/tilted approaches can recover. Extreme impacts still
+wreck the craft. Banked tracks use their own
 surface orientation. A depleted hull rebuilds with 25 shield points after manual
 reset to prevent an unavoidable repeat crash at the next jump.
 

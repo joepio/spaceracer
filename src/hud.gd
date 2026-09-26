@@ -80,7 +80,7 @@ func _draw() -> void:
 	elif p.jammer_time>0.: item="JAMMER  %.1f"%p.jammer_time
 	elif p.weapon=="landing": item="AUTO · Landing assist"
 	elif not item.is_empty(): item=("" if OS.has_feature("android") else "X · ")+item
-	if not item.is_empty(): centered(item,w,h-25,12,Color("97ffdf"))
+	if not item.is_empty(): centered(item,w,h-25,14 if p.pickup_fx>0. else 12,Color("d8ffac") if p.pickup_fx>0. else Color("97ffdf"))
 	if p.missile_warning>0.: centered("DODGE!" if p.missile_warning>1. else "MISSILE LOCK",w,108,14,Color("ff6c86"))
 	elif p.evade_notice>0.: centered("EVADED",w,108,12,Color("97ffdf"))
 	if p.emp_time>0.: centered("ENGINE OFF  %.1f"%p.emp_time,w,132,13,Color("a6caff"))

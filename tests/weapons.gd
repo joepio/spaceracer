@@ -18,7 +18,7 @@ func neutral()->Array: return [{},{},{}]
 func _initialize()->void: call_deferred("run")
 func run()->void:
 	var race:=fresh()
-	check(race.weapons.pickups.size()>=9,"Track contains several usable pickup rows")
+	check(race.weapons.pickups.size()>=3 and race.weapons.pickups.size()<=12,"Track retains a sparse set of usable pickup rows")
 	check(race.weapons.pickups==fresh().weapons.pickups,"Pickup layout is reproducible by seed")
 	var fronts:=0;var backs:=0
 	for i in range(6000):
@@ -27,11 +27,14 @@ func run()->void:
 	check(backs>fronts*1.25 and fronts>1000,"Catch-up odds favor the rear while useful items remain available up front")
 	var row:Dictionary=race.weapons.pickups[1]
 	for p in race.racers:
+		race.weapons.begin_step(race,2.01,neutral())
 		p.weapon_before=row.distance-30.;p.weapon_x_before=row.x;p.distance=row.distance+30.;p.x=row.x
 		race.weapons.collect(race,p)
 		check(not p.weapon.is_empty(),"Swept pickup collects at speed for each player, including sparse seat IDs")
 		p.weapon="";race.weapons.collect(race,p)
 		check(p.weapon.is_empty(),"Backing through a used row cannot farm it")
+		race.weapons.begin_step(race,2.01,neutral())
+		p.weapon_before=row.distance-30.
 		p.weapon_before+=race.track.length;p.distance+=race.track.length
 		race.weapons.collect(race,p)
 		check(not p.weapon.is_empty(),"Pickup recharges on the following lap")

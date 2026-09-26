@@ -125,11 +125,11 @@ static func crash(p:Dictionary,normal:Vector3=Vector3.ZERO)->void:
 
 static func touchdown_damage(frame:Basis,surface:Basis,velocity:Vector3)->float:
 	# Relative to the actual banked deck, not world-up or total racing speed.
-	var impact:=maxf(0.,-velocity.dot(surface.y)-8.)
+	var impact:=maxf(0.,-velocity.dot(surface.y)-18.)
 	var angle:=maxf(acos(clampf(frame.y.dot(surface.y),-1.,1.)),acos(clampf(frame.z.dot(surface.z),-1.,1.)))
-	var tilt:=maxf(0.,angle-deg_to_rad(5.))/deg_to_rad(40.)
-	var sideways:=maxf(0.,absf(velocity.dot(surface.x))-8.)
-	return minf(65.,impact*.28+pow(tilt,1.35)*18.+sideways*.10)
+	var tilt:=maxf(0.,angle-deg_to_rad(12.))/deg_to_rad(40.)
+	var sideways:=maxf(0.,absf(velocity.dot(surface.x))-18.)
+	return minf(18.,impact*.10+pow(tilt,1.35)*5.+sideways*.035)
 
 static func engage_landing_assist(p:Dictionary)->void:
 	p.weapon="";p.landing_assist=1.;p.landing_fx=.65
@@ -204,8 +204,8 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 		var landing_pad:bool=n.get("feature","") in ["jump","flight"]
 		# Purpose-built landing decks have stronger magnetic capture. A hard
 		# touchdown still costs speed/energy; steep or misaligned impacts crash.
-		var descent_limit:=100. if landing_pad else 75.
-		if nose_alignment>.65 and upright>.65 and p.lift_speed> -descent_limit and approach>65 and legal_progress:
+		var descent_limit:=140. if landing_pad else 115.
+		if nose_alignment>.4 and upright>.4 and p.lift_speed> -descent_limit and approach>45 and legal_progress:
 			var damage:=0. if assisted else touchdown_damage(frame,surface,velocity)
 			p.landing_damage=damage
 			p.energy=maxf(0.,p.energy-damage)
@@ -220,7 +220,7 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 			p.route=signf(p.x) if float(n.get("split_gap",0.))>.01 else 0.
 			p.heading=clampf(atan2(-frame.z.dot(surface.x),frame.z.dot(surface.z)),-.7,.7)
 			p.slip=clampf(-velocity.dot(surface.x),-70,70)
-			p.speed=clampf(approach/maxf(.55,cos(p.heading)),65,440)*(1.-damage*.004)
+			p.speed=clampf(approach/maxf(.55,cos(p.heading)),65,440)*(1.-damage*.002)
 			p.lift=maxf(0,after)
 			p.lift_speed=0.0
 			p.unload=0.0

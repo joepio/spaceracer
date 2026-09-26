@@ -1,7 +1,11 @@
 # Pickup weapons
 
-Pickups use deterministic seed-based rolls and one carried item per racer. Each
-row can be collected once per lap by each player, including sparse GameNight
+Pickups use deterministic seed-based rolls and one carried item per racer. One
+in three of the original stations remains, with three lanes at each. Collecting
+a lane hides it globally for two seconds; other lanes stay available. A 450 ms
+mint flash illuminates the collector and nearby road, with expanding world-space
+rings at the pickup and craft. The pickup scales back in over approximately
+170 ms. Each player can collect once per row per lap, including sparse GameNight
 slots. X activates; LT remains brake. Keyboard defaults are X, slash, P and C.
 Touch shows a Use button when carrying an active item. Landing assist is passive:
 its HUD label says AUTO and it does not need or show a Use button.
@@ -24,14 +28,27 @@ invalid activation, but crashes discard it. Heavy hits give 1.1 seconds of
 protection against stacked attacks; respawning gives two seconds. Empty shields
 use the existing crash, debris and manual Y recovery system.
 
-Unassisted landing damage uses the local deck frame: normal descent above 8 m/s,
-attitude error beyond 5 degrees and lateral speed above 8 m/s contribute, capped
-at 65 shield points. Fatal energy loss and the existing extreme-impact limits
-produce a wreck. A depleted hull receives 25 shield points after manual recovery
+Unassisted landing damage uses the local deck frame: normal descent above 18 m/s,
+attitude error beyond 12 degrees and lateral speed above 18 m/s contribute, capped
+at 18 shield points. The coefficients are reduced to .10 for descent, 5 for the
+normalized attitude term and .035 for slip. A representative 55 m/s descent with
+20-degree roll costs about 4 points instead of about 18. Speed loss is .2% per
+point (maximum 3.6%). Top-side capture accepts nose/up dot products above .4,
+approach above 45 m/s and descent below 115 m/s (140 on purpose-built jump decks).
+Fatal energy loss and extreme impacts produce a wreck. A depleted hull receives 25 shield points after manual recovery
 so it cannot be trapped at a mandatory jump; ordinary resets retain their cost.
 
 ## Validation (2026-09-26)
 
+- Pickup/landing rebalance: 36 pickup checks, 34 landing checks, 41 weapon checks,
+  54 flight checks and 18,058 jump checks pass. The forest suite passes 2,730
+  checks with 72/72 finishers. `tests/weapon_render.gd -- --pickup-showcase` checks
+  shared disappearance, collector light and rings in three-player rendering;
+  add `--pickup-respawn` to verify their removal and the item's reappearance.
+  Pickup flashes use one brief shadowless light per collecting racer, with
+  pooled ring meshes. No light remains active after the flash ends.
+  Packaged GameNight integration passes when run separately; the first run
+  alongside Android export/render capture exceeded its 15-second reprepare timeout.
 - Jammer: seeded, smoothly interpolated eight-Hz control noise uses simulation
   time and controller slot. Inputs are copied before applying interference,
   preserving GameNight frames and local controls. `tests/jammer.gd` checks cone

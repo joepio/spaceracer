@@ -20,11 +20,15 @@ var serial:=0
 func _init(track:RefCounted)->void:
 	rng.seed=track.seed_value+918371
 	var distance:=360.
+	var station:=0
 	while distance<track.length-250.:
 		var n:Dictionary=track.sample(distance)
 		if not n.loop and not n.air_gap and n.split_gap<.01 and n.feature=="ribbon" and absf(n.curve)<.007 and track.jump_at(distance,220.).is_empty():
-			for lane in [-.58,0.,.58]:
-				pickups.append({"distance":distance,"x":n.width*lane,"claimed":{},"pose":Transform3D(n.frame,Track.point(n,n.width*lane,5.))})
+			# Keep one in three original stations, retaining lane choice at each.
+			if station%3==0:
+				for lane in [-.58,0.,.58]:
+					pickups.append({"distance":distance,"x":n.width*lane,"claimed":{},"cooldown":0.,"reveal":1.,"pose":Transform3D(n.frame,Track.point(n,n.width*lane,5.))})
+			station+=1
 			distance+=760.
 		else: distance+=35.
 
@@ -33,7 +37,7 @@ static func initialize(p:Dictionary)->void:
 		"drone_time":0.,"drone_cooldown":0.,"drone_target":-1,"shield_hit":0.,"weapon_guard":0.,
 		"missile_warning":0.,"evade_notice":0.,"last_jink":-10.,"jinking":false,"combat_g":0.,
 		"landing_assist":0.,"landing_fx":0.,"landing_damage":0.,"emp_time":0.,"emp_guard":0.,
-		"jammer_time":0.,"jammer_deploy":0.,"jam_strength":0.},true)
+		"jammer_time":0.,"jammer_deploy":0.,"jam_strength":0.,"pickup_fx":0.,"pickup_pose":Transform3D.IDENTITY},true)
 
 static func available(p:Dictionary)->bool:
 	return not p.finished and not p.crashed and p.recovery<=0.
@@ -56,6 +60,9 @@ func choose(rank:int,count:int)->String:
 	return "missile" if roll<odds.x else ("warp" if roll<odds.x+odds.y else "drone")
 
 func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
+	for pickup in pickups:
+		pickup.cooldown=maxf(0.,pickup.cooldown-dt)
+		if pickup.cooldown<=0.: pickup.reveal=minf(1.,pickup.reveal+dt*6.)
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
 		p.weapon_before=p.distance;p.weapon_x_before=p.x
@@ -64,6 +71,7 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 		p.weapon_guard=maxf(0.,p.weapon_guard-dt)
 		p.evade_notice=maxf(0.,p.evade_notice-dt)
 		p.landing_fx=maxf(0.,p.landing_fx-dt)
+		p.pickup_fx=maxf(0.,p.pickup_fx-dt)
 		p.emp_time=maxf(0.,p.emp_time-dt)
 		p.emp_guard=maxf(0.,p.emp_guard-dt)
 		p.jammer_time=maxf(0.,p.jammer_time-dt)
@@ -195,6 +203,7 @@ func collect(race:RefCounted,p:Dictionary)->void:
 	var end:float=p.distance
 	if end<=start or end-start>120.: return # Recovery/teleports never sweep up items.
 	for pickup in pickups:
+		if pickup.cooldown>0.: continue
 		var circuit:=floori((end-pickup.distance)/race.track.length)
 		var crossing:float=pickup.distance+circuit*race.track.length
 		if circuit<0 or crossing<start or crossing>end: continue
@@ -205,7 +214,9 @@ func collect(race:RefCounted,p:Dictionary)->void:
 		p.weapon=choose(ordered.find(p)+1,ordered.size())
 		if ordered[0]==p and p.weapon=="missile": p.weapon="drone"
 		p.weapon_acquired=race.clock
-		# A row is personal, so the leader cannot strip every item from the pack.
+		pickup.cooldown=2.;pickup.reveal=0.
+		p.pickup_fx=.45;p.pickup_pose=pickup.pose
+		# Only this lane disappears globally; one item per row/lap for each racer.
 		for other in pickups:
 			if other.distance==pickup.distance: other.claimed[p.slot]=circuit
 		return

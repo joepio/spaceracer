@@ -39,6 +39,17 @@ func run()->void:
 		race.racers[0].weapon="jammer";race.weapons.activate(race,0)
 		race.racers[0].jammer_deploy=1.
 		race.weapons.step_jammers(race)
+	if "--pickup-showcase" in OS.get_cmdline_user_args():
+		race.weapons.missiles.clear();race.weapons.shots.clear()
+		var pickup:Dictionary=race.weapons.pickups[1]
+		for i in range(race.racers.size()):
+			var p:Dictionary=race.racers[i]
+			p.distance=pickup.distance+[3.,-40.,-75.,400.,500.,600.][i]
+			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.speed=180.
+		var collector:Dictionary=race.racers[0]
+		collector.weapon="";collector.weapon_before=pickup.distance-4.;collector.weapon_x_before=pickup.x;collector.x=pickup.x
+		race.weapons.collect(race,collector)
+		if "--pickup-respawn" in OS.get_cmdline_user_args(): race.weapons.begin_step(race,2.2,[{},{},{},{},{},{}])
 	for view in game.views: game.world.update_camera(view.camera,view.index,0.,true)
 	for view in game.views: RenderingServer.viewport_set_measure_render_time(view.viewport.get_viewport_rid(),true)
 	var gpu:Array[float]=[]
@@ -60,6 +71,12 @@ func run()->void:
 			gpu.append(sum_gpu);cpu.append(sum_cpu);frames.append((now-last)/1000.)
 		last=now
 	await RenderingServer.frame_post_draw
+	if "--pickup-showcase" in OS.get_cmdline_user_args():
+		var respawn:bool="--pickup-respawn" in OS.get_cmdline_user_args()
+		assert(game.world.weapon_vfx.pickup_bases[1].visible==respawn)
+		assert(game.world.weapon_vfx.pickup_lights[0].visible!=respawn)
+		assert(game.world.weapon_vfx.pickup_halos[0].visible!=respawn)
+		print("PICKUP_RENDER respawn=",respawn," collected=",race.racers[0].weapon)
 	var output:="C:/dev/ion-rush-captures/controls/weapons-showcase.png"
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--output="): output=arg.trim_prefix("--output=")

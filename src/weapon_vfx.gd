@@ -15,6 +15,10 @@ var emp_rings:Array[MeshInstance3D]=[]
 var emp_arcs:Array[MeshInstance3D]=[]
 var dishes:Array[Node3D]=[]
 var radio_waves:Array[Array]=[]
+var pickup_bases:Array[MeshInstance3D]=[]
+var pickup_echoes:Array[MeshInstance3D]=[]
+var pickup_halos:Array[MeshInstance3D]=[]
+var pickup_lights:Array[OmniLight3D]=[]
 var laser_material:StandardMaterial3D
 var steel:StandardMaterial3D
 var mint:StandardMaterial3D
@@ -57,8 +61,15 @@ func configure(state:RefCounted)->void:
 	var hoop:=ring(3.8,4.15)
 	for pickup in race.weapons.pickups:
 		var base:=mesh(self,hoop,mint)
+		pickup_bases.append(base)
 		base.transform=pickup.pose;base.position-=pickup.pose.basis.y*3.
 	for p in race.racers:
+		var collect_mat:=ShaderMaterial.new();collect_mat.shader=load("res://src/pickup_flash.gdshader")
+		pickup_echoes.append(mesh(self,ring(.88,1.),collect_mat))
+		pickup_halos.append(mesh(self,ring(.91,1.),collect_mat))
+		var flash:=OmniLight3D.new();flash.light_color=Color("b4ffac");flash.omni_range=20.
+		flash.shadow_enabled=false;flash.light_energy=0.;flash.omni_attenuation=1.6
+		add_child(flash);pickup_lights.append(flash)
 		dishes.append(make_dish())
 		var waves:Array=[]
 		for j in range(3):
@@ -167,7 +178,11 @@ func update()->void:
 		var frame:Transform3D=pickup.pose
 		frame.origin+=frame.basis.y*sin(time*2.+i)*.6
 		frame.basis=frame.basis*Basis(Vector3.UP,time*.8+i)*Basis(Vector3.FORWARD,PI*.25)
+		var reveal:float=pickup.reveal if pickup.cooldown<=0. else 0.
+		frame.basis=frame.basis.scaled(Vector3.ONE*reveal)
 		cores.set_instance_transform(i,frame)
+		pickup_bases[i].visible=pickup.cooldown<=0.
+		pickup_bases[i].scale=Vector3.ONE*maxf(.001,reveal)
 	var active:Dictionary={}
 	for m in race.weapons.missiles:
 		active[m.id]=true
@@ -188,6 +203,16 @@ func update()->void:
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
 		var frame:=Weapons.pose(race,p)
+		var flash:float=clampf(p.pickup_fx/.45,0.,1.)
+		pickup_echoes[i].visible=flash>0.
+		pickup_halos[i].visible=flash>0. and not p.crashed
+		var pickup_radius:=4.+(1.-flash)*9.
+		pickup_echoes[i].transform=p.pickup_pose*Transform3D(Basis.IDENTITY.scaled(Vector3.ONE*pickup_radius),Vector3.ZERO)
+		pickup_halos[i].transform=frame.scaled_local(Vector3(5.+(1.-flash)*2.,.6,6.+(1.-flash)*2.))
+		pickup_halos[i].material_override.set_shader_parameter("strength",flash)
+		pickup_lights[i].visible=flash>0. and not p.crashed
+		pickup_lights[i].position=frame.origin+frame.basis.y*3.
+		pickup_lights[i].light_energy=flash*3.
 		var dish:=dishes[i]
 		dish.visible=p.jammer_deploy>.01 and not p.crashed
 		dish.transform=frame*Transform3D(Basis.IDENTITY.scaled(Vector3(1.,maxf(.01,p.jammer_deploy),1.)),Vector3(0,2.,-1.5))

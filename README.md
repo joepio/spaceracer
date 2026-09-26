@@ -137,12 +137,16 @@ inventory label briefly brightens. One inventory slot, one pickup per row per la
 per player. Bots also collect and use items.
 Use buttons, timers and effects pause with the race; crashes discard items.
 
-- **Cruise missile:** locks onto the leader at launch, shows a red targeting laser
+- **Cruise missile:** a large finned rocket follows the track at **1,500 km/h**,
+  including banks, loops and jump routes. It locks onto the leader at launch, shows a red targeting laser
   and an incoming warning, then deals 38 shield damage and a speed hit. A fresh
   high-G turn in the last 230 ms breaks the lock. Brake hard and steer sharply on
   the road, or make a sharp flying manoeuvre. Early held turns do not automatically
   evade. A successful dodge sends the missile past; consecutive heavy hits get a
-  brief protection window. A leader cannot fire a missile at themselves.
+  brief protection window. A leader cannot fire a missile at themselves. The final
+  approach retains the same speed; there is no hidden catch-up acceleration.
+  An exhaust trail leads into a bright impact flash and expanding smoke. A cached
+  procedural bang/rumble is ready when sound is enabled; playtests remain muted.
 - **Warp drive:** phases through traffic and follows the course for about 2.8
   seconds, with refracted/rainbow screen distortion and expanding rings. It follows
   loops and split lanes and extends through a gap until it can release over deck.

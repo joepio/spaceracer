@@ -33,6 +33,7 @@ var results_clock := 0.0
 var back_release := 0.0
 var activity_clock := 0.0
 var engine_sound: AudioStreamPlayer
+var missile_sound:Node
 var demo := false
 var capture_path := ""
 var capture_frame := 180
@@ -741,6 +742,7 @@ func setting_changed(key:String,value:Variant)->void:
 		layout_views()
 
 func setup_audio()->void:
+	missile_sound=preload("res://src/missile_audio.gd").new();add_child(missile_sound)
 	AudioServer.set_bus_mute(0,not sound_enabled)
 	var data:=PackedByteArray()
 	for i in range(22050):
@@ -761,6 +763,7 @@ func setup_audio()->void:
 	engine_sound.play()
 
 func update_audio()->void:
+	missile_sound.update(race,views,running and not in_menu,sound_enabled)
 	if race==null or not running or race.over or race.countdown>0:
 		engine_sound.volume_db=-80
 		return

@@ -74,6 +74,12 @@ func run()->void:
 		race.weapons.collect_energy(race,collector)
 		assert(collector.energy==60. and collector.weapon=="missile")
 		if "--pickup-respawn" in OS.get_cmdline_user_args(): race.weapons.begin_step(race,2.2,[{},{},{},{},{},{}])
+	if "--missile-showcase" in OS.get_cmdline_user_args():
+		race.racers[1].warp_time=0.;race.racers[1].warp_fx=0.;race.racers[2].drone_time=0.;race.weapons.shots.clear()
+		var blast_frame:Transform3D=race.Weapons.pose(race,race.racers[2])
+		var blast_age:=.95 if "--smoke-tail" in OS.get_cmdline_user_args() else .22
+		race.weapons.bursts.append({"id":999,"position":blast_frame.origin+blast_frame.basis*Vector3(12,3,25),"life":race.Weapons.MISSILE_BLAST_LIFE-blast_age})
+		for j in range(16): missile.trail.append(missile.position-frame.basis.z*(15.+j*9.))
 	for view in game.views: game.world.update_camera(view.camera,view.index,0.,true)
 	for view in game.views: RenderingServer.viewport_set_measure_render_time(view.viewport.get_viewport_rid(),true)
 	var gpu:Array[float]=[]
@@ -110,6 +116,10 @@ func run()->void:
 		assert(game.world.weapon_vfx.battery_batches[0].get_instance_transform(1).basis.determinant()>0. if respawn else game.world.weapon_vfx.battery_batches[0].get_instance_transform(1).basis.determinant()==0.)
 		assert(game.world.weapon_vfx.pickup_lights[0].visible!=respawn)
 		print("BATTERY_RENDER respawn=",respawn," energy=",race.racers[0].energy)
+	if "--missile-showcase" in OS.get_cmdline_user_args():
+		assert(game.world.weapon_vfx.smoke.visible_instance_count==26)
+		assert(game.world.weapon_vfx.blast_lights[0].visible==not ("--smoke-tail" in OS.get_cmdline_user_args()))
+		print("MISSILE_RENDER bounded smoke and flash verified")
 	var output:="C:/dev/ion-rush-captures/controls/weapons-showcase.png"
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--output="): output=arg.trim_prefix("--output=")

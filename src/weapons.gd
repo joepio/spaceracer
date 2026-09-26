@@ -10,6 +10,8 @@ const EMP_RADIUS:=220.
 const EMP_EXPAND:=.65
 const EMP_DURATION:=2.2
 const BATTERY_ENERGY:=25.
+const MISSILE_SPEED:=1500./3.6
+const MISSILE_BLAST_LIFE:=2.4
 var pulses:Array[Dictionary]=[]
 var pickups:Array[Dictionary]=[]
 var batteries:Array[Dictionary]=[]
@@ -112,7 +114,7 @@ func activate(race:RefCounted,index:int)->bool:
 			serial+=1
 			var frame:=pose(race,p)
 			missiles.append({"id":serial,"owner":index,"target":race.racers.find(leader),"distance":p.distance,
-				"position":frame.origin+frame.basis.y*7.,"velocity":frame.basis.z*620.,"age":0.,"terminal":-1.,"evaded":false,"fade":.7})
+				"position":frame.origin+frame.basis.y*9.,"velocity":frame.basis.z*MISSILE_SPEED,"x":p.x,"age":0.,"terminal":-1.,"evaded":false,"fade":.7,"trail":[],"trail_time":0.})
 		"warp":
 			if p.airborne or p.emp_time>0.: return false
 			p.warp_time=WARP_DURATION;p.warp_age=0.;p.boost=0.;p.slide=0.;p.slip=0.;p.heading=0.
@@ -320,32 +322,44 @@ func end_step(race:RefCounted,dt:float)->void:
 func step_missile(race:RefCounted,m:Dictionary,dt:float)->void:
 	var target:Dictionary=race.racers[m.target]
 	m.age+=dt
-	if not available(target) or target.warp_time>0. or not available(race.racers[m.owner]) or m.age>12.:
+	if not available(target) or target.warp_time>0. or not available(race.racers[m.owner]) or m.age>90.:
 		missiles.erase(m);return
+	m.trail_time+=dt
+	if m.trail_time>=.05:
+		m.trail_time=fmod(m.trail_time,.05);m.trail.push_front(m.position)
+		if m.trail.size()>16: m.trail.pop_back()
 	if m.evaded:
-		m.position+=m.velocity*dt;m.fade-=dt
+		m.position+=m.velocity.normalized()*MISSILE_SPEED*dt;m.fade-=dt
 		if m.fade<=0.: missiles.erase(m)
 		return
 	var destination:=pose(race,target).origin
-	target.missile_warning=maxf(target.missile_warning,1. if m.terminal<0. else 2.)
 	var previous:Vector3=m.position
 	if m.terminal<0.:
-		var catchup:=clampf((target.distance-m.distance)*.45,330.,1500.)
-		m.distance+=maxf(660.,target.speed+catchup)*dt
+		# Cruise follows the seeded ribbon, including banks, loops and jump paths.
+		# No rubber-band speed or world-space lerp that cuts across tight corners.
+		m.distance+=MISSILE_SPEED*dt
 		var n:Dictionary=race.track.sample(m.distance)
-		var chase:=Track.point(n,target.x,10.)
-		m.position=m.position.lerp(chase,1.-exp(-dt*14.))
-		if target.distance-m.distance<170.: m.terminal=.55
+		m.x=move_toward(m.x,clampf(target.x,-n.width*.7,n.width*.7),dt*18.)
+		if n.split_gap>0.: m.x=(1. if m.x>=0. else -1.)*maxf(absf(m.x),n.split_gap+6.)
+		m.position=Track.point(n,m.x,10.)
+		var range_to_target:float=m.position.distance_to(destination)
+		var target_progress:float=target.distance
+		if target.airborne: target_progress=race.track.project(target.air_position,target.distance,target.air_travel*1.35+100.).distance
+		if absf(target_progress-m.distance)<65. and range_to_target<(180. if target.airborne else 55.): m.terminal=1.
 	else:
-		m.terminal-=dt
-		# A sharp manoeuvre must START during the final 230 ms. Holding a turn
-		# well before the warning does not roll a random dodge chance.
+		var offset:Vector3=destination-m.position
+		var distance:=offset.length()
+		var direction:=offset.normalized()
+		var target_velocity:Vector3=target.air_velocity if target.airborne else target.ground_velocity
+		var closing:=maxf(1.,MISSILE_SPEED-target_velocity.dot(direction))
+		m.terminal=maxf(0.,distance-4.)/closing
+		# The leader can still break lock with a fresh, late high-G manoeuvre.
 		if m.terminal<.23 and race.clock-target.last_jink<.23 and target.last_jink>=race.clock-dt-.001:
 			m.evaded=true;target.evade_notice=1.2
 			return
-		m.position=m.position.lerp(destination,clampf(dt/maxf(dt,m.terminal+dt),0.,1.))
-		if m.terminal<=0.:
+		m.position+=direction*minf(MISSILE_SPEED*dt,distance)
+		if distance<=MISSILE_SPEED*dt+4.:
 			damage(race,target,38.,.66)
-			bursts.append({"position":destination,"life":.45})
+			bursts.append({"id":m.id,"position":destination,"life":MISSILE_BLAST_LIFE})
 			missiles.erase(m)
 	m.velocity=(m.position-previous)/maxf(dt,.001)

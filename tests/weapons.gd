@@ -52,6 +52,7 @@ func run()->void:
 		race=fresh();owner=race.racers[2];leader=race.racers[0];owner.weapon="missile"
 		race.weapons.activate(race,2)
 		var missile:Dictionary=race.weapons.missiles[0];missile.terminal=.20
+		missile.position=race.Weapons.pose(race,leader).origin-Vector3(0,0,25.)
 		race.weapons.begin_step(race,.01,neutral())
 		leader.weapon_velocity=Vector3(0,0,250.);leader.ground_velocity=Vector3(200.,0,150.)
 		leader.input_steer=1.;leader.slide=1.;leader.jinking=not late;leader.last_jink=race.clock-1.
@@ -64,7 +65,9 @@ func run()->void:
 	race.racers[1].distance=leader.distance-60.
 	owner.distance=leader.distance-100.;owner.weapon="missile";race.weapons.activate(race,2)
 	var physical_missile:Dictionary=race.weapons.missiles[0];physical_missile.terminal=.22
-	for tick in range(24): race.step(.01,[{"throttle":1.,"steer":1.,"brake":1.},{},{}])
+	physical_missile.position=race.Weapons.pose(race,leader).origin-race.track.sample(leader.distance).frame.z*40.
+	for tick in range(24):
+		race.step(.01,[{"throttle":1.,"steer":1.,"brake":1.},{},{}])
 	check(physical_missile.evaded and leader.energy==100.,"Actual late steering/braking physics can evade, without synthetic G-force state")
 	race=fresh();owner=race.racers[2];owner.weapon="warp"
 	var distance:float=owner.distance

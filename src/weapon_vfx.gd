@@ -9,6 +9,9 @@ var shields:Array[MeshInstance3D]=[]
 var rings:Array[Array]=[]
 var tracers:Array[MeshInstance3D]=[]
 var explosions:Array[MeshInstance3D]=[]
+var blast_lights:Array[OmniLight3D]=[]
+var smoke:MultiMesh
+var smoke_count:=0
 var guidance:Array[Node3D]=[]
 var guidance_material:ShaderMaterial
 var emp_fields:Array[MeshInstance3D]=[]
@@ -144,6 +147,13 @@ func configure(state:RefCounted)->void:
 	for i in range(24):
 		var impact:=ShaderMaterial.new();impact.shader=load("res://src/weapon_impact.gdshader")
 		explosions.append(mesh(self,sphere(1.),impact))
+		var light:=OmniLight3D.new();light.light_color=Color("ff953d");light.omni_range=42.;light.shadow_enabled=false
+		light.light_energy=0.;add_child(light);blast_lights.append(light)
+	smoke=MultiMesh.new();smoke.transform_format=MultiMesh.TRANSFORM_3D;smoke.use_custom_data=true
+	var puff:=QuadMesh.new();puff.size=Vector2.ONE*2.;smoke.mesh=puff;smoke.instance_count=384
+	var smoke_node:=MultiMeshInstance3D.new();smoke_node.multimesh=smoke
+	var smoke_mat:=ShaderMaterial.new();smoke_mat.shader=load("res://src/missile_smoke.gdshader");smoke_node.material_override=smoke_mat
+	smoke_node.layers=2;smoke_node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(smoke_node)
 	update()
 
 func make_dish()->Node3D:
@@ -182,16 +192,28 @@ static func line(node:MeshInstance3D,from:Vector3,to:Vector3,width:float)->void:
 
 func make_missile()->Node3D:
 	var root:=Node3D.new();add_child(root)
-	var body:=mesh(root,cylinder(.55,3.5),steel);body.rotation.x=PI*.5
-	var nose:=mesh(root,cylinder(.55,1.4,true),laser_material,Vector3(0,0,2.2));nose.rotation.x=PI*.5
+	var hull:=material(Color("c4c9ce"));hull.metallic=.7
+	var body:=mesh(root,cylinder(1.25,8.),hull);body.rotation.x=PI*.5
+	var nose:=mesh(root,cylinder(1.25,3.,true),laser_material,Vector3(0,0,5.5));nose.rotation.x=PI*.5
+	var band:=mesh(root,cylinder(1.28,.5),flame,Vector3(0,0,2.8));band.rotation.x=PI*.5
 	for angle in [0.,PI*.5]:
-		var fin:=mesh(root,box(Vector3(2.1,.12,.8)),steel,Vector3(0,0,-1.3));fin.rotation.z=angle
-	var plume:=mesh(root,cylinder(.42,4.,true),flame,Vector3(0,0,-3.5));plume.rotation.x=-PI*.5
+		var fin:=mesh(root,box(Vector3(5.8,.2,2.5)),steel,Vector3(0,0,-2.7));fin.rotation.z=angle
+	mesh(root,sphere(.9),material(Color("fff5c9"),4.),Vector3(0,0,-4.))
+	for angle in [0.,PI*.5]:
+		var ribbon:=QuadMesh.new();ribbon.size=Vector2(3.,10.)
+		var plume:=mesh(root,ribbon,bump_material,Vector3(0,0,-9.))
+		plume.basis=Basis(Vector3.BACK,angle)*Basis(Vector3.RIGHT,PI*.5)
 	var beam:=mesh(self,cylinder(1.,1.),laser_material);root.set_meta("laser",beam)
 	return root
 
+func puff(position_value:Vector3,radius:float,opacity:float,heat:float,seed_value:float)->void:
+	if smoke_count>=smoke.instance_count: return
+	smoke.set_instance_transform(smoke_count,Transform3D(Basis.IDENTITY.scaled(Vector3.ONE*radius),position_value))
+	smoke.set_instance_custom_data(smoke_count,Color(opacity,heat,seed_value,1.));smoke_count+=1
+
 func update()->void:
 	var time:float=race.vfx_clock
+	smoke_count=0
 	guidance_material.set_shader_parameter("race_time",time)
 	bump_material.set_shader_parameter("race_time",time)
 	for i in range(race.weapons.batteries.size()):
@@ -223,13 +245,15 @@ func update()->void:
 		pickup_bases[i].scale=Vector3.ONE*maxf(.001,reveal)
 	var active:Dictionary={}
 	for m in race.weapons.missiles:
+		for j in range(m.trail.size()): puff(m.trail[j],1.4+j*.22,(1.-j/16.)*.45,0.,j*1.37)
 		active[m.id]=true
 		if not missile_nodes.has(m.id): missile_nodes[m.id]=make_missile()
 		var node:Node3D=missile_nodes[m.id]
 		node.position=m.position
 		if m.velocity.length_squared()>.01:
 			var forward:Vector3=m.velocity.normalized()
-			var up:=Vector3.UP if absf(forward.y)<.98 else Vector3.RIGHT
+			var up:Vector3=race.track.sample(m.distance).frame.y
+			if absf(forward.dot(up))>.98: up=Vector3.UP if absf(forward.y)<.98 else Vector3.RIGHT
 			node.basis=Basis.looking_at(forward,up,true)
 		var beam:MeshInstance3D=node.get_meta("laser")
 		if m.evaded: beam.visible=false
@@ -303,8 +327,19 @@ func update()->void:
 			var shot:Dictionary=race.weapons.shots[i];line(tracers[i],shot.from,shot.to,.055)
 	for i in range(explosions.size()):
 		explosions[i].visible=i<race.weapons.bursts.size()
+		blast_lights[i].visible=i<race.weapons.bursts.size()
 		if explosions[i].visible:
 			var burst:Dictionary=race.weapons.bursts[i]
+			var age:float=Weapons.MISSILE_BLAST_LIFE-burst.life
 			explosions[i].position=burst.position
-			explosions[i].scale=Vector3.ONE*(1.-burst.life/.45)*13.+Vector3.ONE*.5
-			explosions[i].material_override.set_shader_parameter("age",1.-burst.life/.45)
+			explosions[i].scale=Vector3.ONE*(.5+minf(age/.45,1.)*18.)
+			explosions[i].material_override.set_shader_parameter("age",minf(1.,age/.45))
+			explosions[i].visible=age<.45
+			blast_lights[i].position=burst.position+Vector3.UP*3.
+			blast_lights[i].visible=age<.4
+			blast_lights[i].light_energy=maxf(0.,1.-age/.4)*7.
+			for j in range(10):
+				var direction:=Vector3(sin(j*2.4),.3+fposmod(j*.37,1.),cos(j*2.4)).normalized()
+				var spread:=direction*(2.+sqrt(age)*11.)+Vector3.UP*age*7.
+				puff(burst.position+spread,3.+age*4.+fposmod(j*1.7,2.),minf(1.,burst.life/.9),maxf(0.,1.-age/.55),j*1.37)
+	smoke.visible_instance_count=smoke_count

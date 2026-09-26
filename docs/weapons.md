@@ -14,7 +14,7 @@ its HUD label says AUTO and it does not need or show a Use button.
 
 | Item | Behaviour |
 | --- | --- |
-| Cruise missile | Locks the leader at launch, with a straight red targeting laser. The final approach lasts 550 ms. A fresh turn above 24 lateral G in the final 230 ms evades it; road turns also require a brake slide. Hit: 38 shield damage and 34% speed loss. |
+| Cruise missile | Locks the leader at launch, with a straight red targeting laser. Follows the track at 1,500 km/h, then homes at the same speed within close range. A fresh turn above 24 lateral G in the final 230 ms evades it; road turns also require a brake slide. Hit: 38 shield damage and 34% speed loss. |
 | Warp drive | 2.8 seconds of course autopilot, up to 530 m/s. Phases through traffic and attacks; extends across a gap to hand control back on solid track. Tapers speed for the upcoming bend. Ground activation only. |
 | Sentry drone | Eight-second escort. Shoots the nearest rival ahead within 220 m of progress and 190 m spatial distance, with a forward cone and scenery occlusion. Four shield damage every 400 ms. |
 | Landing assist | Single-use automatic guidance during the final 300 ms of a predicted top-side touchdown. Levels attitude and damps lateral/descent velocity with four visible thrusters. The assisted touchdown is perfectly aligned and damage-free. Does not teleport across gaps or bypass scenery/underside collisions. |
@@ -116,3 +116,28 @@ Example capture command (add the engine executable before these arguments):
 ```text
 --path . --audio-driver Dummy --position -20000,-20000 --resolution 1920x1080 --script tests/weapon_render.gd -- --demo --players=3 --seed=31 --biome=forest --difficulty=hard --output=weapons.png
 ```
+
+
+## Track-following cruise missile
+
+Cruise advances at 416.67 m/s (1,500 km/h) along seeded track distance. Position
+is sampled directly from the banked ribbon at 10 m clearance, including loops,
+split lanes and jump trajectories. The old distance-dependent catch-up speed
+and world-space smoothing are removed. Within 55 m of a grounded target it
+switches to a physical final approach at the same speed. Airborne targets can
+be acquired within 180 m when their projected track progress is near the missile.
+Lifetime is 90 seconds, so distant leaders do not force artificial acceleration.
+A new high-G jink inside the last 230 ms of estimated closing time still evades.
+
+The missile hull is 11 m long with 5.8 m fins. Smoke uses one bounded instanced
+batch (384 puffs shared by trails and blasts); each missile retains 16 trail
+samples, each blast ten billows. Light/flash lasts under half a second, smoke
+2.4 seconds. The sound synthesizes once and shares four playback voices,
+attenuating by the nearest local camera. Pause stops audio and simulation-driven
+smoke, and muted events are never replayed after unmuting.
+
+Effects research: [Growing Guns explosion lab](https://github.com/ontola/growing-guns/blob/68cd40fc080acf6b5016fa8fd49b909816bc3099/scripts/explosion_lab.gd),
+[smoke layers](https://github.com/ontola/growing-guns/blob/68cd40fc080acf6b5016fa8fd49b909816bc3099/scripts/violence.gd), and
+[procedural audio](https://github.com/ontola/growing-guns/blob/68cd40fc080acf6b5016fa8fd49b909816bc3099/scripts/sfx.gd).
+These informed the layered flash/smoke and transient/rumble approach. The racer
+uses its own implementation; no external code, audio samples or textures copied.

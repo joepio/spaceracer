@@ -75,7 +75,7 @@ func build(state: RefCounted) -> void:
 	env.fog_sky_affect = 0.0
 	if forest:
 		env.ambient_light_color=Color("d6e9f4")
-		env.ambient_light_energy=.48
+		env.ambient_light_energy=.13
 		env.tonemap_exposure=1.
 		env.adjustment_enabled=true
 		env.adjustment_contrast=1.1
@@ -122,7 +122,7 @@ func build(state: RefCounted) -> void:
 		forest_sun=night_fill
 		night_fill.rotation_degrees=Vector3(-48,-65,0)
 		night_fill.light_color=Color("fff2d9")
-		night_fill.light_energy=2.2
+		night_fill.light_energy=1.65
 		sky_material.set_shader_parameter("sun_direction",night_fill.basis.z)
 		night_fill.light_specular=.65
 		night_fill.shadow_enabled=true
@@ -370,8 +370,8 @@ func set_quality(value:float,view_count:int)->void:
 	lighting_quality=value
 	lighting_clock=-1.
 	if is_instance_valid(forest_sun):
-		forest_sun.shadow_enabled=advanced_renderer and value>=.8
-		forest_sun.directional_shadow_max_distance=220. if view_count>1 else 380.
+		forest_sun.shadow_enabled=(advanced_renderer or RenderingServer.get_current_rendering_method()=="mobile")
+		forest_sun.directional_shadow_max_distance=170. if RenderingServer.get_current_rendering_method()=="mobile" else (220. if view_count>1 else 380.)
 	if not advanced_renderer: return
 	scene_environment.ssil_enabled=false
 	scene_environment.volumetric_fog_enabled=value>=1. and race.track.biome!="forest"

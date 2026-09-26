@@ -38,8 +38,16 @@ the code; both appear beside the seed in the HUD and results.
 
 **World** switches between the neon **City** and **Forest — Verdant Reach**.
 The forest has a bright blue daytime sky, soft procedural clouds and warm sunlight.
-It races over a reflective lake among 260–520 metre trees, branching
-canopies, mossy islands and thousands of ferns. Lower hills bring portions of the
+It races over a reflective lake beneath a dense canopy dominated by 340–650 metre trees.
+Six crown shapes, independent trunk/canopy proportions, smaller 80–340 metre trees,
+mossy islands and more than 5,000 varied ferns break up repetition in the checked seeds.
+Photographed CC0 leaf and bark maps come from ambientCG; provenance is in
+`third_party/ambientcg/README.txt`. Cutout foliage uses mipmaps and two mesh detail
+levels, including simpler distant trunks. Lower ambient fill, outward canopy normals
+and directional shadows keep the shaded sides dark, including on Android.
+Water uses two scrolling ripple-normal samples, low swells and a seeded 512px
+shoreline map for shallows, with existing sky/probe reflections and desktop SSR.
+It needs no extra reflection camera or per-frame CPU water simulation. Lower hills bring portions of the
 course nearer the water, while the loops and difficulty-dependent flight gaps
 remain. Foliage and ripples follow the race clock; hitting the water crashes the
 craft and waits for Y to reset. Geometry is procedural and instanced; no asset downloads are needed.

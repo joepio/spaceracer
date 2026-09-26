@@ -11,6 +11,11 @@ func check(ok:bool,message:String)->void:
 		if failures<12: push_error(message)
 func _initialize()->void: call_deferred("run")
 func run()->void:
+	for variant in range(6):
+		var near_model:=Forest.model(variant)
+		var far_model:=Forest.model(variant,true)
+		check(near_model.bounds==far_model.bounds,"LOD preserves exact crown placement and clearance")
+		check(far_model.leaves.surface_get_array_len(0)<near_model.leaves.surface_get_array_len(0)*.5,"Distant foliage cuts vertex work by at least half")
 	for seed_value in [31,421]:
 		var race:=Race.new([{"slot":0}],seed_value,1,"hard","forest")
 		var stage:=Node3D.new();root.add_child(stage)
@@ -21,9 +26,18 @@ func run()->void:
 		check(forest.trees==replica.trees and forest.plants==replica.plants,"Forest scenery reproduces from the seed")
 		check(forest.local_lights.is_empty() and forest.probes.size()==3,"Lighting has a bounded shared capture budget")
 		check(forest.layout.billboards.is_empty() and forest.traffic.instance_count==0,"City ads and air traffic do not leak into the forest")
+		var giants:int=forest.trees.filter(func(tree):return tree.height>=340.).size()
+		check(giants>forest.trees.size()*.6,"Towering trees dominate the dense canopy")
+		var variants:Dictionary={}
+		var smallest:=INF;var tallest:=0.
+		for tree in forest.trees:
+			variants[tree.variant]=true
+			smallest=minf(smallest,tree.height);tallest=maxf(tallest,tree.height)
+		check(variants.size()==6 and tallest/smallest>5.,"Six silhouettes and a broad height spread")
+		check(forest.shore_image.get_width()==512,"Shoreline baking uses a bounded texture budget")
 		var vegetation:Array[AABB]=[]
 		for tree in forest.trees:
-			check(tree.height>=260 and tree.height<=520,"Giant trees keep their intended scale")
+			check(tree.height>=80 and tree.height<=650,"Trees retain the bounded young-to-giant size range")
 			vegetation.append_array(tree.bounds);vegetation.append(tree.island)
 		vegetation.append_array(forest.plants)
 		# Independently audit sampled racing points, including pipe walls and flight

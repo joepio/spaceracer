@@ -1,20 +1,34 @@
 shader_type spatial;
 render_mode cull_disabled;
 uniform float race_time=0.;
+uniform sampler2D ripples : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform sampler2D shore_map : filter_linear_mipmap, repeat_disable;
 varying vec3 world;
-float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
 void vertex(){
     world=(MODEL_MATRIX*vec4(VERTEX,1.)).xyz;
-    VERTEX.y+=sin(world.x*.013+race_time*.65)*.32+cos(world.z*.018-race_time*.4)*.24;
+    // Long, low swells; high-frequency detail stays in the normal map.
+    float wave=sin(dot(world.xz,vec2(.008,.006))+race_time*.48)*.25;
+    wave+=sin(dot(world.xz,vec2(-.005,.011))-race_time*.37)*.18;
+    VERTEX.y+=wave;
+    world.y+=wave;
 }
 void fragment(){
-    float flow=noise(world.xz*.018+race_time*.03);
-    float a=sin(world.x*.14+world.z*.055+flow*8.+race_time*1.1);
-    float b=cos(world.z*.12+world.x*.045+flow*9.-race_time*.8);
-    vec3 n=normalize(vec3(a*.045,1.,b*.035));
+    vec2 uv=world.xz;
+    vec3 a=texture(ripples,uv*.022+vec2(.008,.004)*race_time).rgb*2.-1.;
+    vec3 b=texture(ripples,mat2(vec2(.8,.6),vec2(-.6,.8))*uv*.061-vec2(.011,.008)*race_time).rgb*2.-1.;
+    float distance_to_eye=length(VERTEX);
+    float detail=1.-smoothstep(160.,1200.,distance_to_eye)*.75;
+    vec2 slope=(a.xy*.12+b.xy*.055)*detail;
+    slope+=cos(dot(uv,vec2(.008,.006))+race_time*.48)*vec2(.002,.0015);
+    vec3 n=normalize(vec3(-slope.x,1.,-slope.y));
     NORMAL=normalize(mat3(VIEW_MATRIX)*n);
-    ALBEDO=mix(vec3(.017,.085,.10),vec3(.027,.16,.16),a*.25+b*.15+.4);
-    ROUGHNESS=.14+(a+b+2.)*.012;
-    METALLIC=.32;SPECULAR=.8;
+    float shore=texture(shore_map,uv/6000.+.5).r;
+    // Dielectric water: absorption below, sky/probe Fresnel reflections above.
+    ALBEDO=mix(vec3(.004,.022,.027),vec3(.025,.095,.068),shore*shore);
+    float foam=smoothstep(.88,.99,shore)*(1.-smoothstep(.99,1.,shore));
+    foam*=smoothstep(.03,.35,a.x+b.y+sin(race_time*.65+shore*28.)*.4);
+    ALBEDO=mix(ALBEDO,vec3(.36,.45,.39),foam*.35);
+    ROUGHNESS=mix(.16,.27,smoothstep(300.,1800.,distance_to_eye))+foam*.15;
+    METALLIC=0.;
+    SPECULAR=.5;
 }

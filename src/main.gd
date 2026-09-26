@@ -260,7 +260,7 @@ func controls(p: Dictionary) -> Dictionary:
 	var k: Array = KEYS[int(p.slot)%4]
 	var c := {"steer":float(Input.is_physical_key_pressed(k[1]))-float(Input.is_physical_key_pressed(k[0])),
 		"throttle":float(Input.is_physical_key_pressed(k[2])),"brake":float(Input.is_physical_key_pressed(k[3])),
-		"trim":0.0,"strafe":0.0,"boost":Input.is_physical_key_pressed(k[4]),"left":Input.is_physical_key_pressed(k[5]),"right":Input.is_physical_key_pressed(k[6]),"reset":Input.is_physical_key_pressed(KEY_1+int(p.slot)%4)}
+		"fire":Input.is_physical_key_pressed([KEY_X,KEY_SLASH,KEY_P,KEY_C][int(p.slot)%4]),"trim":0.0,"strafe":0.0,"boost":Input.is_physical_key_pressed(k[4]),"left":Input.is_physical_key_pressed(k[5]),"right":Input.is_physical_key_pressed(k[6]),"reset":Input.is_physical_key_pressed(KEY_1+int(p.slot)%4)}
 	var device: int = p.get("device",-1)
 	if device>=0 and Input.get_connected_joypads().has(device):
 		var axis := Input.get_joy_axis(device,JOY_AXIS_LEFT_X)
@@ -272,7 +272,8 @@ func controls(p: Dictionary) -> Dictionary:
 		var right_y:=Input.get_joy_axis(device,JOY_AXIS_RIGHT_Y)
 		c.strafe=signf(right_x)*maxf(0,(absf(right_x)-.15)/.85)
 		c.trim=-signf(right_y)*maxf(0,(absf(right_y)-.15)/.85)
-		c.brake=maxf(c.brake,maxf(float(Input.is_joy_button_pressed(device,JOY_BUTTON_X)),clampf((Input.get_joy_axis(device,JOY_AXIS_TRIGGER_LEFT)-.06)/.94,0,1)))
+		c.brake=maxf(c.brake,clampf((Input.get_joy_axis(device,JOY_AXIS_TRIGGER_LEFT)-.06)/.94,0,1))
+		c.fire=c.fire or Input.is_joy_button_pressed(device,JOY_BUTTON_X)
 		c.boost=c.boost or Input.is_joy_button_pressed(device,JOY_BUTTON_B)
 		c.reset=c.reset or Input.is_joy_button_pressed(device,JOY_BUTTON_Y)
 		c.left=c.left or Input.is_joy_button_pressed(device,JOY_BUTTON_LEFT_SHOULDER)
@@ -282,6 +283,7 @@ func controls(p: Dictionary) -> Dictionary:
 		for axis in ["steer","strafe","trim"]:
 			if absf(touch[axis])>absf(c[axis]): c[axis]=touch[axis]
 		for axis in ["throttle","brake"]: c[axis]=maxf(c[axis],touch[axis])
+		c.fire=c.fire or touch.fire
 		c.boost=c.boost or touch.boost
 		c.reset=c.reset or touch.reset
 	return c
@@ -294,6 +296,7 @@ func _process(dt: float) -> void:
 			new_race()
 	if is_instance_valid(touch_controls):
 		touch_controls.visible=running and not in_menu
+		touch_controls.weapon_available=race!=null and not race.racers[0].weapon.is_empty() and not race.racers[0].crashed
 		touch_controls.reset_available=race!=null and race.can_reset(race.racers[0])
 	navigate_menu(dt)
 	process_pause(dt)
@@ -317,7 +320,7 @@ func _process(dt: float) -> void:
 			if p.bot: continue
 			var token: String=p.get("controller","")
 			var input: Dictionary=bridge.controls(token)
-			if absf(input.steer)>.25 or input.throttle>.25 or input.brake or input.boost or input.left or input.right:
+			if absf(input.steer)>.25 or input.throttle>.25 or input.brake or input.boost or input.fire or input.left or input.right:
 				bridge._send({"type":"controller_input","session":bridge.session,"controller":token})
 	if not capture_path.is_empty():
 		frame_number+=1
@@ -335,6 +338,8 @@ func update_speed_effects(view:Dictionary,dt:float)->void:
 	var surge:float=view.camera.get_meta("speed_surge",0.)
 	var amount:=rush*(.05+boost*.042+surge*.014)
 	view.blur.set_shader_parameter("amount",amount if quality>=.8 and active else 0.)
+	view.blur.set_shader_parameter("warp",p.warp_fx if active else 0.)
+	view.blur.set_shader_parameter("race_time",race.vfx_clock)
 	view.speed_effects.update_effects(view.camera,dt,active,quality<.8)
 
 func capture() -> void:
@@ -603,7 +608,7 @@ func make_menu()->void:
 		var help:=VBoxContainer.new()
 		reference.add_child(help)
 		menu_label(help,"CONTROLS",24)
-		menu_label(help,"RT / A  Throttle     LT  Brake     B  Boost\nLeft stick  Steer / yaw\nRight stick  Strafe / roll · Grip / pitch\nY  Reset     Start  Pause\n\nKeyboard  WASD · Space · Q / E · 1",20)
+		menu_label(help,"RT / A  Throttle     LT  Brake     B  Boost\nX  Use pickup\nLeft stick  Steer / yaw\nRight stick  Strafe / roll · Grip / pitch\nY  Reset     Start  Pause\n\nKeyboard  WASD · Space · Q / E · 1 · X pickup",20)
 		var credits:=RichTextLabel.new()
 		credits.bbcode_enabled=true
 		credits.fit_content=true

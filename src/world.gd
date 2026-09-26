@@ -5,6 +5,8 @@ const Forest = preload("res://src/forest.gd")
 const TurnMarkers = preload("res://src/turn_markers.gd")
 const Obstacles=preload("res://src/obstacles.gd")
 const CrashVfx=preload("res://src/crash_vfx.gd")
+const WeaponVfx=preload("res://src/weapon_vfx.gd")
+var weapon_vfx:Node3D
 const RAIL_HEIGHT := 2.5
 const Flight=preload("res://src/flight.gd")
 const Chase=preload("res://src/chase.gd")
@@ -148,6 +150,7 @@ func build(state: RefCounted) -> void:
 		ships.append(ship)
 		var crash:=CrashVfx.new();add_child(crash);crash.configure(ship);crashes.append(crash)
 		ship_colors.append(color_for(p))
+	weapon_vfx=WeaponVfx.new();add_child(weapon_vfx);weapon_vfx.configure(race)
 	update_ships()
 
 func vertex(surface: SurfaceTool, n: Dictionary, x: float, h: float, uv: Vector2, normal:Vector3=Vector3.ZERO) -> void:
@@ -328,6 +331,7 @@ func build_ship(tint: Color) -> Node3D:
 	return Ship.build(tint)
 
 func update_ships() -> void:
+	if weapon_vfx: weapon_vfx.update()
 	road_material.set_shader_parameter("race_time",race.clock)
 	for section in road_sections: section.set_shader_parameter("race_time",race.clock)
 	tunnel_material.set_shader_parameter("race_time",race.clock)

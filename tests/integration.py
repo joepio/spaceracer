@@ -164,6 +164,10 @@ def main():
             assert .45 < stick_state["racers"][0]["braking"] < .5
             assert stick_state["racers"][1]["trim"] == 0, "Right stick must stay with its controller owner"
             frames[1]["axes"][2:5] = [0, 0, 0]
+            frames[1]["buttons"] = 4
+            fire_state = wait(read, lambda s: s["racers"][0]["fire_held"] and s["racers"][0]["braking"] == 0)
+            assert not fire_state["racers"][1]["fire_held"], "Weapon input must stay with its controller owner"
+            frames[1]["buttons"] = 0
             host.send("pause", session="wrong-session")
             time.sleep(.15)
             assert read()["running"]
@@ -212,7 +216,7 @@ def main():
             log.flush(); log.seek(0)
             output = log.read()
             assert "SCRIPT ERROR" not in output and "ERROR:" not in output, output
-            print("PASS native WebSocket authentication, hidden prepare, sparse controller ownership, pause/resume, stale input, live profiles, Start gate, dispose/reprepare, disconnect exit")
+            print("PASS native WebSocket authentication, hidden prepare, sparse controller ownership, weapon input, pause/resume, stale input, live profiles, Start gate, dispose/reprepare, disconnect exit")
         except BaseException:
             log.flush(); log.seek(0)
             print(log.read())

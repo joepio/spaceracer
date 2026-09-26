@@ -102,16 +102,46 @@ bar. A small route map appears in single-player; split-screen keeps that space c
 |---|---|---|---|
 | Steer | Left stick / D-pad | A / D | Left / Right |
 | Accelerate | A / RT | W | Up |
-| Brake / slide | LT (analog; X also brakes) | S | Down |
+| Brake / slide | LT (analog) | S | Down |
 | Boost | B | Space | Ctrl |
+| Use pickup | X | X | Slash |
 | Strafe | Right stick left / right, or LB / RB | Q / E | Comma / Period |
 | Grip / speed trim | Right stick forward / backward | Controller only | Controller only |
 | Reset when airborne or crashed | Y | 1 | 2 |
 | Pause / resume | Start | Escape | Escape |
 
 Keyboard P3: IJKL, U boost, Y/O strafe. P4: TFGH, R boost, V/B strafe.
-Keyboard recovery uses 3 for P3 and 4 for P4.
+Keyboard recovery uses 3 for P3 and 4 for P4. Pickup use is P for P3 and C for P4.
 Standalone assigns connected controllers at race start and fills disconnected seats when a controller is paired later. Other connected players keep their seats. Keyboard controls also work.
+
+## Pickup weapons
+
+Fly through the cyan pickup rows and press **X** to activate the carried item.
+One inventory slot, one pickup per row per lap per player: someone ahead cannot
+remove all pickups for the rest of the pack. Bots also collect and use items.
+Use buttons, timers and effects pause with the race; crashes discard items.
+
+- **Cruise missile:** locks onto the leader at launch, shows a red targeting laser
+  and an incoming warning, then deals 38 shield damage and a speed hit. A fresh
+  high-G turn in the last 230 ms breaks the lock. Brake hard and steer sharply on
+  the road, or make a sharp flying manoeuvre. Early held turns do not automatically
+  evade. A successful dodge sends the missile past; consecutive heavy hits get a
+  brief protection window. A leader cannot fire a missile at themselves.
+- **Warp drive:** phases through traffic and follows the course for about 2.8
+  seconds, with refracted/rainbow screen distortion and expanding rings. It follows
+  loops and split lanes and extends through a gap until it can release over deck.
+  Speed tapers before handing back control, accounting for the next corner. It
+  preserves lap/finish accounting and does not spend ordinary boost energy. It
+  activates only on the track, so it cannot teleport a failed flight to safety.
+- **Sentry drone:** a quadcopter escorts the craft for eight seconds and fires at
+  the nearest valid rival ahead, within 190 metres in space / 220 along the course.
+  Bursts deal 4 shield damage every 0.4 seconds. Buildings/terrain block its shots.
+
+Catch-up bias affects only random item odds. Front-to-back odds interpolate from
+18/28/54% to 30/36/34% (missile/warp/drone); a missile rolled by the leader becomes
+a drone. There is no hidden handling or engine-speed penalty for leading.
+Damage uses the existing shield/boost-energy bar; depletion produces the normal
+wreck and manual **Y** recovery. Respawning grants two seconds of weapon protection.
 
 ## Android tablet
 
@@ -124,7 +154,8 @@ Pair a controller through Android Bluetooth or connect it by USB. The same stick
 triggers and Start menu work; late pairing is supported. Touch controls are also
 available: left pad steers/yaws, right pad strafes/rolls and controls grip/pitch.
 Tap **Throttle** to keep power on, leaving both thumbs free for the sticks; tap
-again to cut power. Hold **Brake** or **Boost**. **Reset** appears off track.
+again to cut power. Hold **Brake** or **Boost**. **Use** appears when carrying an item;
+**Reset** appears off track.
 The top pause button opens the shared menu. Controller use hides touch pads;
 touching the screen brings them back. Pausing or backgrounding clears touch input.
 Touch drives player one; extra local players need controllers.

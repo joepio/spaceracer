@@ -1,5 +1,6 @@
 extends RefCounted
 const Track = preload("res://src/track.gd")
+const Weapons=preload("res://src/weapons.gd")
 const Flight=preload("res://src/flight.gd")
 const TOP_SPEED := 265.0
 const BOOST_SPEED := 390.0
@@ -7,6 +8,7 @@ const BOOST_SPEED := 390.0
 const HULL_HALF_WIDTH := 4.7
 const HULL_HALF_LENGTH := 4.45
 const HULL_CENTER := .65
+var weapons:RefCounted
 var track: RefCounted
 var racers: Array[Dictionary] = []
 var countdown := 3.0
@@ -27,7 +29,9 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 			"input_throttle":0.0,"engine_power":0.0,"startup":0.0,"ignited":false,"brake_vfx":0.0,"slide_hold":0.0,"acceleration":0.0,"input_steer":0.0,"input_strafe":0.0,"input_pitch":0.0,"input_brake":0.0,"air_position":Vector3.ZERO,"air_velocity":Vector3.ZERO,"air_frame":Basis.IDENTITY,
 			"ground_velocity":Vector3.ZERO,"air_rates":Vector3.ZERO,"unload":0.0,"landing_frame":Basis.IDENTITY,"landing_blend":0.0,"air_time":0.0,"air_travel":0.0,"air_roll":0.0,"launch_cooldown":0.0,"crashed":false,"trim": 0.0, "lift": 0.0, "lift_speed": 0.0, "airborne": false, "slide": 0.0, "braking": 0.0, "thrust": 0.0, "flash": 0.0, "recovery": 0.0, "lap": 1, "rank": i + 1, "finished": false,
 			"time": INF, "best_lap": INF, "lap_start": 0.0, "drifting": false, "on_pad": false}, true)
+		Weapons.initialize(p)
 		racers.append(p)
+	weapons=Weapons.new(track)
 
 func bot(p: Dictionary) -> Dictionary:
 	if p.wreck_wait: return {"reset":p.wreck_time>.8}
@@ -59,7 +63,7 @@ func bot(p: Dictionary) -> Dictionary:
 	var jump:Dictionary=track.jump_at(p.distance,180.)
 	if not jump.is_empty() and fposmod(p.distance,track.length)<jump.takeoff: brake=0.
 	return {"steer":turn,"throttle":1.0,"brake":brake,"left":false,"right":false,
-		"boost":p.lap>1 and p.energy>40 and peak<.0025 and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
+		"fire":not p.weapon.is_empty() and clock-p.weapon_acquired>.9 and not p.fire_held,"boost":p.lap>1 and p.energy>40 and peak<.0025 and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
 
 func air_bot(p:Dictionary)->Dictionary:
 	var hit:Dictionary=track.project(p.air_position,p.distance,p.air_travel*1.35+100.)
@@ -88,6 +92,7 @@ func step(dt: float, inputs: Array) -> void:
 	if over:
 		return
 	vfx_clock+=dt
+	weapons.begin_step(self,dt,inputs)
 	for i in range(racers.size()):
 		var input:Dictionary=inputs[i]
 		var pilot:Dictionary=racers[i]
@@ -131,6 +136,10 @@ func step(dt: float, inputs: Array) -> void:
 		if p.wreck_wait:
 			p.wreck_time+=dt
 			p.speed=0.;p.thrust=0.
+			continue
+		if p.warp_time>0.:
+			p.boost_held=c.get("boost",false)
+			weapons.step_warp(self,p,dt)
 			continue
 		var n: Dictionary = track.sample(p.distance)
 		var previous_pose:=Flight.ground_pose(p,n,clock-dt)
@@ -180,6 +189,7 @@ func step(dt: float, inputs: Array) -> void:
 				p.crashed=false
 				p.wreck=null
 				p.launch_cooldown=1.0
+				p.weapon_guard=2.
 				if not p.manual_reset: p.energy=65.
 				p.manual_reset=false
 				p.x = 0.0
@@ -254,6 +264,7 @@ func step(dt: float, inputs: Array) -> void:
 			p.air_position=next_pose.origin;p.air_frame=next_pose.basis
 			Flight.crash(p)
 	resolve_contacts()
+	weapons.end_step(self,dt)
 	var ordered := standings()
 	var all_finished := not racers.is_empty()
 	for i in range(ordered.size()):
@@ -327,7 +338,7 @@ func resolve_contacts()->void:
 			for j in range(i+1,racers.size()):
 				var a:=racers[i]
 				var b:=racers[j]
-				if a.finished or b.finished or a.crashed or b.crashed or a.recovery>0 or b.recovery>0 or a.airborne or b.airborne: continue
+				if a.warp_time>0. or b.warp_time>0. or a.finished or b.finished or a.crashed or b.crashed or a.recovery>0 or b.recovery>0 or a.airborne or b.airborne: continue
 				var separation:=contact(a,b)
 				if separation.length_squared()<.000001: continue
 				touching=true

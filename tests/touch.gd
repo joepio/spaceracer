@@ -30,6 +30,11 @@ func run()->void:
 	check(pad.controls().steer==1. and pad.controls().strafe==-.5 and pad.controls().trim==-.5,"Two sticks maintain conventional independent axes")
 	touch(3,"brake")
 	touch(4,"boost")
+	pad.weapon_available=true
+	touch(6,"fire")
+	check(pad.controls().fire and pad.controls().boost,"Use pickup works alongside steering and boost")
+	touch(6,"fire",false)
+	check(not pad.controls().fire,"Releasing use ends the held input")
 	check(pad.controls().brake==1. and pad.controls().throttle==0. and pad.controls().boost,"Brake cuts power while multiple fingers remain active")
 	touch(3,"brake",false)
 	check(pad.controls().throttle==1. and pad.controls().brake==0.,"Releasing brake restores selected throttle")

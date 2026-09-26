@@ -415,10 +415,15 @@ not hardware ray tracing or complete scene occlusion. Selection can change at
 chunk boundaries. Probes supply broader surroundings and screen-space reflections
 add visible geometry. Water-film normals break up the reflected images.
 
-Streetlights aim at the road from visible fixtures. At most two nearby fixture or
-billboard lights per player cast shadows (eight total for four players, fewer
-when views share lights). Shadow selection updates at most every 0.15 seconds;
-distance fades and 1024/2048 shadow atlases bound the cost. Exhaust and tunnel
+Streetlights aim at the road from visible fixtures. Two nearby fixture or
+billboard lights per player hold full shadows; outgoing shadows fade over half a
+second, with at most four transition slots per view (16 total for four players).
+Selection uses hysteresis and updates at most every 0.15 seconds. Longer distance
+fades and 1024/2048 shadow atlases bound the cost. Forest and Cell sun shadows use
+blended cascades reaching 1,400 m solo / 1,100 m split-screen at Balanced/High,
+with a broad fade across the outer 45%. Solo uses four cascades; multiplayer,
+Performance and Mobile use two to reduce CPU draw overhead.
+See `docs/shadows.md` for ranges and measured costs. Exhaust and tunnel
 lights remain shadow-free. High adds a short, subtle volumetric haze; Balanced
 omits it. Screen-space indirect lighting was measured and disabled because its
 contribution to this scene was negligible. These are local lighting effects,

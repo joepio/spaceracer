@@ -185,7 +185,7 @@ func build_billboards(parent:Node3D)->void:
 			light.distance_fade_enabled=true
 			light.distance_fade_begin=350.
 			light.distance_fade_length=150.
-			light.distance_fade_shadow=130.
+			light.distance_fade_shadow=260.
 			light.shadow_normal_bias=.3
 			mount.add_child(light)
 			local_lights.append(light)

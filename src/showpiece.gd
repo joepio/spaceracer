@@ -45,9 +45,9 @@ func build(parent:Node3D,track:RefCounted)->void:
 			light.shadow_normal_bias=.25
 			light.shadow_bias=.025
 			light.distance_fade_enabled=true
-			light.distance_fade_begin=180.
-			light.distance_fade_length=80.
-			light.distance_fade_shadow=110.
+			light.distance_fade_begin=240.
+			light.distance_fade_length=180.
+			light.distance_fade_shadow=200.
 			light.shadow_enabled=false
 			light.light_volumetric_fog_energy=.7
 			lights.append(light)

@@ -12,6 +12,8 @@ const RAIL_HEIGHT := 2.5
 const Flight=preload("res://src/flight.gd")
 const Chase=preload("res://src/chase.gd")
 const Victory=preload("res://src/victory.gd")
+const Shadows=preload("res://src/shadows.gd")
+var shadows:=Shadows.new()
 const Showpiece=preload("res://src/showpiece.gd")
 var showpiece:RefCounted
 const Ship = preload("res://src/ship.gd")
@@ -138,17 +140,14 @@ func build(state: RefCounted) -> void:
 		sky_material.set_shader_parameter("sun_direction",night_fill.basis.z)
 		night_fill.light_specular=.65
 		night_fill.shadow_enabled=true
-		night_fill.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-		night_fill.directional_shadow_max_distance=380.
 	if cell:
 		forest_sun=night_fill
 		night_fill.rotation_degrees=Vector3(-38,-50,0)
 		night_fill.light_color=Color("ffe2ca");night_fill.light_energy=1.15;night_fill.light_specular=.65
 		night_fill.shadow_enabled=true
-		night_fill.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-		night_fill.directional_shadow_max_distance=380.
 		var rim:=DirectionalLight3D.new();rim.rotation_degrees=Vector3(22,125,0)
 		rim.light_color=Color("76dfcd");rim.light_energy=.45;rim.light_specular=.45;add_child(rim)
+	if forest or cell: Shadows.configure_sun(night_fill,1.,1,RenderingServer.get_current_rendering_method())
 	add_child(night_fill)
 	road_material = ShaderMaterial.new()
 	road_material.shader = load("res://src/road.gdshader")
@@ -399,8 +398,8 @@ func set_quality(value:float,view_count:int)->void:
 	lighting_quality=value
 	lighting_clock=-1.
 	if is_instance_valid(forest_sun):
-		forest_sun.shadow_enabled=(advanced_renderer or RenderingServer.get_current_rendering_method()=="mobile")
-		forest_sun.directional_shadow_max_distance=170. if RenderingServer.get_current_rendering_method()=="mobile" else (220. if view_count>1 else 380.)
+		Shadows.configure_sun(forest_sun,value,view_count,RenderingServer.get_current_rendering_method())
+	shadows.selection_clock=-1.
 	if not advanced_renderer: return
 	scene_environment.ssil_enabled=false
 	scene_environment.volumetric_fog_enabled=value>=1. and race.track.biome=="city"
@@ -411,20 +410,12 @@ func set_quality(value:float,view_count:int)->void:
 
 func update_lighting()->void:
 	if showpiece==null or scenery==null: return
-	if lighting_clock>=0 and race.vfx_clock-lighting_clock<.15: return
 	lighting_clock=race.vfx_clock
 	var lights:Array=showpiece.lights+scenery.local_lights
-	var selected:Array[Light3D]=[]
-	if advanced_renderer and lighting_quality>=.8:
-		for i in range(race.racers.size()):
-			if not race.racers[i].get("view",false): continue
-			var position:Vector3=ships[i].global_position
-			var candidates:Array=lights.duplicate()
-			candidates.sort_custom(func(a:Light3D,b:Light3D):
-				return a.global_position.distance_to(position)-(12. if a.shadow_enabled else 0.) < b.global_position.distance_to(position)-(12. if b.shadow_enabled else 0.))
-			for light:Light3D in candidates.slice(0,2):
-				if light.global_position.distance_to(position)<150. and not selected.has(light): selected.append(light)
-	for light:Light3D in lights: light.shadow_enabled=selected.has(light)
+	var positions:Array[Vector3]=[]
+	for i in range(race.racers.size()):
+		if race.racers[i].get("view",false): positions.append(ships[i].global_position)
+	shadows.update(lights,positions,race.vfx_clock,advanced_renderer and lighting_quality>=.8)
 
 func configure_reflections(material:ShaderMaterial,position:Vector3,detailed:bool)->void:
 	if race.track.biome!="city":

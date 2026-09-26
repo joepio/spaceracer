@@ -9,6 +9,7 @@ var ablation:=""
 var seed_value:=31
 var fraction:=.055
 var moving:=false
+var scripted_motion:=false
 var quality:=1.0
 var landmark:=""
 var speed:=250.
@@ -17,6 +18,7 @@ func _initialize()->void:
 	root.unfocusable=true
 	for arg in OS.get_cmdline_user_args():
 		if arg=="--moving": moving=true
+		elif arg=="--scripted-motion": moving=true;scripted_motion=true
 		elif arg=="--boost": boost=true
 		elif arg.begins_with("--speed="): speed=float(arg.trim_prefix("--speed="))
 		elif arg.begins_with("--landmark="): landmark=arg.trim_prefix("--landmark=")
@@ -94,6 +96,16 @@ func run()->void:
 	if ablation=="with-ssil": env.ssil_enabled=true
 	if ablation=="no-ssr": env.ssr_enabled=false
 	if ablation=="no-shadows": disable_shadows(game.world)
+	if ablation=="two-cascades" and is_instance_valid(game.world.forest_sun):
+		game.world.forest_sun.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		game.world.forest_sun.directional_shadow_split_1=.12
+	if ablation=="legacy-shadows" and is_instance_valid(game.world.forest_sun):
+		game.world.forest_sun.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		game.world.forest_sun.directional_shadow_max_distance=380. if players==1 else 220.
+		game.world.forest_sun.directional_shadow_blend_splits=false
+		game.world.forest_sun.directional_shadow_split_1=.1
+		game.world.forest_sun.directional_shadow_fade_start=.8
+		game.world.forest_sun.directional_shadow_pancake_size=20.
 	if ablation in ["no-jet-optics","no-jet-heat"]:
 		for ship in game.world.ships:
 			for side in [-1,1]:
@@ -112,8 +124,8 @@ func run()->void:
 	while Time.get_ticks_msec()<warm_end: await RenderingServer.frame_post_draw
 	if moving:
 		game.running=true
-		game.set_process(true)
-		game.set_physics_process(true)
+		game.set_process(not scripted_motion)
+		game.set_physics_process(not scripted_motion)
 	var frame_ms:Array[float]=[]
 	var gpu_ms:Array[float]=[]
 	var cpu_ms:Array[float]=[]
@@ -121,6 +133,11 @@ func run()->void:
 	var last:=Time.get_ticks_usec()
 	var sample_start:=Time.get_unix_time_from_system()
 	for i in range(samples):
+		if scripted_motion:
+			# Identical route and simulation time across shadow configurations.
+			game._physics_process(1./120.)
+			game._physics_process(1./120.)
+			game._process(1./60.)
 		await RenderingServer.frame_post_draw
 		var now:=Time.get_ticks_usec()
 		var wall:float=(now-last)/1000.
@@ -137,12 +154,18 @@ func run()->void:
 	raw.store_string("\n".join(rows));raw.close()
 	var result:={"moving":moving,"quality":quality,"seed":seed_value,"fraction":fraction,"views":players,"resolution":root.size,"samples":samples,"ablation":ablation,"wall_ms":stats(frame_ms),"gpu_ms":stats(gpu_ms),"render_cpu_ms":stats(cpu_ms),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"video_mem_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.,"device":RenderingServer.get_video_adapter_name(),"camera":str(game.views[0].camera.global_transform)}
 	result.sample_start_utc=sample_start
+	result.scripted_motion=scripted_motion
 	result.difficulty=game.race.track.difficulty
 	result.biome=game.race.track.biome
 	result.speed=speed
 	result.boost=boost
 	result.sample_end_utc=sample_end
 	result.shadow_lights=(game.world.showpiece.lights+game.world.scenery.local_lights).filter(func(light):return light.shadow_enabled).size()
+	if is_instance_valid(game.world.forest_sun):
+		result.sun_shadow_distance=game.world.forest_sun.directional_shadow_max_distance
+		result.sun_shadow_fade=game.world.forest_sun.directional_shadow_fade_start
+		result.sun_shadow_blend=game.world.forest_sun.directional_shadow_blend_splits
+		result.sun_shadow_cascades=4 if game.world.forest_sun.directional_shadow_mode==DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS else 2
 	result.viewport_sizes=game.views.map(func(view):return str(view.viewport.size))
 	var file:=FileAccess.open(output.path_join(label_name+".json"),FileAccess.WRITE)
 	file.store_string(JSON.stringify(result,"\t"));file.close()

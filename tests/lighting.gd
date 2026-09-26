@@ -26,8 +26,9 @@ func run()->void:
 	check(active>0 and active<=8,"At most two shadow lights per player, shared between nearby players")
 	check(not game.world.scene_environment.ssil_enabled and game.world.scene_environment.volumetric_fog_enabled,"High keeps atmospheric fog without the negligible SSIL pass")
 	game.world.set_quality(.6,4)
+	game.race.vfx_clock+=.6
 	game.world.update_ships()
-	for light in lights: check(not light.shadow_enabled,"Performance clears previous shadow allocation immediately")
+	for light in lights: check(not light.shadow_enabled,"Performance releases previous shadow allocation after the fade")
 	check(not game.world.scene_environment.ssr_enabled and not game.world.scene_environment.ssil_enabled and not game.world.scene_environment.volumetric_fog_enabled,"Performance disables expensive screen effects")
 	game.world.set_quality(.8,4)
 	game.world.update_ships()

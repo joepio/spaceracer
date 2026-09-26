@@ -20,7 +20,8 @@ subtle contrast and warmer greens preserve foliage detail. Forest HUD text has
 a dark outline for readability against clouds. Shader wind and water ripples use the paused race clock.
 Reflections use existing screen-space reflections and three static probes;
 the forest does not add per-tree lights or rebuild meshes each frame. Split
-screen shortens directional shadow distance; Performance disables these shadows.
+screen uses a slightly shorter directional-shadow range. The current forest and
+Cell share long, blended cascades; see `shadows.md` for quality tiers and timings.
 All forest geometry and materials are procedural, with no new downloaded assets.
 
 ## Validation

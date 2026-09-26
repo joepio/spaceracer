@@ -2,6 +2,8 @@ extends Node3D
 const Track = preload("res://src/track.gd")
 const Scenery = preload("res://src/scenery.gd")
 const Forest = preload("res://src/forest.gd")
+const TurnMarkers = preload("res://src/turn_markers.gd")
+const RAIL_HEIGHT := 2.5
 const Flight=preload("res://src/flight.gd")
 const Chase=preload("res://src/chase.gd")
 const Showpiece=preload("res://src/showpiece.gd")
@@ -184,9 +186,9 @@ func build_track() -> void:
 					var right:float=-1.+2.*(across+1)/divisions
 					strip(surface,a,b,left,right,0.,distance)
 					strip(underside,a,b,left,right,-1.4,distance)
-			if a.rails and b.rails:
-				strip(rail,a,b,-1.015,-1.,.65,distance)
-				strip(rail,a,b,1.,1.015,.65,distance)
+			if a.rails and b.rails and not (Track.closed_tube(a) and Track.closed_tube(b)):
+				strip(rail,a,b,-1.015,-1.,RAIL_HEIGHT,distance)
+				strip(rail,a,b,1.,1.015,RAIL_HEIGHT,distance)
 			if not (Track.closed_tube(a) and Track.closed_tube(b)):
 				wall(underside,a,b,-1.,distance)
 				wall(underside,a,b,1.,distance)
@@ -202,7 +204,8 @@ func build_track() -> void:
 			add_child(mesh)
 	build_tunnel()
 	build_jump_markers()
-	# Tunnel ribs and track-side turn chevrons are static geometry.
+	TurnMarkers.build(self,race.track)
+	# Tunnel ribs are static geometry.
 	var rib := material(Color("31465d"))
 	for i in range(0, nodes.size(), 5):
 		var n: Dictionary = nodes[i]
@@ -214,14 +217,6 @@ func build_track() -> void:
 			box(frame, Vector3(n.width + 3, 11, 0), Vector3(1.7, 22, 2.2), rib)
 			box(frame, Vector3(0, 22, 0), Vector3(n.width * 2 + 8, 1.8, 2.2), rib)
 			box(frame, Vector3(0, 20.8, -.1), Vector3(n.width * 2 + 4, .3, 1.3), rail_material)
-		elif absf(n.curve) > .002 and n.feature=="ribbon":
-			var sign_node := Node3D.new()
-			add_child(sign_node)
-			sign_node.transform = Transform3D(Track.basis_at(n), Track.point(n, -signf(n.curve) * (n.width + 2), 4))
-			box(sign_node, Vector3.ZERO, Vector3(.5, 3, 6), rib)
-			for z in [-1.5,1.5]:
-				var marker:=box(sign_node,Vector3(0,0,z),Vector3(.7,.38,2),rail_material)
-				marker.rotation.x=.65*signf(n.curve)
 
 func build_jump_markers()->void:
 	var amber:=material(Color("ffc46b"),2.)
@@ -258,11 +253,11 @@ func inner_rail(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,distanc
 	for item in [[a,left,distance],[b,left,distance+race.track.step],[a,right,distance],
 		[a,right,distance],[b,left,distance+race.track.step],[b,right,distance+race.track.step]]:
 		var lateral:float=side*(item[0].split_gap+item[1])
-		vertex(surface,item[0],lateral,.65,Vector2(lateral/item[0].width,item[2]))
+		vertex(surface,item[0],lateral,RAIL_HEIGHT,Vector2(lateral/item[0].width,item[2]))
 
 func fork_wall(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,distance:float)->void:
-	for item in [[a,0.,distance],[a,-1.4,distance],[b,0.,distance+race.track.step],
-		[b,0.,distance+race.track.step],[a,-1.4,distance],[b,-1.4,distance+race.track.step]]:
+	for item in [[a,RAIL_HEIGHT,distance],[a,-1.4,distance],[b,RAIL_HEIGHT,distance+race.track.step],
+		[b,RAIL_HEIGHT,distance+race.track.step],[a,-1.4,distance],[b,-1.4,distance+race.track.step]]:
 		var lateral:float=side*item[0].split_gap
 		vertex(surface,item[0],lateral,item[1],Vector2(lateral/item[0].width,item[2]),item[0].frame.x*side)
 
@@ -299,8 +294,9 @@ func build_tunnel()->void:
 	add_child(tunnel)
 
 func wall(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,distance:float)->void:
-	for item in [[a,0,distance],[a,-1.4,distance],[b,0,distance+race.track.step],
-		[b,0,distance+race.track.step],[a,-1.4,distance],[b,-1.4,distance+race.track.step]]:
+	var height:=RAIL_HEIGHT if a.rails and b.rails else 0.
+	for item in [[a,height,distance],[a,-1.4,distance],[b,height,distance+race.track.step],
+		[b,height,distance+race.track.step],[a,-1.4,distance],[b,-1.4,distance+race.track.step]]:
 		vertex(surface,item[0],item[0].width*side,item[1],Vector2(side,item[2]),-Track.surface_frame(item[0],item[0].width*side).x*signf(side))
 
 static func box(parent: Node3D, position_value: Vector3, size_value: Vector3, mat: Material) -> MeshInstance3D:

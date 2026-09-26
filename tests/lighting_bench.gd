@@ -43,6 +43,12 @@ func run()->void:
 	game.human_count=players
 	game.next_seed=seed_value
 	game.start_local()
+	if landmark=="corner":
+		for i in range(game.race.track.nodes.size()):
+			var node:Dictionary=game.race.track.nodes[i]
+			if absf(node.curve)>.0035 and node.feature=="ribbon" and not node.loop:
+				fraction=fposmod(i*game.race.track.step-180.,game.race.track.length)/game.race.track.length
+				break
 	if landmark in ["loop","tunnel","open","halfpipe","tube","split","jump","flight"]:
 		var indices:Array=[]
 		for i in range(game.race.track.nodes.size()):

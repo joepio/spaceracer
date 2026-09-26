@@ -57,6 +57,10 @@ return toward the bottom as the tube opens out. Running past an unguarded edge
 enters free flight, with the existing landing/respawn rules. Pick a side before
 the fork; both routes use the same lap progress and merge back into one road.
 
+Guarded sections have 2.5-metre sidewalls with luminous top edges. Mounted amber
+chevrons on the outside of tighter corners indicate the first significant turn
+up to 320 metres ahead. Intentional open edges and flight gaps remain open.
+
 Amber runway bars mark launch ramps; cyan bars and beacons mark the landing deck.
 Keep speed through the run-up. Crossing the lip releases into the same fighter
 flight controls as manual takeoff, carrying velocity and attitude without a kick

@@ -74,7 +74,7 @@ func run()->void:
 	check(before==camera.transform,"Paused crash camera is motionless")
 	for tick in range(61): race.step(1./120.,[{}])
 	world.update_ships()
-	check(not p.crashed and p.wreck==null and world.ships[0].visible and not world.crashes[0].visible,"Automatic recovery hides pooled fragments and restores the craft")
+	check(not p.crashed and p.wreck==null and world.ships[0].visible and world.crashes[0].fragments.all(func(part):return not part.visible),"Automatic recovery hides pooled fragments and restores the craft")
 	world.free();camera.free()
 	print("WRECK_TESTS ",checks," checks, ",failures," failures")
 	quit(1 if failures else 0)

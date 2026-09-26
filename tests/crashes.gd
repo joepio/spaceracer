@@ -51,7 +51,9 @@ func run()->void:
 	check(p.distance<=500. and Race.Track.supported(race.track.sample(p.distance),p.x),"Recovery cannot advance race progress")
 	check(p.speed==90. and p.weapon_guard==2. and p.crash_id==id,"Automatic recovery restores momentum and protection without another explosion")
 	effect.update(p,race.vfx_clock)
-	check(not effect.visible,"Automatic recovery hides the explosion")
+	check(effect.debris.visible_instance_count==0 and effect.blast.visible,"Recovery hides debris while the impact smoke finishes fading")
+	effect.update(p,4.)
+	check(not effect.visible,"Explosion fully expires after its smoke tail")
 	effect.queue_free()
 	# Two racers recover independently; a depleted hull gets the existing reserve.
 	var pair:=Race.new([{"slot":2},{"slot":7}],31,1,"hard")

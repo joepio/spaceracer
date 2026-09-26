@@ -1,5 +1,6 @@
 extends Node3D
 const Weapons=preload("res://src/weapons.gd")
+const Blast=preload("res://src/blast_vfx.gd")
 var race:RefCounted
 var cores:MultiMesh
 var battery_batches:Array[MultiMesh]=[]
@@ -8,7 +9,7 @@ var drones:Array[Node3D]=[]
 var shields:Array[MeshInstance3D]=[]
 var rings:Array[Array]=[]
 var tracers:Array[MeshInstance3D]=[]
-var explosions:Array[MeshInstance3D]=[]
+var explosions:Array[Node3D]=[]
 var blast_lights:Array[OmniLight3D]=[]
 var smoke:MultiMesh
 var smoke_count:=0
@@ -132,10 +133,7 @@ func configure(state:RefCounted)->void:
 		rings.append(warp_rings)
 	for i in range(32): tracers.append(mesh(self,cylinder(1.,1.),flame))
 	for i in range(24):
-		var impact:=ShaderMaterial.new();impact.shader=load("res://src/weapon_impact.gdshader")
-		explosions.append(mesh(self,sphere(1.),impact))
-		var light:=OmniLight3D.new();light.light_color=Color("ff953d");light.omni_range=42.;light.shadow_enabled=false
-		light.light_energy=0.;add_child(light);blast_lights.append(light)
+		var blast:=Blast.new();add_child(blast);explosions.append(blast);blast_lights.append(blast.flash)
 	smoke=MultiMesh.new();smoke.transform_format=MultiMesh.TRANSFORM_3D;smoke.use_custom_data=true
 	var puff:=QuadMesh.new();puff.size=Vector2.ONE*2.;smoke.mesh=puff;smoke.instance_count=384
 	var smoke_node:=MultiMeshInstance3D.new();smoke_node.multimesh=smoke
@@ -309,19 +307,8 @@ func update()->void:
 			var shot:Dictionary=race.weapons.shots[i];line(tracers[i],shot.from,shot.to,.055)
 	for i in range(explosions.size()):
 		explosions[i].visible=i<race.weapons.bursts.size()
-		blast_lights[i].visible=i<race.weapons.bursts.size()
 		if explosions[i].visible:
 			var burst:Dictionary=race.weapons.bursts[i]
 			var age:float=Weapons.MISSILE_BLAST_LIFE-burst.life
-			explosions[i].position=burst.position
-			explosions[i].scale=Vector3.ONE*(.5+minf(age/.45,1.)*18.)
-			explosions[i].material_override.set_shader_parameter("age",minf(1.,age/.45))
-			explosions[i].visible=age<.45
-			blast_lights[i].position=burst.position+Vector3.UP*3.
-			blast_lights[i].visible=age<.4
-			blast_lights[i].light_energy=maxf(0.,1.-age/.4)*7.
-			for j in range(10):
-				var direction:=Vector3(sin(j*2.4),.3+fposmod(j*.37,1.),cos(j*2.4)).normalized()
-				var spread:=direction*(2.+sqrt(age)*11.)+Vector3.UP*age*7.
-				puff(burst.position+spread,3.+age*4.+fposmod(j*1.7,2.),minf(1.,burst.life/.9),maxf(0.,1.-age/.55),j*1.37)
+			explosions[i].show_blast(burst.id,burst.position,age,14.,1. if race.track.biome=="forest" else .75)
 	smoke.visible_instance_count=smoke_count

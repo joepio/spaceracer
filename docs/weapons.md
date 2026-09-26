@@ -136,15 +136,21 @@ be acquired within 180 m when their projected track progress is near the missile
 Lifetime is 90 seconds, so distant leaders do not force artificial acceleration.
 A new high-G jink inside the last 230 ms of estimated closing time still evades.
 
-The missile hull is 11 m long with 5.8 m fins. Smoke uses one bounded instanced
-batch (384 puffs shared by trails and blasts); each missile retains 16 trail
-samples, each blast ten billows. Light/flash lasts under half a second, smoke
-2.4 seconds. The sound synthesizes once and shares four playback voices,
+The missile hull is 11 m long with 5.8 m fins. Trail smoke uses one bounded
+instanced batch (384 puffs); each missile retains 16 trail samples. Impacts now
+share the Growing Guns explosion port with vehicle crashes: four GPU-animated
+layers for turbulent smoke, hot fire clouds, delayed flame tongues, and embers.
+The hot flash settles into a warm light, then dark rising smoke fades out over
+2.32 seconds. The sound synthesizes once and shares four playback voices,
 attenuating by the nearest local camera. Pause stops audio and simulation-driven
 smoke, and muted events are never replayed after unmuting.
 
-Effects research: [Growing Guns explosion lab](https://github.com/ontola/growing-guns/blob/68cd40fc080acf6b5016fa8fd49b909816bc3099/scripts/explosion_lab.gd),
+Ported explosion logic: [Growing Guns explosion lab](https://github.com/ontola/growing-guns/blob/68cd40fc080acf6b5016fa8fd49b909816bc3099/scripts/explosion_lab.gd),
 [smoke layers](https://github.com/ontola/growing-guns/blob/68cd40fc080acf6b5016fa8fd49b909816bc3099/scripts/violence.gd), and
 [procedural audio](https://github.com/ontola/growing-guns/blob/68cd40fc080acf6b5016fa8fd49b909816bc3099/scripts/sfx.gd).
-These informed the layered flash/smoke and transient/rumble approach. The racer
-uses its own implementation; no external code, audio samples or textures copied.
+The billow and ember shaders and layer construction are adapted directly from
+`violence.gd`, at the owner's request. See `third_party/growing-guns/README.md` for
+provenance and changes. The existing sound synthesis remains original; no audio
+samples or textures were copied. Race time replaces tweens so every layer pauses
+consistently. There are 24 reusable missile blast slots and one crash blast per
+craft; expensive refraction shells and lights are capped at 3 and 10 respectively.

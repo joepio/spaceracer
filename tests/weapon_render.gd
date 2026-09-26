@@ -117,7 +117,8 @@ func run()->void:
 		assert(game.world.weapon_vfx.pickup_lights[0].visible!=respawn)
 		print("BATTERY_RENDER respawn=",respawn," energy=",race.racers[0].energy)
 	if "--missile-showcase" in OS.get_cmdline_user_args():
-		assert(game.world.weapon_vfx.smoke.visible_instance_count==26)
+		assert(game.world.weapon_vfx.smoke.visible_instance_count==16)
+		assert(game.world.weapon_vfx.explosions[0].layers.size()==4)
 		assert(game.world.weapon_vfx.blast_lights[0].visible==not ("--smoke-tail" in OS.get_cmdline_user_args()))
 		print("MISSILE_RENDER bounded smoke and flash verified")
 	var output:="C:/dev/ion-rush-captures/controls/weapons-showcase.png"

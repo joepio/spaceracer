@@ -296,6 +296,10 @@ misaligned impact, hitting its underside, falling below the world, or remaining
 in the air for ten seconds crashes the craft. Buildings, solid tree parts,
 hills, traffic and track fixtures can also be hit while flying. A crash produces
 an explosion that breaks the craft into 16 hull, wing, engine and tail pieces.
+Crashes and missile impacts use the Growing Guns explosion logic: lumpy 3D fire
+and smoke, delayed flame tongues, embers, a refractive heat shell and a warm fading
+light. Crash smoke completes its fade at the impact after the craft respawns.
+The source and port details are recorded in `third_party/growing-guns`.
 They carry impact momentum, tumble under gravity, bounce off scenery and the road,
 then settle. Steering, throttle, braking and movable fins are disabled until
 recovery. After two seconds the craft respawns automatically; pause remains available. The camera coasts briefly,

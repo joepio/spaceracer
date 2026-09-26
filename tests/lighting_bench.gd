@@ -127,6 +127,7 @@ func run()->void:
 	var result:={"moving":moving,"quality":quality,"seed":seed_value,"fraction":fraction,"views":players,"resolution":root.size,"samples":samples,"ablation":ablation,"wall_ms":stats(frame_ms),"gpu_ms":stats(gpu_ms),"render_cpu_ms":stats(cpu_ms),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"video_mem_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.,"device":RenderingServer.get_video_adapter_name(),"camera":str(game.views[0].camera.global_transform)}
 	result.sample_start_utc=sample_start
 	result.difficulty=game.race.track.difficulty
+	result.biome=game.race.track.biome
 	result.speed=speed
 	result.boost=boost
 	result.sample_end_utc=sample_end

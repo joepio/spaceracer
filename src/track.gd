@@ -26,6 +26,9 @@ var corner_shift:float
 var features:Array[Dictionary]=[]
 const DIFFICULTIES := ["easy","normal","hard"]
 var difficulty := "normal"
+const BIOMES := ["city","forest"]
+var biome := "city"
+var water_level:float=-INF
 var jumps:Array[Dictionary]=[]
 
 func base_position(u: float) -> Vector3:
@@ -35,7 +38,9 @@ func base_position(u: float) -> Vector3:
 	var corner_b := exp(-pow(angle_difference(a, 5.45-corner_shift) / corner_b_width, 2))
 	var r := radius + amplitude * sin(lobes * a + phase) + 260 * corner_a - 175 * corner_b
 	var ridge := 170 * exp(-pow((u - .55) / .075, 2))
-	return Vector3(sin(a) * r * stretch, 200 + climb * sin(hills * a + phase) + 45 * sin(5*a) + ridge, cos(a) * r)
+	var altitude:=200 + climb * sin(hills * a + phase) + 45 * sin(5*a) + ridge
+	if biome=="forest": altitude=80+climb*.42*sin(hills*a+phase)+20*sin(5*a)+ridge*.3
+	return Vector3(sin(a) * r * stretch, altitude, cos(a) * r)
 
 static func smooth_phase(t: float) -> float:
 	return t*t*t*(t*(t*6-15)+10)
@@ -68,12 +73,14 @@ func raw_position(u: float) -> Vector3:
 		p += loop.right * 160 * sin(theta) * pow(sin(PI*q),2)
 	return p
 
-func _init(track_seed: int = 1, challenge:String="normal") -> void:
+func _init(track_seed: int = 1, challenge:String="normal", setting:String="city") -> void:
 	seed_value = track_seed
+	biome=setting if setting in BIOMES else "city"
 	difficulty=challenge if challenge in DIFFICULTIES else "normal"
 	var rng := RandomNumberGenerator.new()
 	rng.seed = track_seed
 	theme = THEMES[rng.randi_range(0,3)]
+	if biome=="forest": theme=["VERDANT REACH",Color("173c43"),Color("426a60"),Color("8bd8bd"),Color("e5b96c")]
 	radius = rng.randf_range(900,1100)
 	lobes = rng.randi_range(2,4)
 	amplitude = rng.randf_range(65,155)
@@ -158,6 +165,12 @@ func _init(track_seed: int = 1, challenge:String="normal") -> void:
 		var next_corner:Dictionary=nodes[(i+10)%count]
 		nodes[i].brake_hint=not nodes[i].loop and not next_corner.loop and absf(next_corner.curve)>.007
 	build_features()
+	if biome=="forest":
+		water_level=INF
+		for n in nodes: water_level=minf(water_level,n.p.y-24.)
+
+func hits_water(position:Vector3)->bool:
+	return biome=="forest" and position.y<=water_level+.6
 
 func build_features()->void:
 	# A separate stream preserves the seed's centreline while varying feature size

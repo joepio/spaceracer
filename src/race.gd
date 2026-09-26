@@ -16,8 +16,8 @@ var laps := 3
 var over := false
 var finish_deadline := INF
 
-func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String="normal") -> void:
-	track = Track.new(track_seed,difficulty)
+func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String="normal", biome:String="city") -> void:
+	track = Track.new(track_seed,difficulty,biome)
 	laps = lap_count
 	for i in range(roster.size()):
 		var p: Dictionary = roster[i].duplicate(true)

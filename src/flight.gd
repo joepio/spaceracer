@@ -154,5 +154,5 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 		crash(p) # Hitting the underside cannot attach to the road.
 	elif p.air_time>.10 and inside and after< -2 and previous_hit.node.get("air_gap",false):
 		crash(p) # A low approach hits the exposed landing lip; never flies through it.
-	elif p.air_time>10 or position.y< -270 or position.distance_to(n.p)>850:
+	elif p.air_time>10 or position.y< -270 or position.distance_to(n.p)>850 or (track.has_method("hits_water") and track.hits_water(position)):
 		crash(p)

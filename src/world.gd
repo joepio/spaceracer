@@ -1,6 +1,7 @@
 extends Node3D
 const Track = preload("res://src/track.gd")
 const Scenery = preload("res://src/scenery.gd")
+const Forest = preload("res://src/forest.gd")
 const Flight=preload("res://src/flight.gd")
 const Chase=preload("res://src/chase.gd")
 const Showpiece=preload("res://src/showpiece.gd")
@@ -19,6 +20,7 @@ var road_sections:Array[ShaderMaterial]=[]
 var tunnel_material:ShaderMaterial
 var tunnel_lights:Array[OmniLight3D]=[]
 var ship_colors: Array[Color] = []
+var forest_sun:DirectionalLight3D
 const PALETTE = [Color("53ffe0"), Color("ff617b"), Color("ffd16b"), Color("ac8cff"), Color("68baff"), Color("ff9f58"), Color("aaff78"), Color("f8aaff")]
 
 static func color_for(p: Dictionary) -> Color:
@@ -37,6 +39,7 @@ static func material(color: Color, glow: float = 0) -> StandardMaterial3D:
 
 func build(state: RefCounted) -> void:
 	race = state
+	var forest:bool=race.track.biome=="forest"
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
 	scene_environment=env
@@ -47,6 +50,7 @@ func build(state: RefCounted) -> void:
 	sky_material.shader = load("res://src/sky.gdshader")
 	var top:=Color("060a12")
 	var horizon:=Color("0c121c")
+	if forest: top=Color("263e58");horizon=Color("94aca8")
 	if advanced_renderer:
 		top=top.srgb_to_linear()
 		horizon=horizon.srgb_to_linear()
@@ -63,6 +67,12 @@ func build(state: RefCounted) -> void:
 	env.fog_light_energy = .65
 	env.fog_density = .00032
 	env.fog_sky_affect = 0.0
+	if forest:
+		env.ambient_light_color=Color("a7c9be")
+		env.ambient_light_energy=.6
+		env.fog_light_color=Color("537e7b")
+		env.fog_light_energy=.7
+		env.fog_density=.00022
 	if advanced_renderer:
 		env.ssr_enabled=true
 		env.ssr_max_steps=48
@@ -83,6 +93,10 @@ func build(state: RefCounted) -> void:
 		env.volumetric_fog_length=180.
 		env.volumetric_fog_ambient_inject=.12
 		env.volumetric_fog_temporal_reprojection_amount=.65
+		if forest:
+			env.volumetric_fog_density=.0002
+			env.volumetric_fog_albedo=Color("aac2a3")
+			env.volumetric_fog_length=260.
 	environment.environment = env
 	add_child(environment)
 	var night_fill := DirectionalLight3D.new()
@@ -91,17 +105,27 @@ func build(state: RefCounted) -> void:
 	night_fill.light_energy = .18
 	night_fill.light_specular = 0.0
 	night_fill.shadow_enabled = false
+	if forest:
+		forest_sun=night_fill
+		night_fill.rotation_degrees=Vector3(-29,-65,0)
+		night_fill.light_color=Color("ffe4ad")
+		night_fill.light_energy=1.65
+		night_fill.light_specular=.65
+		night_fill.shadow_enabled=true
+		night_fill.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		night_fill.directional_shadow_max_distance=380.
 	add_child(night_fill)
 	road_material = ShaderMaterial.new()
 	road_material.shader = load("res://src/road.gdshader")
 	tunnel_material=ShaderMaterial.new()
 	tunnel_material.shader=load("res://src/tunnel.gdshader")
-	scenery=Scenery.new()
+	scenery=Forest.new() if forest else Scenery.new()
 	scenery.build(self,race)
 	road_material.set_shader_parameter("billboard_art",load("res://assets/city-billboards.png"))
 	build_track()
 	showpiece=Showpiece.new()
-	showpiece.build(self,race.track)
+	if forest: showpiece.probes=scenery.probes
+	else: showpiece.build(self,race.track)
 	for p in race.racers:
 		var ship := build_ship(color_for(p))
 		set_dynamic_layer(ship)
@@ -324,6 +348,9 @@ static func set_dynamic_layer(node:Node)->void:
 func set_quality(value:float,view_count:int)->void:
 	lighting_quality=value
 	lighting_clock=-1.
+	if is_instance_valid(forest_sun):
+		forest_sun.shadow_enabled=advanced_renderer and value>=.8
+		forest_sun.directional_shadow_max_distance=220. if view_count>1 else 380.
 	if not advanced_renderer: return
 	scene_environment.ssil_enabled=false
 	scene_environment.volumetric_fog_enabled=value>=1.
@@ -350,6 +377,10 @@ func update_lighting()->void:
 	for light:Light3D in lights: light.shadow_enabled=selected.has(light)
 
 func configure_reflections(material:ShaderMaterial,position:Vector3,detailed:bool)->void:
+	if race.track.biome=="forest":
+		material.set_shader_parameter("box_count",0)
+		material.set_shader_parameter("sign_count",0)
+		return
 	var boxes:Array=scenery.reflection_boxes.filter(func(item:Dictionary): return item.bounds.end.y>position.y-40. and item.bounds.get_center().distance_to(position)<800.) if detailed else []
 	boxes.sort_custom(func(a:Dictionary,b:Dictionary): return a.bounds.get_center().distance_squared_to(position)<b.bounds.get_center().distance_squared_to(position))
 	var low:=PackedVector3Array()

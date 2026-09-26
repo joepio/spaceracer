@@ -26,6 +26,7 @@ var selected_seed := 1
 var seed_input:LineEdit
 var laps := 3
 var difficulty := "normal"
+var biome := "city"
 var quality := 1.0
 var results_clock := 0.0
 var back_release := 0.0
@@ -64,6 +65,7 @@ func _ready() -> void:
 	bridge.declare_settings([
 		{"key":"laps","label":"Laps (next race)","kind":"number","default":3,"min":1,"max":5},
 		{"key":"difficulty","label":"Track difficulty (next race)","kind":"choice","default":"normal","options":["easy","normal","hard"]},
+		{"key":"biome","label":"World (next race)","kind":"choice","default":"city","options":["city","forest"]},
 		{"key":"quality","label":"Graphics","kind":"choice","default":"high","options":["performance","balanced","high"]}])
 	ui = Control.new()
 	ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -78,6 +80,7 @@ func _ready() -> void:
 		elif arg.begins_with("--players="): human_count = clampi(int(arg.get_slice("=",1)),1,4)
 		elif arg.begins_with("--seed="): next_seed = int(arg.get_slice("=",1))
 		elif arg.begins_with("--difficulty=") and arg.get_slice("=",1) in Race.Track.DIFFICULTIES: difficulty=arg.get_slice("=",1)
+		elif arg.begins_with("--biome=") and arg.get_slice("=",1) in Race.Track.BIOMES: biome=arg.get_slice("=",1)
 		elif arg.begins_with("--capture="): capture_path = arg.trim_prefix("--capture=")
 		elif arg.begins_with("--capture-frame="): capture_frame = int(arg.get_slice("=",1))
 		elif arg.begins_with("--preview-u="): preview_u = clampf(float(arg.get_slice("=",1)),0,.99)
@@ -150,7 +153,7 @@ func new_race() -> void:
 	views.clear()
 	if next_seed == 0: next_seed = randi_range(1,MAX_SEED)
 	next_seed=clampi(next_seed,1,MAX_SEED)
-	race = Race.new(roster,next_seed,laps,difficulty)
+	race = Race.new(roster,next_seed,laps,difficulty,biome)
 	next_seed = next_seed%MAX_SEED+1
 	results_clock = 0
 	world = World.new()
@@ -464,15 +467,32 @@ func make_menu()->void:
 	style_button(random_button)
 	random_button.pressed.connect(randomize_menu_seed)
 	seed_row.add_child(random_button)
+	var setting_row:=HBoxContainer.new()
+	setting_row.add_theme_constant_override("separation",10)
+	content.add_child(setting_row)
 	var challenge:=Button.new()
 	challenge.set_meta("menu_id","difficulty")
-	challenge.text="Track difficulty   ·   %s"%difficulty.capitalize()
-	challenge.custom_minimum_size=Vector2(430,42)
+	challenge.text="Level · %s"%difficulty.capitalize()
+	challenge.custom_minimum_size=Vector2(210,42)
 	style_button(challenge)
+	challenge.add_theme_font_size_override("font_size",18)
 	challenge.pressed.connect(func():
 		difficulty=Race.Track.DIFFICULTIES[(Race.Track.DIFFICULTIES.find(difficulty)+1)%3]
 		make_menu())
-	content.add_child(challenge)
+	setting_row.add_child(challenge)
+	var setting_button:=Button.new()
+	setting_button.set_meta("menu_id","biome")
+	setting_button.text="World · %s"%biome.capitalize()
+	setting_button.custom_minimum_size=Vector2(210,42)
+	style_button(setting_button)
+	setting_button.add_theme_font_size_override("font_size",18)
+	setting_button.pressed.connect(func():
+		finish_seed_edit()
+		biome="forest" if biome=="city" else "city"
+		next_seed=selected_seed
+		new_race()
+		make_menu())
+	setting_row.add_child(setting_button)
 	menu_label(content,{"easy":"Wide turns · protective rails · no flight gaps","normal":"Open edges · short jump · wide landing","hard":"Long flight gaps · exposed edges · tighter landings"}[difficulty],13,Color("aebfca"))
 	var start:=Button.new()
 	start.set_meta("menu_id","race")
@@ -519,8 +539,12 @@ func make_menu()->void:
 		control.focus_neighbor_bottom=challenge.get_path()
 	challenge.focus_neighbor_top=seed_input.get_path()
 	challenge.focus_neighbor_bottom=start.get_path()
-	challenge.focus_neighbor_left=challenge.get_path()
-	challenge.focus_neighbor_right=challenge.get_path()
+	challenge.focus_neighbor_left=setting_button.get_path()
+	challenge.focus_neighbor_right=setting_button.get_path()
+	setting_button.focus_neighbor_left=challenge.get_path()
+	setting_button.focus_neighbor_right=challenge.get_path()
+	setting_button.focus_neighbor_top=seed_input.get_path()
+	setting_button.focus_neighbor_bottom=start.get_path()
 	start.focus_neighbor_top=challenge.get_path()
 	start.focus_neighbor_bottom=help.get_path()
 	start.focus_neighbor_left=start.get_path()
@@ -535,7 +559,7 @@ func make_menu()->void:
 		button.add_theme_stylebox_override("focus",menu_style(Color.TRANSPARENT,Color("7de9d6")))
 	menu_label(content,"Left stick  Navigate     A  Select     Start  Race",13,Color("91a8b7"))
 	start.grab_focus()
-	for button in players+[seed_input,random_button,challenge,start,help,quality_button]:
+	for button in players+[seed_input,random_button,challenge,setting_button,start,help,quality_button]:
 		if button.get_meta("menu_id")==focus_id: button.grab_focus()
 
 func menu_label(parent:Node,value:String,size_value:int,color:Color=Color("d5e1ec"))->void:
@@ -630,6 +654,7 @@ func update_profiles(seats:Array,players:Array,presence:Array)->void:
 func setting_changed(key:String,value:Variant)->void:
 	if key=="laps": laps=clampi(int(value),1,5)
 	elif key=="difficulty" and str(value) in Race.Track.DIFFICULTIES: difficulty=str(value)
+	elif key=="biome" and str(value) in Race.Track.BIOMES: biome=str(value)
 	elif key=="quality":
 		quality={"performance":.6,"balanced":.8,"high":1.0}.get(str(value),1.0)
 		layout_views()
@@ -677,6 +702,7 @@ func write_probe()->void:
 		"speed_travel":views.map(func(view):return view.speed_effects.travel),
 		"speed_camera_clock":views.map(func(view):return view.camera.get_meta("speed_clock",0.)),
 		"difficulty":race.track.difficulty if race else "", "next_difficulty":difficulty,
+		"biome":race.track.biome if race else "", "next_biome":biome,
 		"visible":get_window().mode!=Window.MODE_MINIMIZED and get_window().position.x> -10000,
 		"sound_enabled":sound_enabled,"muted":AudioServer.is_bus_mute(0),"clock":race.clock if race else -1,"countdown":race.countdown if race else -1,"vfx_clock":race.vfx_clock if race else -1,
 		"racers":snapshot,"views":views.size(),"session":bridge.session,

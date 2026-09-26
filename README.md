@@ -29,15 +29,25 @@ The start menu has a five-digit **Track seed** (00001–99999). Type a code or s
 **Random** with the controller to choose another. Race uses that exact code;
 it remains visible in the HUD and results so you can write it down. Returning
 to the menu keeps the current code for replay. Seeds reproduce the track and
-city within the same game version. Write down the difficulty with the code;
-it appears beside the seed in the HUD and results.
+scenery within the same game version. Write down the difficulty and world with
+the code; both appear beside the seed in the HUD and results.
 
-Choose **Track difficulty** with A/click in the start menu:
+**World** switches between the neon **City** and **Forest — Verdant Reach**.
+The forest races over a reflective lake among 260–520 metre trees, branching
+canopies, mossy islands and thousands of ferns. Lower hills bring portions of the
+course nearer the water, while the loops and difficulty-dependent flight gaps
+remain. Foliage and ripples follow the race clock, and hitting the water triggers
+respawn. Geometry is procedural and instanced; no asset downloads are needed.
+Selecting a world updates the menu preview without changing the chosen seed.
+GameNight exposes **World (next race)**, and standalone accepts `--biome=forest`
+or `--biome=city` after `--`.
+
+Choose **Level** with A/click in the start menu:
 
 - **Easy:** wider road, gentler sharp corners, protected edges and no mandatory
   flight gaps. The half-pipe is shallower. Deliberate pull-back takeoff still works.
 - **Normal:** exposed sky sections and pipe edges, a short jump, and a wide landing.
-- **Hard:** a longer jump plus a second city flight gap, with narrower landings.
+- **Hard:** a longer jump plus a second flight gap, with narrower landings.
 
 Every seed includes a half-pipe, a full magnetic tube and a fork with two separate
 decks that rejoin. Feature placement and size
@@ -253,7 +263,7 @@ Back requires a full second of release between requests. Dispose frees the
 world, and host disconnect exits. Round results report Finished and continue
 within the same session. Live player names, colors, skin, and face artwork are
 preserved by ID. Roster changes take effect on the next race; instant join is
-false. `laps` and `difficulty` apply next race and `quality` applies immediately.
+false. `laps`, `difficulty` and `biome` apply next race and `quality` applies immediately.
 
 The packaging tool emits a `shelf.json` with absolute local launch paths. Merge
 that entry into your local GameNight shelf; no public catalog release or
@@ -299,6 +309,7 @@ godot --headless --path . --script res://tests/track_features.gd
 godot --headless --path . --script res://tests/jumps.gd
 godot --headless --path . --script res://tests/difficulty_soak.gd
 godot --headless --path . --script res://tests/speed_feel.gd
+godot --headless --path . --script res://tests/forest.gd
 python tests/integration.py --godot /path/to/Godot_console.exe --headless
 python tests/integration.py --godot /path/to/Godot_console.exe
 ```

@@ -360,10 +360,10 @@ vertical loops, crossings and camera clearance. Mounted screens stay inside thei
 clear the road and buildings. The opening skyline preserves views of the loop.
 
 Ships have beveled hulls, swept wings, cockpit glass and animated tapered plasma
-jets, bright engine cores, and soft, rounded exhaust particles. The engine socket glow
+jets, bright engine cores, and soft exhaust wisps. The engine socket glow
 responds to throttle; plume length grows with actual acceleration and boost.
 Exhaust sparks move backward relative to the craft at vehicle speed plus
-220–380 m/s (another 220 m/s during boost), with wider glow puffs and feathered edges. Their
+220–380 m/s (another 220 m/s during boost), with feathered ribbons concentrated near the jets. Their
 distance is integrated from the effects clock, so throttle changes cannot jump
 the trail and pausing freezes it. The particle count remains fixed at 20 per craft.
 Each craft has two short-range dynamic exhaust lights, one per nozzle. Throttle and boost

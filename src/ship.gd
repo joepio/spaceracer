@@ -1,6 +1,7 @@
 extends RefCounted
 ## Beveled hull, swept aerofoils, recessed cockpit and additive engine plumes.
 static var discharge_mesh:ArrayMesh
+const WAKE_SPAN:=20.
 
 static func boost_mesh()->ArrayMesh:
 	if discharge_mesh!=null: return discharge_mesh
@@ -309,19 +310,19 @@ static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)
 	var exhaust_speed:=vehicle_speed+220.+power*160.+(220. if burning else 0.)
 	var previous_time:float=root.get_meta("wake_time",time)
 	var elapsed:=clampf(time-previous_time,0.,.1)
-	var travel:=fposmod(float(root.get_meta("wake_travel",0.))+exhaust_speed*elapsed,64.)
+	var travel:=fposmod(float(root.get_meta("wake_travel",0.))+exhaust_speed*elapsed,WAKE_SPAN)
 	root.set_meta("wake_time",time)
 	root.set_meta("wake_travel",travel)
 	for particle in range(20):
 		# Integrate distance instead of multiplying absolute time by changing speed.
 		# A fixed wake span prevents throttle changes from teleporting the particles.
-		var distance:=fposmod(travel+particle*11.072+p.slot*19.84,64.)
-		var age:=distance/64.
+		var distance:=fposmod(travel+particle*11.072+p.slot*19.84,WAKE_SPAN)
+		var age:=distance/WAKE_SPAN
 		var side:=1 if particle%2==0 else -1
 		var phase:=particle*2.4
-		var position:=Vector3(side*2.45+sin(phase)*age*.8,-.12+cos(phase)*age*.6,-3.8-distance)
-		# Rounded puffs expand slightly as they leave the nozzle, rather than needles.
-		var diameter:=lerpf(.48,.8,age)*(1.+.12*sin(phase))
-		var size:=Vector3(diameter,diameter,clampf(exhaust_speed*.0014,.65,1.45))*(power if countdown<=0 else 0.0)
+		var position:=Vector3(side*2.45+sin(phase)*age*.3,-.12+cos(phase)*age*.22,-3.8-distance)
+		# Overlapping wisps stay attached to the jet and die before reaching the camera.
+		var diameter:=lerpf(.24,.36,age)*(1.+.12*sin(phase))
+		var size:=Vector3(diameter,diameter,clampf(exhaust_speed*.006,3.,5.4))*(power if countdown<=0 else 0.0)
 		wake.set_instance_transform(particle,Transform3D(Basis.IDENTITY.scaled(size),position))
-		wake.set_instance_color(particle,Color(jet_tint.r,jet_tint.g,jet_tint.b,pow(1.-age,2.)*power*.6))
+		wake.set_instance_color(particle,Color(jet_tint.r,jet_tint.g,jet_tint.b,pow(1.-age,3.)*power*(.36 if burning else .25)))

@@ -21,10 +21,12 @@ index so they remain brief above the physics frame rate. Neither consumes gamepl
 random numbers. Pausing freezes the last effect snapshot.
 Discharges are hidden outside boost and during recovery.
 
-Normal exhaust particles are camera-facing rounded glow puffs, roughly 0.48–0.8 m
-wide with short oval trails and a smooth radial fade. They replace thin box streaks
-without extra particles or textures. Ejection speed and distance-based fading are
-unchanged, and each split-screen camera gets the correct billboard orientation.
+Normal exhaust particles are overlapping, softly feathered wisps along the real
+exhaust axis. Their 0.24–0.36 m width is wider than the original needle streaks,
+but they no longer appear as floating glow dots. The wake ends within 20 m,
+with rapid opacity falloff and a close-camera fade. Ejection speed is unchanged.
+Each split-screen camera gets the correct ribbon orientation, with no new textures
+or additional particles.
 
 A single transparent ribbon per nozzle reads the opaque screen behind the
 exhaust and refracts it with animated turbulence. The distortion is roughly

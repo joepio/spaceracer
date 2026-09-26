@@ -63,7 +63,7 @@ func run()->void:
 	arcs.visible=false
 	var wake:MultiMeshInstance3D=ship.get_node("EngineWake");wake.visible=true
 	var soft_wake:=await capture()
-	check(difference(clean,soft_wake)>20,"Soft exhaust puffs render visibly")
+	check(difference(clean,soft_wake)>20,"Soft exhaust wisps render visibly")
 	wake.visible=false
 	var flare:MeshInstance3D=ship.get_node("EngineFlare-1");flare.visible=true
 	var lit:=await capture()

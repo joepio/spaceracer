@@ -94,8 +94,10 @@ static func integrate_air(p:Dictionary,dt:float,roll_input:float,yaw_input:float
 	p.air_position+=velocity*dt
 	p.speed=velocity.length()
 
-static func crash(p:Dictionary)->void:
+static func crash(p:Dictionary,normal:Vector3=Vector3.ZERO)->void:
 	if p.crashed: return
+	p.crash_velocity=p.air_velocity if p.airborne else p.ground_velocity
+	p.crash_normal=normal
 	p.crashed=true
 	p.airborne=false
 	p.recovery=0.0
@@ -109,6 +111,8 @@ static func crash(p:Dictionary)->void:
 	p.lift=0.0
 	p.lift_speed=0.0
 	p.unload=0.0
+	p.thrust=0.;p.engine_power=0.;p.acceleration=0.;p.braking=0.
+	p.input_throttle=0.;p.input_steer=0.;p.input_pitch=0.;p.input_strafe=0.;p.input_brake=0.
 
 static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float,throttle:float,brake:float)->void:
 	p.air_time+=dt
@@ -116,10 +120,10 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 	integrate_air(p,dt,strafe,steer,throttle,brake)
 	var position:Vector3=p.air_position
 	if track.get("obstacles")!=null:
-		var contact:Variant=track.obstacles.hit(previous,position)
-		if contact!=null:
-			p.air_position=contact
-			crash(p)
+		var contact:Dictionary=track.obstacles.trace(previous,position)
+		if not contact.is_empty():
+			p.air_position=contact.position
+			crash(p,contact.normal)
 			return
 	var velocity:Vector3=p.air_velocity
 	var frame:Basis=p.air_frame
@@ -165,9 +169,9 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 			p.landing_blend=1.0
 			p.launch_cooldown=.7
 		else:
-			crash(p)
+			crash(p,surface.y)
 	elif p.air_time>.10 and inside and before< -2 and after>=-2:
-		crash(p) # Hitting the underside cannot attach to the road.
+		crash(p,-surface.y) # Hitting the underside cannot attach to the road.
 	elif p.air_time>.10 and inside and after< -2 and previous_hit.node.get("air_gap",false):
 		crash(p) # A low approach hits the exposed landing lip; never flies through it.
 	elif p.air_time>10 or position.y< -179.5 or position.distance_to(n.p)>850 or (track.has_method("hits_water") and track.hits_water(position)):

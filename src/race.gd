@@ -21,6 +21,7 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 	laps = lap_count
 	for i in range(roster.size()):
 		var p: Dictionary = roster[i].duplicate(true)
+		p.wreck=null;p.crash_velocity=Vector3.ZERO;p.crash_normal=Vector3.ZERO
 		p.merge({"distance": -floorf(i / 3.0) * 13.0, "x": (i % 3 - (mini(3, roster.size()) - 1) / 2.0) * 12.0, "speed": 0.0,
 			"heading": 0.0, "slip": 0.0, "energy": 100.0, "boost": 0.0, "boost_held": false,"reset_held":false,"manual_reset":false,"wreck_wait":false,"wreck_time":0.,"crash_id":0,"air_entry_speed":235.,
 			"input_throttle":0.0,"engine_power":0.0,"startup":0.0,"ignited":false,"brake_vfx":0.0,"slide_hold":0.0,"acceleration":0.0,"input_steer":0.0,"input_strafe":0.0,"input_pitch":0.0,"input_brake":0.0,"air_position":Vector3.ZERO,"air_velocity":Vector3.ZERO,"air_frame":Basis.IDENTITY,
@@ -99,6 +100,11 @@ func step(dt: float, inputs: Array) -> void:
 			pilot.wreck_wait=false
 			pilot.recovery=2.
 		pilot.reset_held=reset_pressed
+		# Only recovery and pause remain available once the craft is destroyed.
+		if pilot.crashed:
+			pilot.input_throttle=0.;pilot.input_steer=0.;pilot.input_pitch=0.;pilot.input_strafe=0.;pilot.input_brake=0.
+			pilot.thrust=0.;pilot.engine_power=0.;pilot.acceleration=0.;pilot.braking=0.
+			continue
 		pilot.input_throttle=clampf(float(input.get("throttle",0.0)),0,1)
 		var brake_input:=clampf(float(input.get("brake",0.0)),0,1)
 		pilot.thrust=pilot.input_throttle*(1-brake_input) if pilot.recovery==0 and not pilot.finished and not pilot.crashed else 0.0
@@ -121,6 +127,7 @@ func step(dt: float, inputs: Array) -> void:
 		p.launch_cooldown=maxf(0,p.launch_cooldown-dt)
 		if p.finished:
 			continue
+		if p.crashed and p.wreck!=null: p.wreck.step(dt,track,p.distance)
 		if p.wreck_wait:
 			p.wreck_time+=dt
 			p.speed=0.;p.thrust=0.
@@ -135,6 +142,8 @@ func step(dt: float, inputs: Array) -> void:
 		p.thrust=throttle*(1-brake) if p.recovery==0 else 0.0
 		var strafe:=clampf(float(c.get("strafe",0.0))+int(c.get("right",false))-int(c.get("left",false)),-1,1)
 		var pitch_input:=clampf(float(c.get("trim",0.0)),-1,1)
+		if p.crashed:
+			steer=0.;throttle=0.;brake=0.;strafe=0.;pitch_input=0.;p.braking=0.
 		p.trim=pitch_input if p.airborne else move_toward(p.trim,pitch_input,dt*5)
 		var planted:float=maxf(0,p.trim)
 		var loose:float=maxf(0,-p.trim)
@@ -169,6 +178,7 @@ func step(dt: float, inputs: Array) -> void:
 			p.landing_blend=0.0
 			if p.recovery == 0:
 				p.crashed=false
+				p.wreck=null
 				p.launch_cooldown=1.0
 				if not p.manual_reset: p.energy=65.
 				p.manual_reset=false

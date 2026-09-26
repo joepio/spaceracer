@@ -141,7 +141,11 @@ down without excessive descent speed to reconnect. Missing the road, a hard or
 misaligned impact, hitting its underside, falling below the world, or remaining
 in the air for ten seconds crashes the craft. Buildings, solid tree parts,
 islands, traffic and track fixtures can also be hit while flying. A crash produces
-an explosion and a smoking wreck that stays there until **Y to reset** is pressed.
+an explosion that breaks the craft into 16 hull, wing, engine and tail pieces.
+They carry impact momentum, tumble under gravity, bounce off scenery and the road,
+then settle. Steering, throttle, braking and movable fins are disabled until
+recovery; **Y to reset** and pause remain available. The camera coasts briefly,
+eases its aim toward the debris and keeps some distance from rebounding parts.
 Y also initiates recovery while airborne: two seconds of downtime, loss of
 momentum and up to 25 energy (leaving at least one). A crash already charges the
 energy cost; resetting the wreck does not charge it twice. Recovery
@@ -327,6 +331,7 @@ godot --headless --path . --editor --import --quit
 godot --headless --path . --script res://tests/run.gd
 godot --headless --path . --script res://tests/flight.gd
 godot --headless --path . --script res://tests/crashes.gd
+godot --headless --path . --script res://tests/wrecks.gd
 godot --headless --path . --script res://tests/menu.gd
 godot --headless --path . --script res://tests/effects.gd
 godot --headless --path . --script res://tests/city.gd

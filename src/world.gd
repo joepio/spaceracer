@@ -142,7 +142,7 @@ func build(state: RefCounted) -> void:
 		set_dynamic_layer(ship)
 		add_child(ship)
 		ships.append(ship)
-		var crash:=CrashVfx.new();add_child(crash);crashes.append(crash)
+		var crash:=CrashVfx.new();add_child(crash);crash.configure(ship);crashes.append(crash)
 		ship_colors.append(color_for(p))
 	update_ships()
 
@@ -334,7 +334,7 @@ func update_ships() -> void:
 		Ship.animate_controls(ships[i],p)
 		var n: Dictionary = race.track.sample(p.distance)
 		ships[i].transform=Flight.pose(p,n,race.clock)
-		ships[i].visible = p.recovery<=0 or fmod(p.recovery,.2)<.1
+		ships[i].visible = not p.crashed
 		ships[i].get_node("Body").material_override.set_shader_parameter("wrecked",1. if p.crashed else 0.)
 		crashes[i].update(p,race.vfx_clock)
 		var tint := color_for(p)
@@ -352,6 +352,10 @@ func update_ships() -> void:
 func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false, effects_enabled:bool=true) -> void:
 	var p: Dictionary = race.racers[index]
 	var n:Dictionary=race.track.sample(p.distance)
+	if p.crashed:
+		var focus:Vector3=p.wreck.focus if p.wreck!=null else p.air_position
+		Chase.update_crash(camera,p.air_position,focus,p.crash_id,dt,race.track.obstacles,snap)
+		return
 	Chase.update(camera,Flight.pose(p,n,race.clock),p.speed,p.boost>0 or p.on_pad,dt,snap,p.acceleration,effects_enabled and race.countdown<=0 and p.recovery<=0 and not p.finished)
 
 static func set_dynamic_layer(node:Node)->void:

@@ -1,6 +1,8 @@
 extends RefCounted
 ## One vehicle-relative chase rig for road, takeoff, flight and landing.
 static func update(camera:Camera3D,pose:Transform3D,speed:float,boosting:bool,dt:float,snap:bool=false,acceleration:float=0.,effects_enabled:bool=true)->void:
+	var previous:=camera.position
+	camera.set_meta("crash_serial",-1)
 	var rush:=smoothstep(70.,390.,speed) if effects_enabled else 0.
 	var boost_target:=smoothstep(180.,350.,speed) if boosting and effects_enabled else 0.
 	var surge_target:=smoothstep(15.,180.,acceleration)*smoothstep(0.,90.,speed) if effects_enabled else 0.
@@ -38,3 +40,37 @@ static func update(camera:Camera3D,pose:Transform3D,speed:float,boosting:bool,dt
 	camera.rotate_object_local(Vector3.RIGHT,deg_to_rad(.16)*shake*(sin(clock*67.)+.3*sin(clock*109.)))
 	camera.rotate_object_local(Vector3.UP,deg_to_rad(.12)*shake*sin(clock*83.))
 	camera.rotate_object_local(Vector3.BACK,deg_to_rad(.08)*shake*sin(clock*57.))
+	if dt>0.: camera.set_meta("chase_velocity",Vector3.ZERO if snap else (camera.position-previous)/dt)
+
+static func update_crash(camera:Camera3D,impact:Vector3,focus:Vector3,serial:int,dt:float,obstacles:RefCounted=null,snap:bool=false)->void:
+	if int(camera.get_meta("crash_serial",-1))!=serial or snap:
+		camera.set_meta("crash_serial",serial)
+		camera.set_meta("crash_velocity",Vector3(camera.get_meta("chase_velocity",Vector3.ZERO)).limit_length(240.))
+		camera.set_meta("crash_aim",camera.position-camera.basis.z*30.)
+		camera.set_meta("crash_up",camera.basis.y)
+		camera.set_meta("crash_anchor",impact)
+	if dt<=0.: return
+	var velocity:Vector3=camera.get_meta("crash_velocity")
+	# Integrate exponential braking: continuous movement, bounded stopping distance.
+	var decay:=exp(-dt*16.)
+	var destination:=camera.position+velocity*(1.-decay)/16.
+	# Rebounding debris can travel toward the chase rig. Ease back to keep the
+	# breakup readable instead of coasting into the explosion or loose wings.
+	var separation:=destination-focus
+	if separation.length()<18. and separation.length()>.01:
+		destination+=separation.normalized()*(18.-separation.length())*(1.-exp(-dt*8.))
+	if obstacles!=null:
+		var hit:Dictionary=obstacles.trace(camera.position,destination,.65)
+		if not hit.is_empty(): destination=hit.position+hit.normal*.05;velocity=velocity.slide(hit.normal)
+	camera.position=destination
+	camera.set_meta("crash_velocity",velocity*decay)
+	var aim:Vector3=camera.get_meta("crash_aim")
+	var anchor:Vector3=camera.get_meta("crash_anchor")
+	var target:=anchor+(focus-anchor).limit_length(45.)
+	aim=aim.lerp(target,1.-exp(-dt*3.5))
+	camera.set_meta("crash_aim",aim)
+	if camera.position.distance_squared_to(aim)>.01:
+		var desired:=camera.transform.looking_at(aim,camera.get_meta("crash_up"))
+		camera.quaternion=camera.quaternion.slerp(desired.basis.get_rotation_quaternion(),1.-exp(-dt*7.)).normalized()
+	camera.fov=lerpf(camera.fov,76.,1.-exp(-dt*1.8))
+	for key in ["speed_rush","speed_boost","speed_surge","speed_velocity"]: camera.set_meta(key,0.)

@@ -109,7 +109,9 @@ def main():
                    GAMENIGHT_TOKEN="ion-test-token", GAMENIGHT_ADDR=f"127.0.0.1:{host.port}", ION_PROBE_PATH=str(probe))
         log = open(Path(temporary) / "godot.log", "w+")
         try:
-            command = [executable, "--position", "-20000,-20000"]
+            # This suite tests protocol/controller behavior with sound disabled;
+            # hardware audio-device changes must not interrupt the native renderer.
+            command = [executable, "--position", "-20000,-20000", "--audio-driver", "Dummy"]
             if not args.packed: command += ["--path", str(project)]
             if args.headless: command.append("--headless")
             child = subprocess.Popen(command, env=env, stdout=log, stderr=log)

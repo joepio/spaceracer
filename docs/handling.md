@@ -65,3 +65,31 @@ the existing track surface/lip collision logic; upright beacons and other solid
 scenery still collide. The full-world test on seed 31 changed from 36 failed
 landings to 36 successful landings (six-craft packs, Normal and Hard, City and
 Forest), with 40 checks passing. The separate scenery crash tests still pass.
+
+## Crash breakup and camera
+
+The intact craft is hidden on impact. Sixteen prebuilt fragments use the actual
+hull, canopy, nacelle, wing, elevon, rudder, nozzle and airbrake geometry; the hull
+is split into three sealed sections. A bounded 60 Hz fragment simulation carries
+impact momentum, integrates gravity and spin, applies restitution/friction on
+swept scenery contacts and road contact, and sleeps settled pieces. It uses
+approximate fragment collision volumes, without fragment-to-fragment contacts.
+The particles and fragments share the pausable race clock. Geometry is pooled
+at world creation, so repeated crashes do not allocate fresh meshes.
+
+Crash input is locked at the simulation and fin-animation layers. Y and pause
+still work; recovery hides the fragments and restores the original craft. The
+camera carries its recent velocity into a damped stop, eases aim independently
+of fragment roll, avoids scenery and eases away from rebounding debris.
+
+The 47-check wreck regression covers uncontrolled tumbling, road settling,
+scenery bounce normals, identical motion under neutral versus saturated inputs,
+paused visuals/camera, bounded camera coast and recovery. The 40 full-world jump
+checks and 612 speed-camera checks also pass. Native 1080p building-impact frames
+were inspected at the initial flash, breakup and falling-debris stages.
+
+A six-simultaneous-crash CPU probe (Forest/Hard 31, 360 ticks, active background
+jobs and playtest) measured about 3.2 ms to activate all six pooled wrecks, versus
+39.9 ms when their meshes were allocated at impact. The combined simulation and
+visual updates averaged 4.44 ms per 120 Hz tick, p95 12.42 ms; fragment simulation
+runs on every second tick. This is a worst-case CPU probe, not rendered frame time.

@@ -8,7 +8,7 @@ static func metal(color:Color,roughness:float=.3)->StandardMaterial3D:
 	material.cull_mode=BaseMaterial3D.CULL_DISABLED
 	return material
 
-static func loft(parent:Node3D,name_value:String,sections:Array,material:Material,offset:Vector3=Vector3.ZERO)->MeshInstance3D:
+static func loft(parent:Node3D,name_value:String,sections:Array,material:Material,offset:Vector3=Vector3.ZERO,seal:bool=false)->MeshInstance3D:
 	var surface:=SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var cross_section:=[Vector2(-1,-.05),Vector2(-.96,.10),Vector2(-.71,.67),Vector2(-.60,.72),Vector2(.60,.72),Vector2(.71,.67),Vector2(.96,.10),Vector2(1,-.05),Vector2(.65,-.5),Vector2(-.65,-.5)]
@@ -19,6 +19,14 @@ static func loft(parent:Node3D,name_value:String,sections:Array,material:Materia
 				var corner:Vector2=cross_section[cell[1]]
 				surface.set_uv(Vector2(float(cell[1])/cross_section.size(),section.x*.2))
 				surface.add_vertex(Vector3(corner.x*section.y,corner.y*section.z,section.x))
+	if seal:
+		for index in [0,sections.size()-1]:
+			var section:Vector3=sections[index]
+			for j in range(cross_section.size()):
+				var a:Vector2=cross_section[j]
+				var b:Vector2=cross_section[(j+1)%cross_section.size()]
+				for point in [Vector3(0,0,section.x),Vector3(a.x*section.y,a.y*section.z,section.x),Vector3(b.x*section.y,b.y*section.z,section.x)]:
+					surface.add_vertex(point)
 	surface.generate_normals()
 	var mesh:=MeshInstance3D.new()
 	mesh.name=name_value
@@ -187,6 +195,7 @@ static func set_jet_tint(root:Node3D,tint:Color)->void:
 		root.get_node("EngineCore%d"%side).material_override.emission=color.lightened(.45)
 
 static func animate_controls(root:Node3D,p:Dictionary)->void:
+	if p.crashed: return
 	for side in [-1,1]:
 		var wing:Node3D=root.get_node("WingControlL" if side<0 else "WingControlR")
 		# Right-stick strafe/roll drives ailerons; left-stick turn drives the rudder.

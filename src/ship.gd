@@ -250,7 +250,7 @@ static func animate_controls(root:Node3D,p:Dictionary)->void:
 		rudder.rotation.y=-p.input_steer*.55
 
 static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)->void:
-	var alive:bool=p.recovery<=0 and not p.finished and not p.crashed
+	var alive:bool=p.recovery<=0 and (not p.finished or p.has("victory_pose")) and not p.crashed
 	var power:float=p.engine_power if alive else 0.0
 	var burning:bool=(p.boost>0 or p.on_pad) and p.thrust>0 and alive
 	var drive:float=smoothstep(0,125,p.acceleration) if countdown<=0 else 0.0

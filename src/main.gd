@@ -247,6 +247,7 @@ func _physics_process(dt: float) -> void:
 	if race == null: return
 	if not running and not in_menu: return
 	if race.over:
+		race.step(dt,[])
 		results_clock += dt
 		if results_clock>=8: new_race()
 		return

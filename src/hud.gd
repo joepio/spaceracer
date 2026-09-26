@@ -44,6 +44,12 @@ func _draw() -> void:
 	if race.over:
 		results(w,h,tint)
 		return
+	if p.finished:
+		draw_texture_rect(bottom_fade,Rect2(0,h-64,w,64),false)
+		label("WINNER" if p.rank==1 else "FINISHED · %d / %d"%[p.rank,race.racers.size()],Vector2(24,h-38),20,tint)
+		label("%s · %.2fs"%[str(p.get("name","Pilot")).left(18),p.time],Vector2(24,h-18),12)
+		right_label("%05d"%race.track.seed_value,Vector2(w-24,h-18),10)
+		return
 	# Soft edge contrast keeps the road open; no floating instrument panels.
 	draw_texture_rect(top_fade,Rect2(0,0,w,64),false)
 	draw_texture_rect(bottom_fade,Rect2(0,h-64,w,64),false)
@@ -107,17 +113,18 @@ func right_label(value:String,at:Vector2,size_value:int,color:Color=Color("e1eef
 	label(value,at-Vector2(font.get_string_size(value,HORIZONTAL_ALIGNMENT_LEFT,-1,size_value).x,0),size_value,color)
 
 func results(w:float,h:float,tint:Color)->void:
-	draw_rect(Rect2(0,0,w,h),Color(.01,.02,.04,.72))
-	var left:=w*.5-135
-	centered("Race complete",w,h*.23,25)
-	var row:=h*.23+38
+	var left:=24.
+	draw_rect(Rect2(12,54,294,72+race.racers.size()*28),Color(.01,.02,.04,.65))
+	label("Race complete",Vector2(left,82),22)
+	var row:=112.
 	for item in race.standings():
 		label(str(item.rank),Vector2(left,row),13,World.color_for(item))
 		label(str(item.get("name","Pilot")).left(19),Vector2(left+28,row),13)
 		right_label("%.2fs"%item.time if item.finished else "DNF",Vector2(left+270,row),12,Color("a0b2bf"))
 		draw_line(Vector2(left,row+10),Vector2(left+270,row+10),Color(1,1,1,.08),1)
 		row+=28
-	centered("%05d · %s · %s   ·   Next circuit shortly"%[race.track.seed_value,race.track.difficulty.to_upper(),race.track.biome.to_upper()],w,row+20,11,tint)
+	label("Next circuit shortly",Vector2(left,row+12),10,tint)
+	label("%05d · %s · %s"%[race.track.seed_value,race.track.difficulty.to_upper(),race.track.biome.to_upper()],Vector2(24,h-18),10,tint)
 
 func centered(value: String,w:float,y:float,size_value:int,color:Color=Color("dbe7f1"))->void:
 	label(value,Vector2((w-font.get_string_size(value,HORIZONTAL_ALIGNMENT_LEFT,-1,size_value).x)/2,y),size_value,color)

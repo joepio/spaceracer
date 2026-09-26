@@ -28,6 +28,10 @@ Start/Escape pauses. Unchanged settings resume the current race; changing a race
 setting changes the primary action to **Restart**. Graphics never resets progress.
 The paused track stays frozen until resuming or restarting. Back no longer pauses.
 F5 starts a fresh track. Three laps by default; results last eight seconds.
+After finishing, an autonomous victory lap keeps your ship moving while a replay
+camera cycles through rear-quarter, front, side and overhead shots. Other players
+keep racing with their own chase cameras. Finish times and places stay locked;
+the camera and victory lap pause with the game and continue behind the results.
 
 The start menu has a five-digit **Track seed** (00001–99999). Use left/right for the previous/next code, type a code, or select
 **Random** with the controller to choose another. Race uses that exact code;

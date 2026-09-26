@@ -21,6 +21,7 @@ static func ground_pose(p:Dictionary,n:Dictionary,clock:float)->Transform3D:
 	return Transform3D(frame,Track.point(n,p.x,hover_height(p.trim)+p.lift))
 
 static func pose(p:Dictionary,n:Dictionary,clock:float)->Transform3D:
+	if p.has("victory_pose"): return p.victory_pose
 	if p.airborne or p.crashed:
 		return Transform3D(p.air_frame,p.air_position)
 	var result:=ground_pose(p,n,clock)

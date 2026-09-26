@@ -3,6 +3,7 @@ const Track = preload("res://src/track.gd")
 const Weapons=preload("res://src/weapons.gd")
 const Flight=preload("res://src/flight.gd")
 const Bump=preload("res://src/bump.gd")
+const Victory=preload("res://src/victory.gd")
 const TOP_SPEED := 265.0
 const BOOST_SPEED := 390.0
 const CRASH_RESPAWN_DELAY := 2.0
@@ -104,14 +105,17 @@ static func begin_recovery(p:Dictionary,delay:float)->void:
 	p.recovery=delay
 
 func step(dt: float, inputs: Array) -> void:
+	vfx_clock+=dt
+	for p in racers:
+		if p.finished: Victory.step(p,track,dt,clock)
 	if over:
 		return
-	vfx_clock+=dt
 	weapons.begin_step(self,dt,inputs)
 	inputs=weapons.jam_inputs(self,inputs)
 	for i in range(racers.size()):
 		var input:Dictionary=inputs[i]
 		var pilot:Dictionary=racers[i]
+		if pilot.finished: continue
 		Bump.begin(pilot,input,dt,countdown)
 		var reset_pressed:bool=input.get("reset",false)
 		if countdown<=0 and reset_pressed and not pilot.reset_held and can_reset(pilot):

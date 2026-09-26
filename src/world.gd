@@ -11,6 +11,7 @@ var weapon_vfx:Node3D
 const RAIL_HEIGHT := 2.5
 const Flight=preload("res://src/flight.gd")
 const Chase=preload("res://src/chase.gd")
+const Victory=preload("res://src/victory.gd")
 const Showpiece=preload("res://src/showpiece.gd")
 var showpiece:RefCounted
 const Ship = preload("res://src/ship.gd")
@@ -377,7 +378,13 @@ func update_ships() -> void:
 
 func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false, effects_enabled:bool=true) -> void:
 	var p: Dictionary = race.racers[index]
+	if race.over and not p.finished:
+		var ordered:Array=race.standings()
+		if not ordered.is_empty() and ordered[0].finished: p=ordered[0]
 	var n:Dictionary=race.track.sample(p.distance)
+	if p.has("victory_pose"):
+		Victory.camera_update(camera,p.victory_pose,n,p.victory_age,race.track.obstacles,snap)
+		return
 	if p.crashed:
 		var focus:Vector3=p.wreck.focus if p.wreck!=null else p.air_position
 		Chase.update_crash(camera,p.air_position,focus,p.crash_id,dt,race.track.obstacles,snap)

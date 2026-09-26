@@ -47,12 +47,20 @@ var sound_enabled := false
 var menu_sticks:Dictionary={}
 var menu_direction:=Vector2i.ZERO
 var menu_repeat:=0.0
+var menu_rows:Array[Control]=[]
+var pause_settings:Dictionary={}
+var touch_controls:Control
+var mobile_mode:=false
+var preview_refresh:=0.0
 
 func _ready() -> void:
 	headless = DisplayServer.get_name() == "headless"
-	Engine.max_fps = 120
+	mobile_mode=OS.has_feature("android") or "--touch" in OS.get_cmdline_user_args()
+	quality=.6 if mobile_mode else quality
+	Engine.max_fps = 60 if mobile_mode else 120
 	Input.joy_connection_changed.connect(func(device:int,connected:bool):
-		if not connected: menu_sticks.erase(device))
+		if not connected: menu_sticks.erase(device)
+		assign_local_controllers())
 	bridge = Bridge.new()
 	bridge.prepared.connect(prepare)
 	bridge.started.connect(start_managed)
@@ -73,6 +81,12 @@ func _ready() -> void:
 	var canvas := CanvasLayer.new()
 	add_child(canvas)
 	canvas.add_child(ui)
+	if mobile_mode:
+		touch_controls=load("res://src/touch_controls.gd").new()
+		touch_controls.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		canvas.add_child(touch_controls)
+		touch_controls.pause_requested.connect(pause_local)
+	get_tree().auto_accept_quit=false
 	get_viewport().size_changed.connect(layout_views)
 	setup_audio()
 	var args := OS.get_cmdline_user_args()
@@ -115,7 +129,7 @@ func local_roster(count: int, bots_only: bool = false) -> Array:
 	return out
 
 func start_selected() -> void:
-	if local_paused:
+	if local_paused and not menu_race_changed():
 		resume_local()
 		return
 	finish_seed_edit()
@@ -131,6 +145,8 @@ func seed_text_changed(value:String)->void:
 		seed_input.text=digits
 		seed_input.caret_column=mini(caret,digits.length())
 	if int(digits)>0: selected_seed=clampi(int(digits),1,MAX_SEED)
+	preview_refresh=.4
+	refresh_menu_values()
 
 func finish_seed_edit()->void:
 	if is_instance_valid(seed_input): seed_input.text="%05d"%selected_seed
@@ -138,9 +154,13 @@ func finish_seed_edit()->void:
 func randomize_menu_seed()->void:
 	# Pick a different five-digit code, even on repeated presses.
 	selected_seed=(selected_seed+randi_range(1,MAX_SEED-1)-1)%MAX_SEED+1
+	preview_refresh=.4
 	finish_seed_edit()
+	refresh_menu_values()
 
 func start_local() -> void:
+	preview_refresh=0.
+	if is_instance_valid(touch_controls): touch_controls.clear_input()
 	local_paused=false
 	if is_instance_valid(menu): menu.queue_free()
 	roster = local_roster(human_count,demo)
@@ -215,7 +235,9 @@ func layout_views() -> void:
 		views[i].holder.size = cell-Vector2.ONE*2
 		# UI uses logical coordinates; 3D must use actual output pixels in fullscreen.
 		var output_pixels:=Vector2(get_window().size)
-		views[i].viewport.size = Vector2i((cell/dimensions)*output_pixels*quality)
+		var mobile_width:=1280. if quality<.8 else (1600. if quality<1. else 1920.)
+		var render_scale:=minf(1.,mobile_width/output_pixels.x) if mobile_mode else quality
+		views[i].viewport.size = Vector2i((cell/dimensions)*output_pixels*render_scale)
 		views[i].viewport.msaa_3d = Viewport.MSAA_2X if quality>=.8 else Viewport.MSAA_DISABLED
 		views[i].viewport.positional_shadow_atlas_size=(2048 if count==1 and quality>=1. else 1024) if quality>=.8 else 0
 
@@ -255,9 +277,24 @@ func controls(p: Dictionary) -> Dictionary:
 		c.reset=c.reset or Input.is_joy_button_pressed(device,JOY_BUTTON_Y)
 		c.left=c.left or Input.is_joy_button_pressed(device,JOY_BUTTON_LEFT_SHOULDER)
 		c.right=c.right or Input.is_joy_button_pressed(device,JOY_BUTTON_RIGHT_SHOULDER)
+	if int(p.slot)==0 and is_instance_valid(touch_controls) and touch_controls.visible:
+		var touch:Dictionary=touch_controls.controls()
+		for axis in ["steer","strafe","trim"]:
+			if absf(touch[axis])>absf(c[axis]): c[axis]=touch[axis]
+		for axis in ["throttle","brake"]: c[axis]=maxf(c[axis],touch[axis])
+		c.boost=c.boost or touch.boost
+		c.reset=c.reset or touch.reset
 	return c
 
 func _process(dt: float) -> void:
+	if in_menu and not local_paused and preview_refresh>0:
+		preview_refresh-=dt
+		if preview_refresh<=0:
+			next_seed=selected_seed
+			new_race()
+	if is_instance_valid(touch_controls):
+		touch_controls.visible=running and not in_menu
+		touch_controls.reset_available=race!=null and race.can_reset(race.racers[0])
 	navigate_menu(dt)
 	process_pause(dt)
 	probe_clock+=dt
@@ -322,7 +359,7 @@ func process_pause(dt:float)->void:
 		back_release=0
 		if bridge.launched_by_daemon:
 			if running: bridge.request_overlay()
-		elif local_paused: resume_local()
+		elif local_paused: start_selected()
 		elif not in_menu: pause_local()
 
 func resume_local()->void:
@@ -335,41 +372,43 @@ func resume_local()->void:
 	menu_sticks.clear()
 
 func pause_local()->void:
+	if local_paused or in_menu: return
 	local_paused=true
 	running=false
 	in_menu=true
 	menu_sticks.clear()
-	menu=Control.new()
-	menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	ui.add_child(menu)
-	var shade:=ColorRect.new()
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color=Color(.015,.025,.04,.75)
-	menu.add_child(shade)
-	var center:=CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	menu.add_child(center)
-	var content:=VBoxContainer.new()
-	content.add_theme_constant_override("separation",16)
-	center.add_child(content)
-	menu_label(content,"Paused",36)
-	var buttons:Array[Button]=[]
-	for title in ["Resume","Restart race","Track settings"]:
-		var button:=Button.new()
-		button.text=title
-		button.custom_minimum_size=Vector2(340,48)
-		button.set_meta("menu_id",title.to_lower())
-		style_button(button,title=="Resume")
-		content.add_child(button)
-		buttons.append(button)
-	buttons[0].pressed.connect(resume_local)
-	buttons[1].pressed.connect(func(): next_seed=race.track.seed_value;start_local())
-	buttons[2].pressed.connect(func(): local_paused=false;make_menu())
-	for i in range(buttons.size()):
-		buttons[i].focus_neighbor_top=buttons[posmod(i-1,buttons.size())].get_path()
-		buttons[i].focus_neighbor_bottom=buttons[(i+1)%buttons.size()].get_path()
-	buttons[0].grab_focus()
-	menu_label(content,"Start  Resume     A  Select",14,Color("aebfca"))
+	if is_instance_valid(touch_controls): touch_controls.clear_input()
+	selected_seed=race.track.seed_value
+	pause_settings={"players":human_count,"biome":race.track.biome,"difficulty":race.track.difficulty,"seed":selected_seed}
+	make_menu()
+
+func menu_race_changed()->bool:
+	return local_paused and pause_settings!={"players":human_count,"biome":biome,"difficulty":difficulty,"seed":selected_seed}
+
+func assign_local_controllers()->void:
+	if bridge==null or bridge.launched_by_daemon or race==null: return
+	var pads:=Input.get_connected_joypads()
+	# Keep existing assignments; fill only disconnected seats, including late pairing.
+	var used:Array=[]
+	for p in race.racers:
+		if not p.bot and pads.has(p.get("device",-1)): used.append(p.device)
+	for p in race.racers:
+		if p.bot or pads.has(p.get("device",-1)): continue
+		p.device=-1
+		for device in pads:
+			if not used.has(device):
+				p.device=device
+				used.append(device)
+				break
+
+func _notification(what:int)->void:
+	if what==NOTIFICATION_APPLICATION_PAUSED or what==NOTIFICATION_APPLICATION_FOCUS_OUT:
+		if mobile_mode and running and not bridge.launched_by_daemon: pause_local()
+	elif what==NOTIFICATION_WM_GO_BACK_REQUEST:
+		if local_paused: start_selected()
+		elif not in_menu: pause_local()
+	elif what==NOTIFICATION_WM_CLOSE_REQUEST:
+		get_tree().quit()
 
 func _input(event:InputEvent)->void:
 	if not bridge.launched_by_daemon and not in_menu and event is InputEventJoypadButton and event.button_index==JOY_BUTTON_START and event.pressed:
@@ -377,6 +416,15 @@ func _input(event:InputEvent)->void:
 		pause_local()
 		return
 	if not in_menu or bridge.launched_by_daemon: return
+	var direction:=Vector2i.ZERO
+	if event is InputEventKey and event.pressed:
+		direction={KEY_UP:Vector2i.UP,KEY_DOWN:Vector2i.DOWN,KEY_LEFT:Vector2i.LEFT,KEY_RIGHT:Vector2i.RIGHT}.get(event.keycode,Vector2i.ZERO)
+	elif event is InputEventJoypadButton and event.pressed:
+		direction={JOY_BUTTON_DPAD_UP:Vector2i.UP,JOY_BUTTON_DPAD_DOWN:Vector2i.DOWN,JOY_BUTTON_DPAD_LEFT:Vector2i.LEFT,JOY_BUTTON_DPAD_RIGHT:Vector2i.RIGHT}.get(event.button_index,Vector2i.ZERO)
+	if direction!=Vector2i.ZERO:
+		move_menu(direction)
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventJoypadMotion and event.axis in [JOY_AXIS_LEFT_X,JOY_AXIS_LEFT_Y]:
 		var stick:Vector2=menu_sticks.get(event.device,Vector2.ZERO)
 		if event.axis==JOY_AXIS_LEFT_X: stick.x=event.axis_value
@@ -412,13 +460,41 @@ func navigate_menu(dt:float)->void:
 	if direction==menu_direction and menu_repeat>0: return
 	menu_repeat=.32 if direction!=menu_direction else .14
 	menu_direction=direction
+	move_menu(direction)
+
+func move_menu(direction:Vector2i)->void:
 	var focused:=get_viewport().gui_get_focus_owner()
 	if focused==null or not menu.is_ancestor_of(focused): return
-	var side:=SIDE_LEFT if direction.x<0 else (SIDE_RIGHT if direction.x>0 else (SIDE_TOP if direction.y<0 else SIDE_BOTTOM))
-	var path:=focused.get_focus_neighbor(side)
-	if not path.is_empty():
-		var next:=focused.get_node_or_null(path) as Control
-		if next: next.grab_focus()
+	if direction.x!=0:
+		adjust_menu(str(focused.get_meta("menu_id","")),direction.x)
+	else:
+		finish_seed_edit()
+		var index:=menu_rows.find(focused)
+		menu_rows[posmod(index+direction.y,menu_rows.size())].grab_focus()
+
+func adjust_menu(id:String,step:int)->void:
+	finish_seed_edit()
+	if id in ["biome","difficulty","seed"]: preview_refresh=.4
+	match id:
+		"players": human_count=posmod(human_count-1+step,4)+1
+		"biome": biome=Race.Track.BIOMES[posmod(Race.Track.BIOMES.find(biome)+step,Race.Track.BIOMES.size())]
+		"difficulty": difficulty=Race.Track.DIFFICULTIES[posmod(Race.Track.DIFFICULTIES.find(difficulty)+step,3)]
+		"seed": selected_seed=posmod(selected_seed-1+step,MAX_SEED)+1;finish_seed_edit()
+		"graphics":
+			var levels:=[.6,.8,1.0]
+			quality=levels[posmod(levels.find(quality)+step,3)]
+			layout_views()
+	refresh_menu_values()
+
+func refresh_menu_values()->void:
+	for row in menu_rows:
+		if not is_instance_valid(row) or not row is Button: continue
+		match str(row.get_meta("menu_id","")):
+			"race": row.text=("Restart" if menu_race_changed() else "Resume") if local_paused else "Race"
+			"players": row.text="Players                         %d"%human_count
+			"biome": row.text="World                           %s"%biome.capitalize()
+			"difficulty": row.text="Level                            %s"%difficulty.capitalize()
+			"graphics": row.text="Graphics                       %s"%{.6:"Performance",.8:"Balanced",1.0:"High"}.get(quality,"Balanced")
 
 func _unhandled_input(event:InputEvent)->void:
 	if bridge.launched_by_daemon: return
@@ -460,6 +536,7 @@ func make_menu()->void:
 		if focused and menu.is_ancestor_of(focused): focus_id=str(focused.get_meta("menu_id","race"))
 		ui.remove_child(menu)
 		menu.queue_free()
+	menu_rows.clear()
 	menu=Control.new()
 	menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(menu)
@@ -471,149 +548,83 @@ func make_menu()->void:
 	shade.material=fade
 	menu.add_child(shade)
 	var content:=VBoxContainer.new()
-	content.position=Vector2(110,95)
-	content.size=Vector2(430,630)
-	content.add_theme_constant_override("separation",16)
+	content.position=Vector2(90,55)
+	content.size.x=480
+	content.add_theme_constant_override("separation",10)
 	menu.add_child(content)
-	menu_label(content,"G A M E N I G H T",14,Color("7de9d6"))
-	menu_label(content,"ION RUSH",68,Color("edf7ff"))
-	menu_label(content,"Find your line.",21,Color("aebfca"))
-	var spacer:=Control.new()
-	spacer.custom_minimum_size.y=10
-	content.add_child(spacer)
-	menu_label(content,"PLAYERS",12,Color("91a8b7"))
-	var row:=HBoxContainer.new()
-	row.add_theme_constant_override("separation",10)
-	content.add_child(row)
-	var players:Array[Button]=[]
-	for i in range(1,5):
-		var button:=Button.new()
-		button.set_meta("menu_id","player%d"%i)
-		players.append(button)
-		button.text=str(i)
-		button.custom_minimum_size=Vector2(100,46)
-		style_button(button,false,i==human_count)
-		button.pressed.connect(func(): human_count=i;make_menu())
-		row.add_child(button)
-	menu_label(content,"TRACK SEED",12,Color("91a8b7"))
-	var seed_row:=HBoxContainer.new()
-	seed_row.add_theme_constant_override("separation",10)
-	content.add_child(seed_row)
-	seed_input=LineEdit.new()
-	seed_input.set_meta("menu_id","seed")
-	seed_input.text="%05d"%selected_seed
-	seed_input.max_length=5
-	seed_input.select_all_on_focus=true
-	seed_input.custom_minimum_size=Vector2(280,46)
-	seed_input.add_theme_font_size_override("font_size",24)
-	seed_input.add_theme_color_override("font_color",Color("edf7ff"))
-	seed_input.add_theme_stylebox_override("normal",menu_style(Color(1,1,1,.045),Color(1,1,1,.12)))
-	seed_input.add_theme_stylebox_override("focus",menu_style(Color.TRANSPARENT,Color("7de9d6")))
-	seed_input.text_changed.connect(seed_text_changed)
-	seed_input.focus_exited.connect(finish_seed_edit)
-	seed_input.text_submitted.connect(func(_value:String): start_selected())
-	seed_row.add_child(seed_input)
-	var random_button:=Button.new()
-	random_button.set_meta("menu_id","random")
-	random_button.text="Random"
-	random_button.custom_minimum_size=Vector2(140,46)
-	style_button(random_button)
-	random_button.pressed.connect(randomize_menu_seed)
-	seed_row.add_child(random_button)
-	var setting_row:=HBoxContainer.new()
-	setting_row.add_theme_constant_override("separation",10)
-	content.add_child(setting_row)
-	var challenge:=Button.new()
-	challenge.set_meta("menu_id","difficulty")
-	challenge.text="Level · %s"%difficulty.capitalize()
-	challenge.custom_minimum_size=Vector2(210,42)
-	style_button(challenge)
-	challenge.add_theme_font_size_override("font_size",18)
-	challenge.pressed.connect(func():
-		difficulty=Race.Track.DIFFICULTIES[(Race.Track.DIFFICULTIES.find(difficulty)+1)%3]
-		make_menu())
-	setting_row.add_child(challenge)
-	var setting_button:=Button.new()
-	setting_button.set_meta("menu_id","biome")
-	setting_button.text="World · %s"%biome.capitalize()
-	setting_button.custom_minimum_size=Vector2(210,42)
-	style_button(setting_button)
-	setting_button.add_theme_font_size_override("font_size",18)
-	setting_button.pressed.connect(func():
-		finish_seed_edit()
-		biome="forest" if biome=="city" else "city"
-		next_seed=selected_seed
-		new_race()
-		make_menu())
-	setting_row.add_child(setting_button)
-	menu_label(content,{"easy":"Wide turns · protective rails · no flight gaps","normal":"Open edges · short jump · wide landing","hard":"Long flight gaps · exposed edges · tighter landings"}[difficulty],13,Color("aebfca"))
-	var start:=Button.new()
-	start.set_meta("menu_id","race")
-	start.text="Race    \u2192"
-	start.alignment=HORIZONTAL_ALIGNMENT_LEFT
-	start.custom_minimum_size=Vector2(430,58)
-	style_button(start,true)
-	start.pressed.connect(start_selected)
-	content.add_child(start)
-	var links:=HBoxContainer.new()
-	links.add_theme_constant_override("separation",14)
-	content.add_child(links)
-	var help:=Button.new()
-	help.set_meta("menu_id","controls")
-	help.text="Hide controls" if show_menu_controls else "Controls"
-	help.flat=true
-	help.add_theme_font_size_override("font_size",16)
-	help.add_theme_color_override("font_color",Color("aebfca"))
-	help.pressed.connect(func(): show_menu_controls=not show_menu_controls;make_menu())
-	links.add_child(help)
-	var quality_button:=Button.new()
-	quality_button.set_meta("menu_id","graphics")
-	quality_button.flat=true
-	quality_button.text="Graphics \u00b7 %s"%({.6:"Performance",.8:"Balanced",1.0:"High"}.get(quality,"Balanced"))
-	quality_button.add_theme_font_size_override("font_size",16)
-	quality_button.add_theme_color_override("font_color",Color("aebfca"))
-	quality_button.pressed.connect(func(): quality=.8 if quality==.6 else (1.0 if quality==.8 else .6);layout_views();make_menu())
-	links.add_child(quality_button)
+	menu_label(content,"ION RUSH",58,Color("edf7ff"))
+	var start:=menu_button(content,"race","Race",start_selected,true)
+	for id in ["players","biome","difficulty","seed","graphics"]:
+		var row:=HBoxContainer.new()
+		row.add_theme_constant_override("separation",6)
+		content.add_child(row)
+		var left:=Button.new()
+		left.text="‹"
+		left.custom_minimum_size=Vector2(52,54)
+		left.focus_mode=Control.FOCUS_NONE
+		style_button(left)
+		left.pressed.connect(adjust_menu.bind(id,-1))
+		row.add_child(left)
+		if id=="seed":
+			seed_input=LineEdit.new()
+			seed_input.set_meta("menu_id",id)
+			seed_input.text="%05d"%selected_seed
+			seed_input.max_length=5
+			seed_input.select_all_on_focus=true
+			seed_input.virtual_keyboard_type=LineEdit.KEYBOARD_TYPE_NUMBER
+			seed_input.custom_minimum_size=Vector2(364,54)
+			seed_input.alignment=HORIZONTAL_ALIGNMENT_CENTER
+			seed_input.add_theme_font_size_override("font_size",24)
+			seed_input.add_theme_stylebox_override("normal",menu_style(Color(1,1,1,.045),Color(1,1,1,.12)))
+			seed_input.add_theme_stylebox_override("focus",menu_style(Color.TRANSPARENT,Color("7de9d6")))
+			seed_input.text_changed.connect(seed_text_changed)
+			seed_input.focus_exited.connect(finish_seed_edit)
+			seed_input.text_submitted.connect(func(_value:String): start_selected())
+			row.add_child(seed_input)
+			menu_rows.append(seed_input)
+		else:
+			menu_button(row,id,"",adjust_menu.bind(id,1)).custom_minimum_size.x=364
+		var right:=Button.new()
+		right.text="›"
+		right.custom_minimum_size=Vector2(52,54)
+		right.focus_mode=Control.FOCUS_NONE
+		style_button(right)
+		right.pressed.connect(adjust_menu.bind(id,1))
+		row.add_child(right)
+		if id=="seed": menu_button(content,"random","Random seed",randomize_menu_seed)
+	menu_button(content,"controls","Controls",func(): show_menu_controls=not show_menu_controls;make_menu())
+	if local_paused:
+		menu_button(content,"restart","Restart race",func(): finish_seed_edit();next_seed=selected_seed;start_local())
 	if show_menu_controls:
-		menu_label(content,"A / RT   Accelerate     B   Boost     LT   Brake / slide\nRoad: left stick turns; right stick strafes / trims grip\nFlight: left stick yaws; right stick pitches / rolls\nY   Reset in flight (-25 energy, 2s)     Start   Pause",16,Color("bacbd5"))
-		menu_label(content,"P1  WASD / Space / Q E     P2  Arrows / Ctrl / , .\nP3  IJKL / U / Y O               P4  TFGH / R / V B",14,Color("91a8b7"))
-		menu_label(content,"Back: nose up / takeoff. Forward: nose down.\nIn flight, bank and align with the road to land.",14,Color("91a8b7"))
-	for i in range(players.size()):
-		players[i].focus_neighbor_left=players[posmod(i-1,4)].get_path()
-		players[i].focus_neighbor_right=players[(i+1)%4].get_path()
-		players[i].focus_neighbor_bottom=seed_input.get_path()
-		players[i].focus_neighbor_top=help.get_path()
-	seed_input.focus_neighbor_left=random_button.get_path()
-	seed_input.focus_neighbor_right=random_button.get_path()
-	random_button.focus_neighbor_left=seed_input.get_path()
-	random_button.focus_neighbor_right=seed_input.get_path()
-	for control in [seed_input,random_button]:
-		control.focus_neighbor_top=players[human_count-1].get_path()
-		control.focus_neighbor_bottom=challenge.get_path()
-	challenge.focus_neighbor_top=seed_input.get_path()
-	challenge.focus_neighbor_bottom=start.get_path()
-	challenge.focus_neighbor_left=setting_button.get_path()
-	challenge.focus_neighbor_right=setting_button.get_path()
-	setting_button.focus_neighbor_left=challenge.get_path()
-	setting_button.focus_neighbor_right=challenge.get_path()
-	setting_button.focus_neighbor_top=seed_input.get_path()
-	setting_button.focus_neighbor_bottom=start.get_path()
-	start.focus_neighbor_top=challenge.get_path()
-	start.focus_neighbor_bottom=help.get_path()
-	start.focus_neighbor_left=start.get_path()
-	start.focus_neighbor_right=start.get_path()
-	help.focus_neighbor_right=quality_button.get_path()
-	help.focus_neighbor_left=quality_button.get_path()
-	quality_button.focus_neighbor_right=help.get_path()
-	quality_button.focus_neighbor_left=help.get_path()
-	for button in [help,quality_button]:
-		button.focus_neighbor_top=start.get_path()
-		button.focus_neighbor_bottom=players[human_count-1].get_path()
-		button.add_theme_stylebox_override("focus",menu_style(Color.TRANSPARENT,Color("7de9d6")))
-	menu_label(content,"Left stick  Navigate     A  Select     Start  Race",13,Color("91a8b7"))
-	start.grab_focus()
-	for button in players+[seed_input,random_button,challenge,setting_button,start,help,quality_button]:
-		if button.get_meta("menu_id")==focus_id: button.grab_focus()
+		var reference:=PanelContainer.new()
+		reference.position=Vector2(610,150)
+		reference.add_theme_stylebox_override("panel",menu_style(Color(.02,.035,.05,.92)))
+		menu.add_child(reference)
+		var help:=VBoxContainer.new()
+		reference.add_child(help)
+		menu_label(help,"CONTROLS",24)
+		menu_label(help,"RT / A  Throttle     LT  Brake     B  Boost\nLeft stick  Steer / yaw\nRight stick  Strafe / roll · Grip / pitch\nY  Reset     Start  Pause\n\nKeyboard  WASD · Space · Q / E · 1",20)
+	menu_label(content,"↑ ↓  Select     ‹ ›  Adjust     Start  Play",14,Color("91a8b7"))
+	refresh_menu_values()
+	for i in range(menu_rows.size()):
+		var row:=menu_rows[i]
+		row.focus_neighbor_top=menu_rows[posmod(i-1,menu_rows.size())].get_path()
+		row.focus_neighbor_bottom=menu_rows[(i+1)%menu_rows.size()].get_path()
+		row.focus_neighbor_left=row.get_path()
+		row.focus_neighbor_right=row.get_path()
+		if row.get_meta("menu_id")==focus_id: row.grab_focus()
+	if get_viewport().gui_get_focus_owner()==null: start.grab_focus()
+
+func menu_button(parent:Node,id:String,title:String,action:Callable,primary:bool=false)->Button:
+	var button:=Button.new()
+	button.set_meta("menu_id",id)
+	button.text=title
+	button.custom_minimum_size=Vector2(480,54)
+	style_button(button,primary)
+	button.pressed.connect(action)
+	parent.add_child(button)
+	menu_rows.append(button)
+	return button
 
 func menu_label(parent:Node,value:String,size_value:int,color:Color=Color("d5e1ec"))->void:
 	var label:=Label.new()

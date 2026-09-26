@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bqsue6hrxnvfr"
 path.s3tc="res://.godot/imported/office-facade.png-2b2466e33b6b81c58e2e1c633b9cdd01.s3tc.ctex"
+path.etc2="res://.godot/imported/office-facade.png-2b2466e33b6b81c58e2e1c633b9cdd01.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/office-facade.png"
-dest_files=["res://.godot/imported/office-facade.png-2b2466e33b6b81c58e2e1c633b9cdd01.s3tc.ctex"]
+dest_files=["res://.godot/imported/office-facade.png-2b2466e33b6b81c58e2e1c633b9cdd01.s3tc.ctex", "res://.godot/imported/office-facade.png-2b2466e33b6b81c58e2e1c633b9cdd01.etc2.ctex"]
 
 [params]
 

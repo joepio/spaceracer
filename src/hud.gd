@@ -63,13 +63,13 @@ func _draw() -> void:
 	var status:="Boost on lap 2" if p.lap<2 else "Boost ready"
 	if p.boost>0 or p.on_pad: status="Boosting"
 	elif p.energy<=22 and p.lap>1: status="Recharge"
-	if p.airborne: status="Flight: pitch / roll / yaw"
-	elif p.unload>.45: status="Lifting — ease forward"
+	if p.airborne: status="Flight"
+	elif p.unload>.45: status="Lifting"
 	elif p.drifting: status="Sliding"
 	elif p.trim>.2: status="Grip"
-	elif p.trim<-.2: status="Low grip / high speed"
+	elif p.trim<-.2: status="Low grip"
 	if race.can_reset(p):
-		centered("Crashed · Y to reset" if p.wreck_wait else "Y to reset · -25 energy · 2 seconds",w,h*.80,12,Color("ffd08a"))
+		centered("Reset" if OS.has_feature("android") else "Y to reset",w,h*.80,12,Color("ffd08a"))
 	label(status,Vector2(w-176,h-10),9,energy_color if p.lap>1 else Color("8b9eac"))
 	if show_map: minimap(Vector2(61,h-48),44)
 	label("%05d · %s · %s"%[race.track.seed_value,race.track.difficulty.to_upper(),race.track.biome.to_upper()],Vector2(20,h-8),8,Color("98aebb"))
@@ -78,7 +78,6 @@ func _draw() -> void:
 		centered("JUMP %dm · KEEP SPEED"%roundi(jump.takeoff-fposmod(p.distance,race.track.length)),w,83,12,Color("ffc46b"))
 	if race.countdown>0:
 		centered(str(ceili(race.countdown)),w,h*.46,52)
-		centered("A / RT / W starts engines — full power at GO",w,h*.46+30,12,Color("bacbd5"))
 	elif race.clock<.7:
 		centered("Go",w,h*.42,40,tint)
 	elif p.recovery>0:

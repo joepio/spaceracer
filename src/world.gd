@@ -57,7 +57,7 @@ func build(state: RefCounted) -> void:
 	var top:=Color("060a12")
 	var horizon:=Color("0c121c")
 	if forest: top=Color("2586d1");horizon=Color("b6e4f7")
-	if advanced_renderer:
+	if RenderingServer.get_current_rendering_method()!="gl_compatibility":
 		top=top.srgb_to_linear()
 		horizon=horizon.srgb_to_linear()
 	sky_material.set_shader_parameter("top_color",Vector3(top.r,top.g,top.b))
@@ -106,6 +106,10 @@ func build(state: RefCounted) -> void:
 		if forest:
 			env.volumetric_fog_enabled=false
 			env.glow_intensity=.35
+	if RenderingServer.get_current_rendering_method()=="mobile":
+		env.glow_enabled=true
+		env.glow_intensity=.35 if forest else .7
+		env.glow_hdr_threshold=1.2
 	environment.environment = env
 	add_child(environment)
 	var night_fill := DirectionalLight3D.new()

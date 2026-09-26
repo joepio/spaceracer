@@ -19,14 +19,17 @@ Open `project.godot` in Godot 4.5.2 and press F6/F5, or run:
 godot --path .
 ```
 
-The portable Windows build runs by opening `IonRush.exe`. Start starts a race; the left stick navigates and A selects menu buttons. Enter also starts;
-choose the player count on the title screen (or F2). Standalone races have six
-machines, filling spare positions with AI. Start/Escape pauses with Resume,
-Restart race and Track settings; Back no longer pauses. F5 starts
-a fresh track. Three laps by default. Results last eight seconds, then a new
-seeded track starts automatically.
+The portable Windows build runs by opening `IonRush.exe`. Start/Enter starts a race.
+The title and pause screens share the same menu: up/down selects a row; left/right
+immediately adjusts players, world, level, seed or graphics. The stick, D-pad,
+keyboard arrows and on-screen arrow buttons all work. A/click activates actions.
+Standalone races have six machines, filling spare positions with AI.
+Start/Escape pauses. Unchanged settings resume the current race; changing a race
+setting changes the primary action to **Restart**. Graphics never resets progress.
+The paused track stays frozen until resuming or restarting. Back no longer pauses.
+F5 starts a fresh track. Three laps by default; results last eight seconds.
 
-The start menu has a five-digit **Track seed** (00001–99999). Type a code or select
+The start menu has a five-digit **Track seed** (00001–99999). Use left/right for the previous/next code, type a code, or select
 **Random** with the controller to choose another. Race uses that exact code;
 it remains visible in the HUD and results so you can write it down. Returning
 to the menu keeps the current code for replay. Seeds reproduce the track and
@@ -44,7 +47,7 @@ Selecting a world updates the menu preview without changing the chosen seed.
 GameNight exposes **World (next race)**, and standalone accepts `--biome=forest`
 or `--biome=city` after `--`.
 
-Choose **Level** with A/click in the start menu:
+Adjust **Level** with left/right in either menu:
 
 - **Easy:** wider road, gentler sharp corners, protected edges and no mandatory
   flight gaps. The half-pipe is shallower. Deliberate pull-back takeoff still works.
@@ -93,8 +96,42 @@ bar. A small route map appears in single-player; split-screen keeps that space c
 
 Keyboard P3: IJKL, U boost, Y/O strafe. P4: TFGH, R boost, V/B strafe.
 Keyboard recovery uses 3 for P3 and 4 for P4.
-Standalone assigns connected controllers once at race start; unplugging a
-controller does not reassign the remaining players. Keyboard controls also work.
+Standalone assigns connected controllers at race start and fills disconnected seats when a controller is paired later. Other connected players keep their seats. Keyboard controls also work.
+
+## Android tablet
+
+`build/android/IonRush.apk` is a debug-signed APK for direct installation. Copy it
+to the tablet, open it in Files and allow that app to install it when Android asks.
+This is an offline standalone build; GameNight's desktop host remains on Windows.
+The APK includes ARM64 (Galaxy Tab S9+) and x86-64. It locks to landscape.
+
+Pair a controller through Android Bluetooth or connect it by USB. The same sticks,
+triggers and Start menu work; late pairing is supported. Touch controls are also
+available: left pad steers/yaws, right pad strafes/rolls and controls grip/pitch.
+Tap **Throttle** to keep power on, leaving both thumbs free for the sticks; tap
+again to cut power. Hold **Brake** or **Boost**. **Reset** appears off track.
+The top pause button opens the shared menu. Controller use hides touch pads;
+touching the screen brings them back. Pausing or backgrounding clears touch input.
+Touch drives player one; extra local players need controllers.
+
+Android uses the Mobile Vulkan renderer, a 60 FPS cap and Performance by default.
+Performance/Balanced/High cap 3D width at 1280/1600/1920 pixels respectively;
+UI stays at display resolution. Mobile keeps emissive lighting, glow and local
+lights but omits desktop SSR, SSAO and volumetric fog. Real Tab S9+ performance
+still needs device testing; desktop previews are not tablet benchmarks.
+
+To reproduce the APK, install Godot 4.5.2 Android export templates, Android SDK
+Platform/Build-Tools 35, and configure Java SDK/Android SDK in Godot Editor Settings.
+Then run (Python uses only its standard library):
+
+```powershell
+python tools/package_android.py --godot C:/dev/tools/godot/Godot_v4.5.2-stable_win64_console.exe
+```
+
+The builder uses your local Android debug keystore (or the `GODOT_ANDROID_KEYSTORE_DEBUG_*`
+environment overrides), verifies the APK signature/content and writes a SHA-256 file.
+No signing key is stored in this repository. For a desktop touch preview, append
+`-- --touch` to the Godot command; `--rendering-method mobile` previews mobile shading.
 
 ## Driving
 

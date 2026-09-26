@@ -94,6 +94,11 @@ func run()->void:
 	if ablation=="with-ssil": env.ssil_enabled=true
 	if ablation=="no-ssr": env.ssr_enabled=false
 	if ablation=="no-shadows": disable_shadows(game.world)
+	if ablation in ["no-jet-optics","no-jet-heat"]:
+		for ship in game.world.ships:
+			for side in [-1,1]:
+				ship.get_node("EngineHeat%d"%side).visible=false
+				if ablation=="no-jet-optics": ship.get_node("EngineFlare%d"%side).visible=false
 	if ablation=="no-probes":
 		for probe in game.world.showpiece.probes: probe.intensity=0.
 	if ablation=="no-speed-post" and not moving:

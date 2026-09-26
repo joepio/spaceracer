@@ -195,7 +195,7 @@ func new_race() -> void:
 		var viewport := SubViewport.new()
 		viewport.world_3d = get_viewport().world_3d
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-		viewport.msaa_3d = Viewport.MSAA_2X if quality>=.8 else Viewport.MSAA_DISABLED
+		configure_viewport_aa(viewport,quality)
 		holder.add_child(viewport)
 		var image := TextureRect.new()
 		image.texture = viewport.get_texture()
@@ -239,7 +239,7 @@ func layout_views() -> void:
 		var mobile_width:=1280. if quality<.8 else (1600. if quality<1. else 1920.)
 		var render_scale:=minf(1.,mobile_width/output_pixels.x) if mobile_mode else quality
 		views[i].viewport.size = Vector2i((cell/dimensions)*output_pixels*render_scale)
-		views[i].viewport.msaa_3d = Viewport.MSAA_2X if quality>=.8 else Viewport.MSAA_DISABLED
+		configure_viewport_aa(views[i].viewport,quality)
 		views[i].viewport.positional_shadow_atlas_size=(2048 if count==1 and quality>=1. else 1024) if quality>=.8 else 0
 
 func _physics_process(dt: float) -> void:
@@ -332,6 +332,13 @@ func _process(dt: float) -> void:
 		last_frame_usec=now
 		if frame_number==capture_frame:
 			capture.call_deferred()
+
+static func configure_viewport_aa(viewport:Viewport,render_quality:float)->void:
+	# Godot 4.5 Mobile cannot resolve readable depth with MSAA. FXAA keeps
+	# edges softened while allowing nozzle occlusion and heat depth rejection.
+	var mobile:bool=RenderingServer.get_current_rendering_method()=="mobile"
+	viewport.msaa_3d=Viewport.MSAA_2X if render_quality>=.8 and not mobile else Viewport.MSAA_DISABLED
+	viewport.screen_space_aa=Viewport.SCREEN_SPACE_AA_FXAA if render_quality>=.8 and mobile else Viewport.SCREEN_SPACE_AA_DISABLED
 
 func update_speed_effects(view:Dictionary,dt:float)->void:
 	var p:Dictionary=race.racers[view.index]

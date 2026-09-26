@@ -134,6 +134,23 @@ static func build(tint:Color)->Node3D:
 		halo_material.set_shader_parameter("jet_tint",Vector3(jet_tint.r,jet_tint.g,jet_tint.b))
 		halo.material_override=halo_material
 		root.add_child(halo)
+		var flare:=MeshInstance3D.new()
+		flare.name="EngineFlare%d"%side
+		var optics:=QuadMesh.new();optics.size=Vector2(13.,3.9)
+		flare.mesh=optics;flare.position=plume.position+Vector3(0,0,-.3)
+		flare.custom_aabb=AABB(Vector3.ONE*-7.,Vector3.ONE*14.)
+		flare.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var flare_material:=ShaderMaterial.new();flare_material.shader=load("res://src/jet_flare.gdshader")
+		flare_material.set_shader_parameter("jet_tint",Vector3(jet_tint.r,jet_tint.g,jet_tint.b))
+		flare_material.render_priority=2;flare.material_override=flare_material
+		root.add_child(flare)
+		var heat:=MeshInstance3D.new();heat.name="EngineHeat%d"%side
+		heat.mesh=QuadMesh.new();heat.position=plume.position+Vector3(0,-.35,-.5)
+		heat.custom_aabb=AABB(Vector3(-3.,-3.,-20.),Vector3(6.,6.,21.))
+		heat.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var heat_material:=ShaderMaterial.new();heat_material.shader=load("res://src/jet_heat.gdshader")
+		heat_material.render_priority=-20;heat.material_override=heat_material
+		root.add_child(heat)
 		var core:=MeshInstance3D.new()
 		core.name="EngineCore%d"%side
 		var bulb:=SphereMesh.new()
@@ -192,6 +209,7 @@ static func set_jet_tint(root:Node3D,tint:Color)->void:
 	for side in [-1,1]:
 		root.get_node("ExhaustL" if side<0 else "ExhaustR").material_override.set_shader_parameter("jet_tint",Vector3(color.r,color.g,color.b))
 		root.get_node("EngineHalo%d"%side).material_override.set_shader_parameter("jet_tint",Vector3(color.r,color.g,color.b))
+		root.get_node("EngineFlare%d"%side).material_override.set_shader_parameter("jet_tint",Vector3(color.r,color.g,color.b))
 		root.get_node("EngineCore%d"%side).material_override.emission=color.lightened(.45)
 
 static func animate_controls(root:Node3D,p:Dictionary)->void:
@@ -212,10 +230,10 @@ static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)
 	var drive:float=smoothstep(0,125,p.acceleration) if countdown<=0 else 0.0
 	var engine_light:OmniLight3D=root.get_node("EngineLight")
 	engine_light.visible=alive and power>.015
-	engine_light.light_energy=power*(2.6+(1.8 if burning else 0.0))
+	engine_light.light_energy=power*(2.6+(5.4 if burning else 0.0))
 	var jet_tint:Color=root.get_meta("jet_tint",Color("75cfff"))
 	engine_light.light_color=jet_tint.lightened(.25) if burning else jet_tint
-	engine_light.omni_range=22.0 if burning else 19.0
+	engine_light.omni_range=28.0 if burning else 19.0
 	var right_light:OmniLight3D=root.get_node("EngineLightR")
 	right_light.visible=engine_light.visible
 	right_light.light_energy=engine_light.light_energy
@@ -230,11 +248,19 @@ static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)
 		exhaust.material_override.set_shader_parameter("boost_amount",1.0 if burning else 0.0)
 		var core:MeshInstance3D=root.get_node("EngineCore%d"%side)
 		core.material_override.albedo_color=Color("152d42").lerp(Color("eeffff"),power)
-		core.material_override.emission_energy_multiplier=power*(5. if burning else 3.)
+		core.material_override.emission_energy_multiplier=power*(8. if burning else 3.)
 		core.scale=Vector3(1,.7,.5)*(.75+power*.5)
 		var halo:MeshInstance3D=root.get_node("EngineHalo%d"%side)
-		halo.scale=Vector3.ONE*(.6+power*.65+(.15 if burning else 0.0))
+		halo.scale=Vector3.ONE*(.6+power*.65+(.4 if burning else 0.0))
 		halo.material_override.set_shader_parameter("power",power)
+		for effect_name in ["EngineFlare%d"%side,"EngineHeat%d"%side]:
+			var effect:MeshInstance3D=root.get_node(effect_name)
+			effect.visible=alive and power>.015
+			effect.material_override.set_shader_parameter("power",power)
+			effect.material_override.set_shader_parameter("boost_amount",1. if burning else 0.)
+		var heat:ShaderMaterial=root.get_node("EngineHeat%d"%side).material_override
+		heat.set_shader_parameter("race_time",time+p.slot*.71)
+		heat.set_shader_parameter("trail_length",length+5.)
 		var reverse:MeshInstance3D=root.get_node("Reverse%d"%side)
 		reverse.visible=p.brake_vfx>.01 and alive
 		reverse.scale=Vector3(.45,.35,.2+p.brake_vfx*2.8)

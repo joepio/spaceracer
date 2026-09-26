@@ -354,6 +354,11 @@ Each craft has two short-range dynamic exhaust lights, one per nozzle. Throttle 
 illuminate its hull, the road and nearby racers, including during countdown; the
 lights follow free flight, track live player colors and turn off during recovery. They are shared across
 views and use no shadow maps.
+Boost triples nozzle light energy and increases its reach, with thin optical
+flares and stronger core bloom. A small heat-shimmer shader refracts the road
+behind each jet; it intensifies during boost and freezes with pause. Flares
+are hidden when their source is occluded. See [boost effects](docs/boost-effects.md)
+for render checks and measured split-screen performance.
 HDR bloom complements the localized engine halos in Forward+. The OpenGL fallback
 retains the local halos. Road panels, metallic shading,
 shoulder chevrons and animated energy strips communicate speed and curvature.
@@ -398,9 +403,10 @@ City lots, the enclosed tunnel and 3D loop geometry are generated once per race.
 
 Performance / Balanced / High change the 3D render scale to 60% / 80% / 100%.
 High is the default and renders at native window/display resolution, including
-fullscreen. Balanced and High use 2x MSAA, bloom and screen-space reflections; High also uses
+fullscreen. On Forward+, Balanced and High use 2x MSAA, bloom and screen-space reflections; High also uses
 ambient occlusion and volumetric haze. Reflection ray steps drop from 48 to 32 in split-screen.
 Performance disables these screen-space effects and local shadows. HUD stays at window resolution.
+Mobile uses FXAA on Balanced/High to preserve readable depth for exhaust optics.
 Split-screen divides a fixed total pixel budget between cameras. The UI
 logical canvas is 1600×900; the actual 3D target follows output pixels, capped at 120 fps. This favors clear silhouettes and
 readable track edges at high speed; it is intentionally stylized rather than

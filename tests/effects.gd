@@ -23,6 +23,7 @@ func run()->void:
 	root.add_child(ship)
 	Ship.animate_effects(ship,p,0,warm.countdown)
 	check(not ship.get_node("EngineLight").visible,"Cold engine emits no dynamic illumination")
+	check(not ship.get_node("EngineHeat-1").visible and not ship.get_node("EngineFlare-1").visible,"Cold engines have no heat haze or optical flare")
 	var idle_color:Color=ship.get_node("EngineCore-1").material_override.albedo_color
 	for tick in range(45):
 		warm.step(1.0/120,[{"throttle":1.0}])
@@ -34,6 +35,7 @@ func run()->void:
 	check(p.engine_power>.99 and p.thrust==1,"Throttle powers the engine before GO")
 	check(ship.get_node("EngineCore-1").material_override.albedo_color.r>idle_color.r+.7,"Engine socket becomes white-hot with throttle")
 	check(ship.get_node("EngineHalo-1").material_override.get_shader_parameter("power")>.99,"Bloom halo responds before the race starts")
+	check(ship.get_node("EngineFlare-1").visible and ship.get_node("EngineHeat-1").visible,"Revving before GO produces nozzle optics and heat")
 	check(rising.origin.distance_to(rest.origin)>.1 and rising.basis.y.dot(n.frame.x)<-.015,"Startup raises one side first")
 	for tick in range(170):
 		warm.step(1.0/120,[{"throttle":1.0}])
@@ -67,10 +69,13 @@ func run()->void:
 	p.boost=1.0
 	Ship.animate_effects(ship,p,warm.vfx_clock,0)
 	check(ship.get_node("EngineLight").light_energy>cruise_energy*1.5,"Boost increases dynamic exhaust illumination")
+	check(ship.get_node("EngineLight").light_energy>cruise_energy*3. and ship.get_node("EngineLight").omni_range>25.,"Boost lights strongly reach nearby road and rivals")
+	check(ship.get_node("EngineFlare-1").material_override.get_shader_parameter("boost_amount")==1. and ship.get_node("EngineHeat-1").material_override.get_shader_parameter("boost_amount")==1.,"Boost strengthens flare and heat distortion together")
 	p.recovery=1.0
 	Ship.animate_effects(ship,p,warm.vfx_clock,0)
 	check(not ship.get_node("EngineLight").visible and ship.get_node("EngineLight").light_energy==0,"Crashed craft cannot leave an orphan light pool")
 	check(not ship.get_node("EngineLightR").visible and ship.get_node("EngineLightR").light_energy==0,"Both nozzle lights turn off on crash")
+	check(not ship.get_node("EngineFlare-1").visible and not ship.get_node("EngineHeat1").visible,"Recovery removes flares and distortion from both engines")
 	Ship.set_jet_tint(ship,Color.MAGENTA)
 	p.recovery=0
 	Ship.animate_effects(ship,p,warm.vfx_clock,0)

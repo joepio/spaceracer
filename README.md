@@ -21,7 +21,8 @@ godot --path .
 
 The portable Windows build runs by opening `IonRush.exe`. Start starts a race; the left stick navigates and A selects menu buttons. Enter also starts;
 choose the player count on the title screen (or F2). Standalone races have six
-machines, filling spare positions with AI. Escape/Back opens the menu; F5 starts
+machines, filling spare positions with AI. Start/Escape pauses with Resume,
+Restart race and Track settings; Back no longer pauses. F5 starts
 a fresh track. Three laps by default. Results last eight seconds, then a new
 seeded track starts automatically.
 
@@ -37,8 +38,8 @@ The forest has a bright blue daytime sky, soft procedural clouds and warm sunlig
 It races over a reflective lake among 260–520 metre trees, branching
 canopies, mossy islands and thousands of ferns. Lower hills bring portions of the
 course nearer the water, while the loops and difficulty-dependent flight gaps
-remain. Foliage and ripples follow the race clock, and hitting the water triggers
-respawn. Geometry is procedural and instanced; no asset downloads are needed.
+remain. Foliage and ripples follow the race clock; hitting the water crashes the
+craft and waits for Y to reset. Geometry is procedural and instanced; no asset downloads are needed.
 Selecting a world updates the menu preview without changing the chosen seed.
 GameNight exposes **World (next race)**, and standalone accepts `--biome=forest`
 or `--biome=city` after `--`.
@@ -48,7 +49,9 @@ Choose **Level** with A/click in the start menu:
 - **Easy:** wider road, gentler sharp corners, protected edges and no mandatory
   flight gaps. The half-pipe is shallower. Deliberate pull-back takeoff still works.
 - **Normal:** exposed sky sections and pipe edges, a short jump, and a wide landing.
-- **Hard:** a longer jump plus a second flight gap, with narrower landings.
+- **Hard:** much tighter braking corners, sparser guardrails, and two longer gaps
+  with narrow landing decks displaced sideways. Aim in flight to reach them;
+  holding straight ahead misses the landing. About a third of the road is unguarded.
 
 Every seed includes a half-pipe, a full magnetic tube and a fork with two separate
 decks that rejoin. Feature placement and size
@@ -67,7 +70,7 @@ flight controls as manual takeoff, carrying velocity and attitude without a kick
 or camera switch. Pitch, roll and yaw to line up with the landing. The gap has no
 road surface or hidden collision bridge. Purpose-built landing decks absorb a
 firm touchdown with a speed/energy penalty; steep or misaligned impacts crash.
-Missed jumps respawn 260 metres before the lip, leaving room to accelerate again.
+After a missed jump, Y resets 260 metres before the lip, leaving room to accelerate again.
 Buildings and ambient traffic leave an expanded corridor around these sections.
 
 The same difficulty is available as a GameNight **Track difficulty (next race)**
@@ -85,8 +88,11 @@ bar. A small route map appears in single-player; split-screen keeps that space c
 | Boost | B | Space | Ctrl |
 | Strafe | Right stick left / right, or LB / RB | Q / E | Comma / Period |
 | Grip / speed trim | Right stick forward / backward | Controller only | Controller only |
+| Reset when airborne or crashed | Y | 1 | 2 |
+| Pause / resume | Start | Escape | Escape |
 
 Keyboard P3: IJKL, U boost, Y/O strafe. P4: TFGH, R boost, V/B strafe.
+Keyboard recovery uses 3 for P3 and 4 for P4.
 Standalone assigns connected controllers once at race start; unplugging a
 controller does not reassign the remaining players. Keyboard controls also work.
 
@@ -110,26 +116,38 @@ Ease the stick forward during this warning to settle back down. Sustained back
 input releases into independent flight, carrying the actual track velocity and
 attitude through takeoff with no added kick. Crests can also unload adhesion.
 
-In flight, right stick forward/back pitches down/up, left stick left/right rolls,
-and right stick left/right (or LB/RB) controls yaw through the rudders. These are
+In flight, right stick forward/back pitches down/up, left stick left/right controls
+yaw through the rudders, and right stick left/right (or LB/RB) rolls via the wing
+ailerons. The same fin mapping is visible while driving. These are
 independent body-axis controls: roll sets bank, with no forced levelling or hidden
 yaw. Bank and pull back to turn like a fighter. LT acts as an air brake. Angular
 rates build and stop quickly with stick input; wing lift, bank, angle of attack,
 side-slip and gravity bend the flight path rather than instantly redirecting it.
 Stalling loses lift. Control surfaces show the corresponding pitch, roll and yaw.
+Sustained flight tops out at 846 km/h, below the 954 km/h road cruise speed.
+Extra launch momentum decays smoothly instead of disappearing at takeoff.
 
 One vehicle-relative chase camera follows road, lift-off, flight and touchdown.
 Its orientation, chase distance and field of view ease continuously; its anchor
 moves with the craft so smoothing does not leave the camera behind at high speed.
 Acceleration briefly pulls the lens wider, then settles at cruise. Boost builds
 to a wider lens, stronger peripheral motion blur and subtle camera vibration.
-Small motes streak past the sides, leaving the ship, racing line and HUD clear.
+The floating speed motes have been removed. A subtle peripheral shade under boost
+complements the lens surge and blur, leaving the ship, racing line and HUD clear.
 Each split-screen view responds only to its own craft. Performance graphics
-disable blur and reduce the mote count; pause freezes the effects clock.
+disable blur; pause freezes the effects clock.
 Approach the track from above, line up with its direction and banking, and touch
 down without excessive descent speed to reconnect. Missing the road, a hard or
 misaligned impact, hitting its underside, falling below the world, or remaining
-in the air for ten seconds causes a two-second respawn at the takeoff position.
+in the air for ten seconds crashes the craft. Buildings, solid tree parts,
+islands, traffic and track fixtures can also be hit while flying. A crash produces
+an explosion and a smoking wreck that stays there until **Y to reset** is pressed.
+Y also initiates recovery while airborne: two seconds of downtime, loss of
+momentum and up to 25 energy (leaving at least one). A crash already charges the
+energy cost; resetting the wreck does not charge it twice. Recovery
+returns to the last safe track position, before a mandatory jump when applicable,
+without awarding progress. Holding Y cannot trigger repeated resets. Manual
+recovery does not refill energy.
 Progress is awarded when landing, so simply flying past the finish does not win.
 
 Hinged wing elevons and twin tail rudders respond directly to pitch, steering,
@@ -145,8 +163,8 @@ Sound is temporarily disabled for playtesting, including managed pause/resume.
 Cruising speed is roughly 950 km/h; boost reaches roughly 1,400 km/h. Boost
 unlocks on lap two, costs 22 energy, and lasts 1.25 seconds. Release and press
 again to retrigger. Wall impacts also consume energy. Green lanes repair;
-amber chevrons give a free boost. Empty energy triggers a two-second recovery
-instead of eliminating a player from a couch session. Rotated hull-sized contact
+amber chevrons give a free boost. Empty energy crashes the craft; Y starts its
+two-second recovery. Rotated hull-sized contact
 boxes separate wings and noses, transfer impact speed, and keep crowded packs
 inside the rails. Six machines start in two rows of three.
 
@@ -155,7 +173,9 @@ large climbs and skyline dives, and one or two vertical corkscrew loops. The loo
 crossings are separated laterally; magnetic grip carries the craft through the
 inverted portion. Track frames, steering, hover height and the chase camera all
 use the same 3D ribbon orientation. Width, banking and four color themes vary by
-seed, with tunnels, recharge lanes and boost strips. Sharper corner complexes have amber edge braking markers ahead of their apexes.
+seed, with tunnels, recharge lanes and boost strips. Banking eases across long
+transitions, with smaller angles and fewer secondary humps. Sharper corner
+complexes have amber edge braking markers ahead of their apexes.
 There is no online/LAN multiplayer in this version.
 
 The circuit now runs through one coherent neon city: more than 1,000 seeded
@@ -264,7 +284,7 @@ AI seats use bots. No online network race synchronization is implemented.
 Prepare builds the world and renders two warm frames off-screen before Ready.
 Start/Resume explicitly show the borderless window. Pause freezes the race,
 countdown, results, cameras, and audio; focus changes never start or resume it.
-Back requires a full second of release between requests. Dispose frees the
+Start requires a full second of release between requests. Dispose frees the
 world, and host disconnect exits. Round results report Finished and continue
 within the same session. Live player names, colors, skin, and face artwork are
 preserved by ID. Roster changes take effect on the next race; instant join is
@@ -306,6 +326,7 @@ loads this game and the lobby together.
 godot --headless --path . --editor --import --quit
 godot --headless --path . --script res://tests/run.gd
 godot --headless --path . --script res://tests/flight.gd
+godot --headless --path . --script res://tests/crashes.gd
 godot --headless --path . --script res://tests/menu.gd
 godot --headless --path . --script res://tests/effects.gd
 godot --headless --path . --script res://tests/city.gd
@@ -324,7 +345,7 @@ hover height, crossing clearance, elevation range, acceleration, braking,
 drift response, energy, boost gating, recovery, lap results, 12 full AI races,
 and host input routing. The synthetic host test launches a real game process
 and checks authenticated WebSocket lifecycle, hidden preparation, sparse/reversed
-controller ownership, frozen pause, profiles, stale input, Back gating, repeated
+controller ownership, frozen pause, profiles, stale input, Start gating, repeated
 Prepare/Dispose, and disconnect cleanup. These checks do not replace physical
 controller or cross-platform focus testing. Test probes are opt-in via
 `ION_PROBE_PATH` and are inactive in normal play.

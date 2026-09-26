@@ -31,6 +31,7 @@ static func build(parent:Node3D,track:RefCounted)->void:
 		if turn==0.: continue
 		# Positive track lateral is the driver's right; panels sit outside the bend.
 		var frame:=Transform3D(Basis(-n.frame.x,n.frame.y,-n.frame.z),Track.point(n,-turn*(n.width+8.),6.))
+		if track.obstacles: track.obstacles.add_box(frame,AABB(Vector3(-6,-2.8,-.1),Vector3(12,5.6,.2)))
 		quad(panel,frame,Vector3(-6,-2.8,0),Vector3(6,-2.8,0),Vector3(6,2.8,0),Vector3(-6,2.8,0))
 		for x in [-3.6,0.,3.6]:
 			stroke(neon,frame,Vector2(x-turn*1.1,1.8),Vector2(x+turn*1.1,0),.48)

@@ -1,0 +1,56 @@
+# Handling and difficulty playtest — 2026-09-26
+
+Hard compresses the two sharp corner complexes to 62% and 70% of their Normal
+width in the generator. Sampled seeds 6, 31, 145 and 421 have peak curvature
+0.024–0.033 per metre, versus 0.012–0.018 on Normal. A paired physics test on
+seed 31 uses identical steering: full throttle leaves the technical corner;
+allowing anticipatory braking completes it without damage. This checks actual
+driving consequences, not just the shape of the spline.
+
+Hard's two flight gaps have 34- and 46-metre lateral landing offsets, alternating
+direction by seed, with smaller landing margins than Normal. Aim for the cyan
+landing markers. Across 44 seeds, the guided pilot lands every Normal and Hard
+jump; the tests also verify that airborne travel awards no progress until a legal
+touchdown. In four sampled Hard seeds, 34.4–35.4% of all road nodes are unguarded
+(air gaps do not count as unguarded road in that numerator).
+
+Bank targets are capped at roughly 11/16/19 degrees for Easy/Normal/Hard and
+smoothed over about 220 metres. Secondary elevation waves are smaller and less
+frequent. Vertical loops retain their full rotation. Existing seed codes remain
+deterministic within this build; layouts differ from older versions.
+
+Left-stick horizontal controls yaw and rudders; right-stick horizontal controls
+roll and ailerons. Right-stick vertical still controls pitch. Flight body rates
+respond strongly within 50 ms, with more sideslip damping, and sustained airspeed
+is capped at 235 m/s versus the 265 m/s road cruise target. Faster takeoff momentum
+decays at 70 m/s per second rather than snapping to the airspeed limit.
+
+Airborne scenery collision uses swept expanded boxes in a 128-metre spatial
+hash, plus moving traffic boxes. It follows individual building volumes and
+solid tree branches, with conservative bounds for octagonal towers and roots;
+it is not per-triangle collision. Crashes show a bounded fire/debris effect and
+smoke until Y is pressed. Recovery costs 25 energy once and two seconds, returns
+to safe road, and does not advance progress. Wrecks are excluded from on-road
+vehicle contacts. Start opens a pause menu; Back no longer does.
+
+The facade flicker had two contributors: coplanar faces in several building
+recipes, and interpolated instance colors crossing discrete shader style/UV
+thresholds. Inset/stepped volumes and flat interpolation of instance attributes
+remove those artifacts. A native 1920×1080 close-up collision render was inspected
+before and after; window textures now remain coherent behind the wreck.
+
+## Verification
+
+- Core simulation: 196,078 checks, 48/48 full-race finishers.
+- Flight: 54 checks; scenery/crash/difficulty regression: 35 checks.
+- Jumps: 18,058 checks, 44 seeds across all difficulty levels.
+- Forest: 2,339 checks, 72/72 race finishers; city layout: 17,267 checks.
+- Feature geometry: 8,373 checks; effects: 25; speed presentation: 612.
+- Controller menu/pause tests, native crash/explosion render, and packaged
+  GameNight integration are part of the release check.
+
+Four-player Forest/Hard moving benchmark, seed 31, 1920×1080 total output
+(four 960×540 views), RTX 5070 Ti / Ryzen 9 5900X, 1,200 sampled frames:
+GPU mean **4.38 ms**, GPU p95 **4.91 ms**; wall mean **16.68 ms**, wall p95
+**19.73 ms**. Background runner jobs were left active. These are observed frame
+times under contention, not an isolated CPU benchmark or a universal FPS promise.

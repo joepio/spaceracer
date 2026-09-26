@@ -135,6 +135,11 @@ func build(parent:Node3D,race:RefCounted)->void:
 			if not safe or not clear(island): continue
 			var tint:=Color.from_hsv(rng.randf_range(.25,.37),rng.randf_range(.40,.65),rng.randf_range(.42,.72))
 			trees.append({"transform":transform,"variant":variant,"bounds":world_bounds,"height":height,"island":island})
+			if track.obstacles:
+				# Solid trunks, roots and branches collide; loose foliage remains flyable.
+				for index in range(models[variant].bounds.size()):
+					if index<2 or index%2==0: track.obstacles.add_box(transform,models[variant].bounds[index])
+				track.obstacles.add_box(Transform3D.IDENTITY,island)
 			var key:=Vector3i(floori(center.x/600.),variant,floori(center.z/600.))
 			if not groups.has(key): groups[key]=[]
 			groups[key].append({"transform":transform,"color":tint})

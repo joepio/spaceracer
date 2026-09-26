@@ -44,7 +44,7 @@ func run()->void:
 		pilot.air_position=race.track.sample(100.).p;pilot.air_position.y=forest.water_level-1.
 		pilot.air_velocity=Vector3(0.,-20.,200.);pilot.air_frame=Basis.IDENTITY
 		Race.Flight.step(pilot,race.track,.01,0.,0.,0.,0.)
-		check(pilot.crashed and pilot.recovery>0,"Water impact respawns the ship instead of allowing underwater flight")
+		check(pilot.crashed and pilot.wreck_wait and pilot.recovery==0,"Water impact waits for reset instead of allowing underwater flight")
 		print("FOREST seed=",seed_value," trees=",forest.trees.size()," ferns=",forest.plants.size()," water=",forest.water_level)
 		stage.free();replica_stage.free()
 	var completed:=0

@@ -189,15 +189,15 @@ static func set_jet_tint(root:Node3D,tint:Color)->void:
 static func animate_controls(root:Node3D,p:Dictionary)->void:
 	for side in [-1,1]:
 		var wing:Node3D=root.get_node("WingControlL" if side<0 else "WingControlR")
-		# Pull-back raises trailing edges; differential deflection banks into steering.
-		wing.rotation.x=clampf(-p.input_pitch*.55-p.input_steer*side*.5+p.input_brake*.6,-.85,.95)
+		# Right-stick strafe/roll drives ailerons; left-stick turn drives the rudder.
+		wing.rotation.x=clampf(-p.input_pitch*.55-p.input_strafe*side*.5+p.input_brake*.6,-.85,.95)
 		wing.rotation.z=-p.input_strafe*.16
 		root.get_node("Airbrake%d"%side).rotation.x=p.brake_vfx*1.15
 		var rudder:Node3D=root.get_node("RudderL" if side<0 else "RudderR")
-		rudder.rotation.y=-p.input_strafe*.55-(0.0 if p.airborne else p.input_steer*.18)
+		rudder.rotation.y=-p.input_steer*.55
 
 static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)->void:
-	var alive:bool=p.recovery<=0 and not p.finished
+	var alive:bool=p.recovery<=0 and not p.finished and not p.crashed
 	var power:float=p.engine_power if alive else 0.0
 	var burning:bool=(p.boost>0 or p.on_pad) and p.thrust>0 and alive
 	var drive:float=smoothstep(0,125,p.acceleration) if countdown<=0 else 0.0

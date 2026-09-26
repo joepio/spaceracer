@@ -103,4 +103,4 @@ func controls(token: String) -> Dictionary:
 		"strafe": signf(axis(value,2))*maxf(0,(absf(axis(value,2))-.15)/.85),
 		"trim": -signf(axis(value,3))*maxf(0,(absf(axis(value,3))-.15)/.85),
 		"brake": maxf(float(pressed(value,2)),clampf((axis(value,4)-.06)/.94,0,1)), "boost": pressed(value, 1),
-		"left": pressed(value, 4), "right": pressed(value, 5)}
+		"left": pressed(value, 4), "right": pressed(value, 5),"reset":pressed(value,3)}

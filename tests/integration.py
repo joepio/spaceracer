@@ -170,7 +170,7 @@ def main():
             time.sleep(.4)
             assert read()["clock"] == paused["clock"] and read()["muted"]
             assert read()["vfx_clock"] == paused["vfx_clock"], "Engine effects must freeze while paused"
-            assert read()["speed_travel"] == paused["speed_travel"], "Whoosh particles must freeze while paused"
+            assert read()["speed_travel"] == paused["speed_travel"], "Speed presentation must freeze while paused"
             assert read()["speed_camera_clock"] == paused["speed_camera_clock"], "Speed camera vibration must freeze while paused"
             assert read()["city_time"] == paused["city_time"], "City traffic must freeze while paused"
             assert read()["traffic_position"] == paused["traffic_position"], "Air traffic must freeze while paused"
@@ -188,10 +188,14 @@ def main():
             before = read()["racers"][0]["speed"]
             time.sleep(.4)
             assert read()["racers"][0]["speed"] < before, "Lost host stream must release throttle"
-            # Back accepts one press only after a full release, regardless of holding.
+            # Back is ignored; Start accepts one press after release, even when held.
             time.sleep(1.1)
-            for _ in range(20):
+            for _ in range(8):
                 host.send("controller_frame", controllers=[dict(controller="ordinal:7",axes=[0]*6,buttons=64)])
+                time.sleep(.025)
+            assert sum(m["type"] == "request_overlay" for m in host.messages) == 0
+            for _ in range(20):
+                host.send("controller_frame", controllers=[dict(controller="ordinal:7",axes=[0]*6,buttons=128)])
                 time.sleep(.025)
             assert sum(m["type"] == "request_overlay" for m in host.messages) == 1
             host.send("dispose", session=session)
@@ -206,7 +210,7 @@ def main():
             log.flush(); log.seek(0)
             output = log.read()
             assert "SCRIPT ERROR" not in output and "ERROR:" not in output, output
-            print("PASS native WebSocket authentication, hidden prepare, sparse controller ownership, pause/resume, stale input, live profiles, Back gate, dispose/reprepare, disconnect exit")
+            print("PASS native WebSocket authentication, hidden prepare, sparse controller ownership, pause/resume, stale input, live profiles, Start gate, dispose/reprepare, disconnect exit")
         except BaseException:
             log.flush(); log.seek(0)
             print(log.read())

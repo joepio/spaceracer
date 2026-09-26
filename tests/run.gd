@@ -112,9 +112,10 @@ func run() -> void:
 	p.slip=100.0
 	p.energy=1.0
 	race.step(1.0/120,[{"steer":1.0,"throttle":1.0}])
-	check(p.recovery>0,"Energy depletion enters recovery")
+	check(p.wreck_wait and p.recovery==0,"Energy depletion leaves a wreck waiting for Y")
+	race.step(1.0/120,[{"reset":true}])
 	for i in range(241): race.step(1.0/120,[{}])
-	check(p.recovery==0 and p.energy>=65,"Recovery cannot strand a racer")
+	check(p.recovery==0 and not p.wreck_wait and p.energy>=1,"Requested recovery cannot strand a racer")
 	var grip := Race.new(roster(),52)
 	var drift := Race.new(roster(),52)
 	for test_race in [grip,drift]:
@@ -222,7 +223,7 @@ func run() -> void:
 	airborne.airborne=true
 	airborne.air_time=10.1
 	Race.Flight.step(airborne,risky.track,1.0/120,0,0,0,0)
-	check(airborne.recovery>0 and airborne.crashed,"Runaway flight crashes then respawns")
+	check(airborne.wreck_wait and airborne.crashed and airborne.recovery==0,"Runaway flight waits for Y after crashing")
 	var analog_strafe:=handling_race()
 	for tick in range(24): analog_strafe.step(1.0/120,[{"strafe":.6,"throttle":1.0}])
 	check(analog_strafe.racers[0].slip>20 and analog_strafe.racers[0].heading==0,"Right stick strafes without steering nose")

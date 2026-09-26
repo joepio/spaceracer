@@ -19,6 +19,7 @@ var menu: Control
 var roster: Array = []
 var running := false
 var in_menu := true
+var local_paused := false
 var human_count := 1
 const MAX_SEED := 99999
 var next_seed := 0
@@ -114,6 +115,9 @@ func local_roster(count: int, bots_only: bool = false) -> Array:
 	return out
 
 func start_selected() -> void:
+	if local_paused:
+		resume_local()
+		return
 	finish_seed_edit()
 	next_seed=selected_seed
 	start_local()
@@ -137,6 +141,7 @@ func randomize_menu_seed()->void:
 	finish_seed_edit()
 
 func start_local() -> void:
+	local_paused=false
 	if is_instance_valid(menu): menu.queue_free()
 	roster = local_roster(human_count,demo)
 	in_menu = false
@@ -215,6 +220,7 @@ func layout_views() -> void:
 		views[i].viewport.positional_shadow_atlas_size=(2048 if count==1 and quality>=1. else 1024) if quality>=.8 else 0
 
 func _physics_process(dt: float) -> void:
+	if local_paused: return
 	if race == null: return
 	if not running and not in_menu: return
 	if race.over:
@@ -232,7 +238,7 @@ func controls(p: Dictionary) -> Dictionary:
 	var k: Array = KEYS[int(p.slot)%4]
 	var c := {"steer":float(Input.is_physical_key_pressed(k[1]))-float(Input.is_physical_key_pressed(k[0])),
 		"throttle":float(Input.is_physical_key_pressed(k[2])),"brake":float(Input.is_physical_key_pressed(k[3])),
-		"trim":0.0,"strafe":0.0,"boost":Input.is_physical_key_pressed(k[4]),"left":Input.is_physical_key_pressed(k[5]),"right":Input.is_physical_key_pressed(k[6])}
+		"trim":0.0,"strafe":0.0,"boost":Input.is_physical_key_pressed(k[4]),"left":Input.is_physical_key_pressed(k[5]),"right":Input.is_physical_key_pressed(k[6]),"reset":Input.is_physical_key_pressed(KEY_1+int(p.slot)%4)}
 	var device: int = p.get("device",-1)
 	if device>=0 and Input.get_connected_joypads().has(device):
 		var axis := Input.get_joy_axis(device,JOY_AXIS_LEFT_X)
@@ -246,19 +252,20 @@ func controls(p: Dictionary) -> Dictionary:
 		c.trim=-signf(right_y)*maxf(0,(absf(right_y)-.15)/.85)
 		c.brake=maxf(c.brake,maxf(float(Input.is_joy_button_pressed(device,JOY_BUTTON_X)),clampf((Input.get_joy_axis(device,JOY_AXIS_TRIGGER_LEFT)-.06)/.94,0,1)))
 		c.boost=c.boost or Input.is_joy_button_pressed(device,JOY_BUTTON_B)
+		c.reset=c.reset or Input.is_joy_button_pressed(device,JOY_BUTTON_Y)
 		c.left=c.left or Input.is_joy_button_pressed(device,JOY_BUTTON_LEFT_SHOULDER)
 		c.right=c.right or Input.is_joy_button_pressed(device,JOY_BUTTON_RIGHT_SHOULDER)
 	return c
 
 func _process(dt: float) -> void:
 	navigate_menu(dt)
-	process_back(dt)
+	process_pause(dt)
 	probe_clock+=dt
 	if probe_clock>=.05:
 		probe_clock=0
 		write_probe()
 	if race == null: return
-	if running or in_menu:
+	if running or (in_menu and not local_paused):
 		world.update_ships()
 		for view in views: world.update_camera(view.camera,view.index,dt,false,running and not in_menu)
 	for view in views:
@@ -285,7 +292,7 @@ func _process(dt: float) -> void:
 
 func update_speed_effects(view:Dictionary,dt:float)->void:
 	var p:Dictionary=race.racers[view.index]
-	var active:bool=running and not in_menu and race.countdown<=0 and p.recovery<=0 and not p.finished
+	var active:bool=running and not in_menu and race.countdown<=0 and p.recovery<=0 and not p.finished and not p.crashed
 	var rush:float=view.camera.get_meta("speed_rush",0.)
 	var boost:float=view.camera.get_meta("speed_boost",0.)
 	var surge:float=view.camera.get_meta("speed_surge",0.)
@@ -304,25 +311,71 @@ func capture() -> void:
 		"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"capture":capture_path}))
 	get_tree().quit()
 
-func process_back(dt:float)->void:
+func process_pause(dt:float)->void:
 	var held:=Input.is_physical_key_pressed(KEY_ESCAPE)
 	if bridge.launched_by_daemon:
 		for token in bridge.frames:
-			held=held or Bridge.pressed(bridge.frame(token),6)
-	else:
-		for device in Input.get_connected_joypads(): held=held or Input.is_joy_button_pressed(device,JOY_BUTTON_BACK)
+			held=held or Bridge.pressed(bridge.frame(token),7)
 	if not held:
 		back_release=minf(1,back_release+dt)
 	elif back_release>=1:
 		back_release=0
 		if bridge.launched_by_daemon:
 			if running: bridge.request_overlay()
-		elif not in_menu:
-			running=false
-			in_menu=true
-			make_menu()
+		elif local_paused: resume_local()
+		elif not in_menu: pause_local()
+
+func resume_local()->void:
+	local_paused=false
+	in_menu=false
+	running=true
+	if is_instance_valid(menu):
+		ui.remove_child(menu)
+		menu.queue_free()
+	menu_sticks.clear()
+
+func pause_local()->void:
+	local_paused=true
+	running=false
+	in_menu=true
+	menu_sticks.clear()
+	menu=Control.new()
+	menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui.add_child(menu)
+	var shade:=ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color=Color(.015,.025,.04,.75)
+	menu.add_child(shade)
+	var center:=CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	menu.add_child(center)
+	var content:=VBoxContainer.new()
+	content.add_theme_constant_override("separation",16)
+	center.add_child(content)
+	menu_label(content,"Paused",36)
+	var buttons:Array[Button]=[]
+	for title in ["Resume","Restart race","Track settings"]:
+		var button:=Button.new()
+		button.text=title
+		button.custom_minimum_size=Vector2(340,48)
+		button.set_meta("menu_id",title.to_lower())
+		style_button(button,title=="Resume")
+		content.add_child(button)
+		buttons.append(button)
+	buttons[0].pressed.connect(resume_local)
+	buttons[1].pressed.connect(func(): next_seed=race.track.seed_value;start_local())
+	buttons[2].pressed.connect(func(): local_paused=false;make_menu())
+	for i in range(buttons.size()):
+		buttons[i].focus_neighbor_top=buttons[posmod(i-1,buttons.size())].get_path()
+		buttons[i].focus_neighbor_bottom=buttons[(i+1)%buttons.size()].get_path()
+	buttons[0].grab_focus()
+	menu_label(content,"Start  Resume     A  Select",14,Color("aebfca"))
 
 func _input(event:InputEvent)->void:
+	if not bridge.launched_by_daemon and not in_menu and event is InputEventJoypadButton and event.button_index==JOY_BUTTON_START and event.pressed:
+		get_viewport().set_input_as_handled()
+		pause_local()
+		return
 	if not in_menu or bridge.launched_by_daemon: return
 	if event is InputEventJoypadMotion and event.axis in [JOY_AXIS_LEFT_X,JOY_AXIS_LEFT_Y]:
 		var stick:Vector2=menu_sticks.get(event.device,Vector2.ZERO)
@@ -522,7 +575,7 @@ func make_menu()->void:
 	quality_button.pressed.connect(func(): quality=.8 if quality==.6 else (1.0 if quality==.8 else .6);layout_views();make_menu())
 	links.add_child(quality_button)
 	if show_menu_controls:
-		menu_label(content,"A / RT   Accelerate     B   Boost     LT   Brake / slide\nRoad: right stick strafes / trims grip; pull back to lift off\nFlight: left stick rolls; right stick pitches / yaws; LT air brake",16,Color("bacbd5"))
+		menu_label(content,"A / RT   Accelerate     B   Boost     LT   Brake / slide\nRoad: left stick turns; right stick strafes / trims grip\nFlight: left stick yaws; right stick pitches / rolls\nY   Reset in flight (-25 energy, 2s)     Start   Pause",16,Color("bacbd5"))
 		menu_label(content,"P1  WASD / Space / Q E     P2  Arrows / Ctrl / , .\nP3  IJKL / U / Y O               P4  TFGH / R / V B",14,Color("91a8b7"))
 		menu_label(content,"Back: nose up / takeoff. Forward: nose down.\nIn flight, bank and align with the road to land.",14,Color("91a8b7"))
 	for i in range(players.size()):

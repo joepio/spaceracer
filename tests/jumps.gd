@@ -28,7 +28,7 @@ func run()->void:
 				check(Track.supported(track.sample(jump.takeoff-.01),0.) and Track.supported(track.sample(jump.landing+.01),0.),"Launch lip and landing share exact mesh boundaries")
 				var p:Dictionary=race.racers[0]
 				p.distance=jump.takeoff-160.;p.speed=250.;p.x=0.;p.heading=0.;p.slip=0.
-				p.airborne=false;p.recovery=0.;p.crashed=false;p.trim=0.;p.lift=0.;p.unload=0.;p.lift_speed=0.;p.air_rates=Vector3.ZERO
+				p.airborne=false;p.recovery=0.;p.crashed=false;p.wreck_wait=false;p.reset_held=false;p.trim=0.;p.lift=0.;p.unload=0.;p.lift_speed=0.;p.air_rates=Vector3.ZERO
 				race.countdown=0.;race.clock=0.;race.over=false
 				var launched:=false
 				var landed:=false
@@ -53,7 +53,7 @@ func run()->void:
 						break
 				check(launched and landed,"Bot lands %s seed %d %s (position %.1f / landing %.1f, peak %.1f)"%[difficulty,seed_value,jump.kind,p.distance,jump.landing,peak])
 				print("JUMP ",difficulty," ",seed_value," ",jump.kind," ","PASS" if landed else "FAIL"," time=",race.clock," gap=",jump.landing-jump.takeoff)
-				p.distance=jump.takeoff+5.;p.recovery=.01;p.crashed=true
+				p.distance=jump.takeoff+5.;p.recovery=.01;p.crashed=true;p.wreck_wait=false
 				p.finished=false;race.over=false
 				race.step(.02,[{}])
 				check(p.distance<=jump.takeoff-140. and Track.supported(track.sample(p.distance),p.x),"Failed jump respawns on a solid run-up")

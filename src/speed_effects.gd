@@ -1,40 +1,34 @@
 extends Control
-## Lightweight per-view near-camera motes. No shared-world particles or lights.
+## A soft peripheral pressure shade; speed comes from camera/lens and scene blur.
 var travel:=0.
-var rush:=0.
-var boost:=0.
-var surge:=0.
-var count:=24
+var strength:=0.
+var edge:GradientTexture2D
 
 func _ready()->void:
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
-	clip_contents=true
+	var gradient:=Gradient.new()
+	gradient.colors=PackedColorArray([Color(.015,.025,.045,1.),Color(.015,.025,.045,0.)])
+	edge=GradientTexture2D.new()
+	edge.gradient=gradient
+	edge.width=128
+	edge.height=1
+	edge.fill_from=Vector2.ZERO
+	edge.fill_to=Vector2(1,0)
 
-func update_effects(camera:Camera3D,dt:float,active:bool,performance:bool=false)->void:
+func update_effects(camera:Camera3D,dt:float,active:bool,_performance:bool=false)->void:
 	visible=active
 	if not active: return
-	rush=camera.get_meta("speed_rush",0.)
-	boost=camera.get_meta("speed_boost",0.)
-	surge=camera.get_meta("speed_surge",0.)
-	count=14 if performance else 24
-	# Integrate travel so throttle changes cannot teleport existing motes.
+	var rush:float=camera.get_meta("speed_rush",0.)
+	var boost:float=camera.get_meta("speed_boost",0.)
+	var surge:float=camera.get_meta("speed_surge",0.)
+	strength=rush*(boost*.085+surge*.025)
 	travel=fposmod(travel+minf(dt,.05)*float(camera.get_meta("speed_velocity",0.))/145.,1024.)
 	queue_redraw()
 
 func _draw()->void:
-	if rush<.04: return
-	var origin:=Vector2(.5,.43)*size
-	for i in range(count):
-		var phase:=fposmod(travel+i*.61803399,1.)
-		var angle:=lerpf(-1.12,1.12,fposmod(i*.75487766,.999))
-		var direction:=Vector2(cos(angle)*(1. if i%2==0 else -1.),sin(angle)*.8)
-		var radius:=.28+phase*phase*.8
-		var head:=origin+direction*radius*size
-		# Limit streaks to the periphery, leaving the car and racing line clear.
-		if head.x>size.x*.31 and head.x<size.x*.69: continue
-		var length:float=(.006+.016*rush+.025*boost+.008*surge)*(.25+phase)
-		var tail:=head-direction*length*size
-		var fade:=smoothstep(0.,.18,phase)*(1.-smoothstep(.8,1.,phase))
-		var alpha:=fade*rush*(.09+.22*boost+.04*surge)
-		draw_line(tail,head,Color(.7,.84,.94,alpha),1.+boost*.5,true)
-		if i%3==0: draw_circle(head,1.,Color(.8,.91,1.,alpha*.8))
+	if strength<.001 or edge==null: return
+	var width:=size.x*.15
+	draw_texture_rect(edge,Rect2(0,0,width,size.y),false,Color(1,1,1,strength))
+	draw_set_transform(Vector2(size.x,0),0,Vector2(-1,1))
+	draw_texture_rect(edge,Rect2(0,0,width,size.y),false,Color(1,1,1,strength))
+	draw_set_transform(Vector2.ZERO)

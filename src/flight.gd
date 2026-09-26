@@ -1,6 +1,7 @@
 extends RefCounted
 ## World-space arcade flight. No road force or track-frame following after launch.
 const HOVER:=1.3
+const AIR_SPEED:=235.
 const Track=preload("res://src/track.gd")
 
 static func ground_basis(frame:Basis,heading:float,trim:float,slip:float)->Basis:
@@ -20,7 +21,7 @@ static func ground_pose(p:Dictionary,n:Dictionary,clock:float)->Transform3D:
 	return Transform3D(frame,Track.point(n,p.x,hover_height(p.trim)+p.lift))
 
 static func pose(p:Dictionary,n:Dictionary,clock:float)->Transform3D:
-	if p.airborne or (p.crashed and p.recovery>0):
+	if p.airborne or p.crashed:
 		return Transform3D(p.air_frame,p.air_position)
 	var result:=ground_pose(p,n,clock)
 	# Cosmetic only: grid warmup cannot change launch speed or physical grip.
@@ -56,6 +57,7 @@ static func launch(p:Dictionary,n:Dictionary,clock:float=0.0)->void:
 	# Carry the measured surface velocity and angular rate through release.
 	# No position step, launch impulse or instantaneous turn of the flight path.
 	p.air_velocity=p.ground_velocity
+	p.air_entry_speed=p.air_velocity.length()
 	p.on_pad=false
 	p.slide=0.0
 	p.drifting=false
@@ -67,8 +69,8 @@ static func integrate_air(p:Dictionary,dt:float,roll_input:float,yaw_input:float
 	var authority:=lerpf(.25,1.0,smoothstep(65,200,speed))
 	# Body-axis rate controls: releasing the stick arrests rotation, not bank.
 	# +Z is the nose, -X is pilot-right; back stick gives negative X pitch.
-	var desired:=Vector3(p.trim*1.15,-yaw_input*.85,roll_input*2.6)*authority
-	p.air_rates=p.air_rates.lerp(desired,1-exp(-dt*9))
+	var desired:=Vector3(p.trim*1.8,-yaw_input*1.65,roll_input*3.8)*authority
+	p.air_rates=p.air_rates.lerp(desired,1-exp(-dt*24))
 	var rotation:Vector3=p.air_rates*dt
 	if rotation.length_squared()>.000000001:
 		frame=(frame*Basis(Quaternion(rotation.normalized(),rotation.length()))).orthonormalized()
@@ -81,19 +83,26 @@ static func integrate_air(p:Dictionary,dt:float,roll_input:float,yaw_input:float
 	if wing_lift.length_squared()>.001: wing_lift=wing_lift.normalized()
 	var stall:=1-smoothstep(.48,1.05,absf(attack))
 	var coefficient:=clampf(.8+attack*7,-2.0,4.0)*stall
-	var lift_force:=clampf(speed*speed*.00085*coefficient,-260,350)*alignment*alignment
-	var force:=frame.z*throttle*38+wing_lift*lift_force+Vector3.DOWN*48
-	force-=velocity*(.025+speed*.00018+brake*.65+absf(attack)*.12)
-	force-=frame.x*velocity.dot(frame.x)*1.6
-	velocity=(velocity+force*dt).limit_length(470)
+	var lift_force:=clampf(speed*speed*.0011*coefficient,-260,350)*alignment*alignment
+	var force:=frame.z*throttle*52+wing_lift*lift_force+Vector3.DOWN*48
+	force-=velocity*(.035+speed*.00075+brake*.65+absf(attack)*.12)
+	force-=frame.x*velocity.dot(frame.x)*3.2
+	# Preserve launch momentum, then smoothly settle below road cruise speed.
+	var limit:=maxf(AIR_SPEED,float(p.get("air_entry_speed",AIR_SPEED))-70.*p.air_time)
+	velocity=(velocity+force*dt).limit_length(limit)
 	p.air_velocity=velocity
 	p.air_position+=velocity*dt
 	p.speed=velocity.length()
 
 static func crash(p:Dictionary)->void:
+	if p.crashed: return
 	p.crashed=true
 	p.airborne=false
-	p.recovery=2.0
+	p.recovery=0.0
+	p.wreck_wait=true
+	p.wreck_time=0.
+	p.crash_id+=1
+	p.speed=0.
 	p.boost=0.0
 	p.on_pad=false
 	p.energy=maxf(0,p.energy-25)
@@ -104,8 +113,14 @@ static func crash(p:Dictionary)->void:
 static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float,throttle:float,brake:float)->void:
 	p.air_time+=dt
 	var previous:Vector3=p.air_position
-	integrate_air(p,dt,steer,strafe,throttle,brake)
+	integrate_air(p,dt,strafe,steer,throttle,brake)
 	var position:Vector3=p.air_position
+	if track.get("obstacles")!=null:
+		var contact:Variant=track.obstacles.hit(previous,position)
+		if contact!=null:
+			p.air_position=contact
+			crash(p)
+			return
 	var velocity:Vector3=p.air_velocity
 	var frame:Basis=p.air_frame
 	p.air_travel+=previous.distance_to(position)
@@ -123,6 +138,7 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 	p.lift=after
 	p.lift_speed=velocity.dot(surface.y)
 	var inside:=Track.supported(n,nearest.lateral,5.8)
+	var legal_progress:bool=nearest.distance-p.distance<=p.air_travel*1.05+25.
 	if p.air_time>.10 and inside and before>0 and after<=0:
 		var nose_alignment:float=frame.z.dot(surface.z)
 		var upright:float=frame.y.dot(surface.y)
@@ -131,7 +147,7 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 		# Purpose-built landing decks have stronger magnetic capture. A hard
 		# touchdown still costs speed/energy; steep or misaligned impacts crash.
 		var descent_limit:=100. if landing_pad else 75.
-		if nose_alignment>.65 and upright>.65 and p.lift_speed> -descent_limit and approach>65:
+		if nose_alignment>.65 and upright>.65 and p.lift_speed> -descent_limit and approach>65 and legal_progress:
 			var impact:=clampf((-p.lift_speed-45.)/55.,0.,1.) if landing_pad else 0.
 			p.airborne=false
 			p.distance=nearest.distance
@@ -154,5 +170,5 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 		crash(p) # Hitting the underside cannot attach to the road.
 	elif p.air_time>.10 and inside and after< -2 and previous_hit.node.get("air_gap",false):
 		crash(p) # A low approach hits the exposed landing lip; never flies through it.
-	elif p.air_time>10 or position.y< -270 or position.distance_to(n.p)>850 or (track.has_method("hits_water") and track.hits_water(position)):
+	elif p.air_time>10 or position.y< -179.5 or position.distance_to(n.p)>850 or (track.has_method("hits_water") and track.hits_water(position)):
 		crash(p)

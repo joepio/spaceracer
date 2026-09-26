@@ -113,6 +113,20 @@ func run()->void:
 	check(game.race.track.biome=="forest","Start uses selected world")
 	check(not game.race.racers[0].bot,"Solo launch gives the player control")
 	check(AudioServer.is_bus_mute(0),"Playtest stays muted")
+	var paused_race:RefCounted=game.race
+	await press(JOY_BUTTON_BACK)
+	check(game.running and not game.local_paused,"Back no longer pauses")
+	await press(JOY_BUTTON_START)
+	check(game.local_paused and not game.running and focus_id()=="resume","Start opens pause with Resume focused")
+	var paused_clock:float=game.race.vfx_clock
+	var paused_distance:float=game.race.racers[0].distance
+	for frame in range(8): await process_frame
+	check(game.race.vfx_clock==paused_clock and game.race.racers[0].distance==paused_distance,"Local pause freezes simulation and effects")
+	await press(JOY_BUTTON_START)
+	check(game.running and not game.in_menu and game.race==paused_race,"Start resumes the same race without rebuilding")
+	await press(JOY_BUTTON_START)
+	await press(JOY_BUTTON_A)
+	check(game.running and game.race==paused_race,"A on Resume also preserves race progress")
 	var saved_nodes:Array=game.race.track.nodes.duplicate(true)
 	game.running=false
 	game.in_menu=true

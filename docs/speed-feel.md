@@ -9,10 +9,10 @@ roll. Shake is applied after the underlying chase transform and cannot
 accumulate into drift or alter vehicle physics.
 
 An eight-tap radial blur increases toward the screen edges. The central racing
-line, player craft and subsequent HUD rendering remain protected. Per-view
-camera motes accelerate outward along the sides using integrated travel instead
-of multiplying absolute time by changing speed. The budget is 24 motes per
-view (14 on Performance, where blur is disabled), with no added world lights,
+line, player craft and subsequent HUD rendering remain protected. The floating
+camera motes were removed after playtesting. A faint, smooth
+peripheral shade builds under boost instead, with no individual lines or dots.
+Performance disables blur. There are no added world lights,
 physics bodies or particle simulation. Menu, countdown, recovery and finish
 states suppress these effects; managed pause freezes both animation clocks.
 
@@ -26,6 +26,10 @@ states suppress these effects; managed pause freezes both animation clocks.
   four-player, including maximum boost.
 
 ## Rendering measurements
+
+These measurements describe the original particle version; the later input and
+presentation revision removes those particles. Raw captures of its airborne HUD
+and local pause menu are under `C:/dev/ion-rush-captures/controls/`.
 
 RTX 5070 Ti, Godot 4.5.2 Forward+, High at 1920×1080, four 960×540 views,
 five-second warm-up and 1,200 samples per run. The old playtest was closed.

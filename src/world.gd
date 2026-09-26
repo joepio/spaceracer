@@ -3,6 +3,8 @@ const Track = preload("res://src/track.gd")
 const Scenery = preload("res://src/scenery.gd")
 const Forest = preload("res://src/forest.gd")
 const TurnMarkers = preload("res://src/turn_markers.gd")
+const Obstacles=preload("res://src/obstacles.gd")
+const CrashVfx=preload("res://src/crash_vfx.gd")
 const RAIL_HEIGHT := 2.5
 const Flight=preload("res://src/flight.gd")
 const Chase=preload("res://src/chase.gd")
@@ -11,6 +13,7 @@ var showpiece:RefCounted
 const Ship = preload("res://src/ship.gd")
 var scenery: RefCounted
 var ships: Array[Node3D] = []
+var crashes:Array[Node3D]=[]
 var cameras: Array[Camera3D] = []
 var race: RefCounted
 var scene_environment:Environment
@@ -41,6 +44,7 @@ static func material(color: Color, glow: float = 0) -> StandardMaterial3D:
 
 func build(state: RefCounted) -> void:
 	race = state
+	race.track.obstacles=Obstacles.new()
 	var forest:bool=race.track.biome=="forest"
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
@@ -132,11 +136,13 @@ func build(state: RefCounted) -> void:
 	showpiece=Showpiece.new()
 	if forest: showpiece.probes=scenery.probes
 	else: showpiece.build(self,race.track)
+	race.track.obstacles.add_visual_boxes(self)
 	for p in race.racers:
 		var ship := build_ship(color_for(p))
 		set_dynamic_layer(ship)
 		add_child(ship)
 		ships.append(ship)
+		var crash:=CrashVfx.new();add_child(crash);crashes.append(crash)
 		ship_colors.append(color_for(p))
 	update_ships()
 
@@ -323,7 +329,9 @@ func update_ships() -> void:
 		Ship.animate_controls(ships[i],p)
 		var n: Dictionary = race.track.sample(p.distance)
 		ships[i].transform=Flight.pose(p,n,race.clock)
-		ships[i].visible = not (p.crashed and p.recovery>0) and (p.recovery<=0 or fmod(p.recovery,.2)<.1)
+		ships[i].visible = p.recovery<=0 or fmod(p.recovery,.2)<.1
+		ships[i].get_node("Body").material_override.set_shader_parameter("wrecked",1. if p.crashed else 0.)
+		crashes[i].update(p,race.vfx_clock)
 		var tint := color_for(p)
 		if ship_colors[i] != tint:
 			Ship.set_jet_tint(ships[i],tint)

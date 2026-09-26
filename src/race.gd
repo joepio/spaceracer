@@ -22,13 +22,14 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 	for i in range(roster.size()):
 		var p: Dictionary = roster[i].duplicate(true)
 		p.merge({"distance": -floorf(i / 3.0) * 13.0, "x": (i % 3 - (mini(3, roster.size()) - 1) / 2.0) * 12.0, "speed": 0.0,
-			"heading": 0.0, "slip": 0.0, "energy": 100.0, "boost": 0.0, "boost_held": false,
+			"heading": 0.0, "slip": 0.0, "energy": 100.0, "boost": 0.0, "boost_held": false,"reset_held":false,"manual_reset":false,"wreck_wait":false,"wreck_time":0.,"crash_id":0,"air_entry_speed":235.,
 			"input_throttle":0.0,"engine_power":0.0,"startup":0.0,"ignited":false,"brake_vfx":0.0,"slide_hold":0.0,"acceleration":0.0,"input_steer":0.0,"input_strafe":0.0,"input_pitch":0.0,"input_brake":0.0,"air_position":Vector3.ZERO,"air_velocity":Vector3.ZERO,"air_frame":Basis.IDENTITY,
 			"ground_velocity":Vector3.ZERO,"air_rates":Vector3.ZERO,"unload":0.0,"landing_frame":Basis.IDENTITY,"landing_blend":0.0,"air_time":0.0,"air_travel":0.0,"air_roll":0.0,"launch_cooldown":0.0,"crashed":false,"trim": 0.0, "lift": 0.0, "lift_speed": 0.0, "airborne": false, "slide": 0.0, "braking": 0.0, "thrust": 0.0, "flash": 0.0, "recovery": 0.0, "lap": 1, "rank": i + 1, "finished": false,
 			"time": INF, "best_lap": INF, "lap_start": 0.0, "drifting": false, "on_pad": false}, true)
 		racers.append(p)
 
 func bot(p: Dictionary) -> Dictionary:
+	if p.wreck_wait: return {"reset":p.wreck_time>.8}
 	if p.airborne: return air_bot(p)
 	var n:Dictionary=track.sample(p.distance)
 	var peak:=absf(n.curve)
@@ -70,19 +71,17 @@ func air_bot(p:Dictionary)->Dictionary:
 		destination=maxf(destination,landing)
 	var aim:Dictionary=track.sample(destination)
 	var frame:Basis=p.air_frame
-	var height:float=(p.air_position-n.p).dot(n.frame.y)
-	var goal:Vector3=aim.frame.z*230.
-	var clearance:=3. if n.get("air_gap",false) and track.difficulty=="hard" else 1.3
-	goal+=n.frame.y*clampf((clearance-height)*3.,-90.,25.)
-	goal+=n.frame.x*clampf(hit.lateral*4.,-100.,100.)
-	# Flare ahead of rising decks: nose alignment alone does not cancel descent.
-	var approach_rate:float=p.air_velocity.dot(aim.frame.y)
-	if height<maxf(30.,-approach_rate*.8):
-		goal+=aim.frame.y*clampf((-35.-approach_rate)*3.,0.,130.)
-	return {"throttle":.65,"brake":clampf((p.speed-215.)/90.,0.,.4),
-		"trim":clampf(-atan2(goal.dot(frame.y),goal.dot(frame.z))*2.,-1.,1.),
-		"strafe":clampf(-atan2(goal.dot(frame.x),goal.dot(frame.z))*5.,-1.,1.),
-		"steer":clampf(-atan2(aim.frame.y.dot(frame.x),aim.frame.y.dot(frame.y))*2.,-1.,1.)}
+	# Lead the displaced landing centre and cancel drift before reaching the deck.
+	var target:Vector3=Track.point(aim,0.,1.3)
+	var desired:Vector3=(target-p.air_position).normalized()*220.
+	var goal:Vector3=desired+(desired-p.air_velocity)*.8
+	return {"throttle":.85,"brake":clampf((p.speed-235.)/100.,0.,.25),
+		"trim":clampf(-atan2(goal.dot(frame.y),maxf(20.,goal.dot(frame.z)))*1.6,-1.,1.),
+		"steer":clampf(-atan2(goal.dot(frame.x),maxf(20.,goal.dot(frame.z)))*3.,-1.,1.),
+		"strafe":clampf(-atan2(aim.frame.y.dot(frame.x),aim.frame.y.dot(frame.y))*1.37,-1.,1.)}
+
+static func can_reset(p:Dictionary)->bool:
+	return (p.wreck_wait or (p.airborne and p.air_time>.3)) and p.recovery<=0 and not p.finished
 
 func step(dt: float, inputs: Array) -> void:
 	if over:
@@ -91,9 +90,18 @@ func step(dt: float, inputs: Array) -> void:
 	for i in range(racers.size()):
 		var input:Dictionary=inputs[i]
 		var pilot:Dictionary=racers[i]
+		var reset_pressed:bool=input.get("reset",false)
+		if countdown<=0 and reset_pressed and not pilot.reset_held and can_reset(pilot):
+			Flight.crash(pilot)
+			# Leave one energy so recovery cannot immediately cause another wreck.
+			pilot.energy=maxf(1.,pilot.energy)
+			pilot.manual_reset=true
+			pilot.wreck_wait=false
+			pilot.recovery=2.
+		pilot.reset_held=reset_pressed
 		pilot.input_throttle=clampf(float(input.get("throttle",0.0)),0,1)
 		var brake_input:=clampf(float(input.get("brake",0.0)),0,1)
-		pilot.thrust=pilot.input_throttle*(1-brake_input) if pilot.recovery==0 and not pilot.finished else 0.0
+		pilot.thrust=pilot.input_throttle*(1-brake_input) if pilot.recovery==0 and not pilot.finished and not pilot.crashed else 0.0
 		pilot.engine_power=lerpf(pilot.engine_power,pilot.thrust,1-exp(-dt*16))
 		pilot.brake_vfx=move_toward(pilot.brake_vfx,brake_input,dt*(18 if brake_input>pilot.brake_vfx else 3))
 		if pilot.input_throttle>.05: pilot.ignited=true
@@ -112,6 +120,10 @@ func step(dt: float, inputs: Array) -> void:
 		p.flash = maxf(0, p.flash - dt)
 		p.launch_cooldown=maxf(0,p.launch_cooldown-dt)
 		if p.finished:
+			continue
+		if p.wreck_wait:
+			p.wreck_time+=dt
+			p.speed=0.;p.thrust=0.
 			continue
 		var n: Dictionary = track.sample(p.distance)
 		var previous_pose:=Flight.ground_pose(p,n,clock-dt)
@@ -158,7 +170,8 @@ func step(dt: float, inputs: Array) -> void:
 			if p.recovery == 0:
 				p.crashed=false
 				p.launch_cooldown=1.0
-				p.energy = 65.0
+				if not p.manual_reset: p.energy=65.
+				p.manual_reset=false
 				p.x = 0.0
 				p.route=0.
 				if track.has_method("safe_respawn"): p.distance=track.safe_respawn(p.distance)
@@ -225,8 +238,8 @@ func step(dt: float, inputs: Array) -> void:
 		var over_edge:bool=not next_node.get("rails",true) and not Track.closed_tube(next_node) and absf(p.x)>next_node.width
 		if (launch or over_edge or next_node.get("air_gap",false)) and not p.finished: Flight.launch(p,next_node,clock)
 		if p.energy <= 0:
-			p.recovery = 2.0
-			p.boost = 0.0
+			p.air_position=next_pose.origin;p.air_frame=next_pose.basis
+			Flight.crash(p)
 	resolve_contacts()
 	var ordered := standings()
 	var all_finished := not racers.is_empty()
@@ -301,7 +314,7 @@ func resolve_contacts()->void:
 			for j in range(i+1,racers.size()):
 				var a:=racers[i]
 				var b:=racers[j]
-				if a.finished or b.finished or a.recovery>0 or b.recovery>0 or a.airborne or b.airborne: continue
+				if a.finished or b.finished or a.crashed or b.crashed or a.recovery>0 or b.recovery>0 or a.airborne or b.airborne: continue
 				var separation:=contact(a,b)
 				if separation.length_squared()<.000001: continue
 				touching=true
@@ -323,7 +336,7 @@ func resolve_contacts()->void:
 					a.speed=clampf(av.y/maxf(.55,cos(a.heading)),0,440)
 					b.speed=clampf(bv.y/maxf(.55,cos(b.heading)),0,440)
 		for p in racers:
-			if not p.airborne: constrain_surface(p,track.sample(p.distance))
+			if not p.airborne and not p.crashed: constrain_surface(p,track.sample(p.distance))
 		if not touching: break
 
 func standings() -> Array:

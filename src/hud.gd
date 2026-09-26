@@ -28,7 +28,7 @@ func _ready() -> void:
 func label(value: String, at: Vector2, size_value: int = 18, color: Color = Color("e1eef6")) -> void:
 	# Rasterize text at output size instead of enlarging small font glyphs.
 	draw_set_transform(Vector2.ZERO)
-	if race and race.track.biome=="forest":
+	if race:
 		draw_string_outline(font,at*draw_scale,value,HORIZONTAL_ALIGNMENT_LEFT,-1,ceili(size_value*draw_scale),maxi(1,ceili(draw_scale)),Color(.015,.035,.055,.75))
 	draw_string(font, at*draw_scale, value, HORIZONTAL_ALIGNMENT_LEFT, -1, ceili(size_value*draw_scale), color)
 	draw_set_transform(Vector2.ZERO,0,Vector2.ONE*draw_scale)
@@ -68,6 +68,8 @@ func _draw() -> void:
 	elif p.drifting: status="Sliding"
 	elif p.trim>.2: status="Grip"
 	elif p.trim<-.2: status="Low grip / high speed"
+	if race.can_reset(p):
+		centered("Crashed · Y to reset" if p.wreck_wait else "Y to reset · -25 energy · 2 seconds",w,h*.80,12,Color("ffd08a"))
 	label(status,Vector2(w-176,h-10),9,energy_color if p.lap>1 else Color("8b9eac"))
 	if show_map: minimap(Vector2(61,h-48),44)
 	label("%05d · %s · %s"%[race.track.seed_value,race.track.difficulty.to_upper(),race.track.biome.to_upper()],Vector2(20,h-8),8,Color("98aebb"))

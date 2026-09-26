@@ -18,6 +18,7 @@ func _initialize()->void:
 func approach(p:Dictionary,n:Dictionary,distance:float,lateral:float=0.0)->void:
 	p.airborne=true
 	p.crashed=false
+	p.wreck_wait=false
 	p.recovery=0.0
 	p.distance=distance
 	p.air_position=Track.point(n,lateral,1.8)
@@ -56,7 +57,7 @@ func guided_return(seed_value:int)->void:
 		var pitch:=clampf(-atan2(goal.dot(frame.y),goal.dot(frame.z))*2,-1,1)
 		var yaw:=clampf(-atan2(goal.dot(frame.x),goal.dot(frame.z))*5,-1,1)
 		var roll:=clampf(-atan2(aim.frame.y.dot(frame.x),aim.frame.y.dot(frame.y))*2,-1,1)
-		race.step(1.0/120,[{"throttle":.65,"brake":.2 if p.speed>245 else 0.0,"trim":pitch,"steer":roll,"strafe":yaw}])
+		race.step(1.0/120,[{"throttle":.65,"brake":.2 if p.speed>245 else 0.0,"trim":pitch,"steer":yaw,"strafe":roll}])
 	check(not p.airborne and not p.crashed and p.recovery==0 and p.distance>launch_distance+200,"A controlled full flight can return to a real seeded track")
 
 func handling_checks()->void:
@@ -67,7 +68,10 @@ func handling_checks()->void:
 	for tick in range(120): Flight.integrate_air(p,1.0/120,1,0,1,0)
 	check(p.air_frame.z.dot(Vector3.BACK)>.999,"Roll does not secretly yaw the nose")
 	check(p.air_roll>2.1,"Full roll has fighter authority, not a capped bank target")
-	check(p.air_velocity.x< -10,"Banked wing lift bends the flight path into the bank")
+	var banked:=Race.new([{"slot":0}],31).racers[0]
+	banked.air_frame=Basis(Vector3.BACK,.65);banked.air_velocity=Vector3(0,0,235)
+	for tick in range(120): Flight.integrate_air(banked,1./120.,0.,0.,1.,0.)
+	check(banked.air_velocity.x< -5,"Holding a bank bends the flight path into the bank at reduced airspeed")
 	for tick in range(120): Flight.integrate_air(p,1.0/120,0,0,1,0)
 	var held:Basis=p.air_frame
 	for tick in range(60): Flight.integrate_air(p,1.0/120,0,0,1,0)
@@ -173,7 +177,7 @@ func run()->void:
 	approach(p,n,500)
 	p.air_frame=n.frame*Basis(Vector3.BACK,PI)
 	Flight.step(p,race.track,.05,0,0,0,0)
-	check(p.crashed and p.recovery==2,"Inverted impact on normal road crashes")
+	check(p.crashed and p.wreck_wait and p.recovery==0,"Inverted impact waits for Y instead of auto-resetting")
 	approach(p,n,500)
 	p.air_position=Track.point(n,0,-2)
 	p.air_velocity=n.frame.z*220+n.frame.y*50
@@ -184,6 +188,9 @@ func run()->void:
 	p.air_time=10.1
 	Flight.step(p,race.track,1.0/120,0,0,0,0)
 	check(p.crashed and not p.airborne,"Unrecovered flight times out into respawn")
+	race.step(3.,[{}])
+	check(p.crashed and p.wreck_wait and p.recovery==0,"Wreck stays put indefinitely without a reset press")
+	race.step(.01,[{"reset":true}])
 	race.step(2.1,[{}])
 	check(p.recovery==0 and not p.crashed and p.speed==90 and p.x==0,"Crash respawns on last safe track position")
 	check(p.launch_cooldown>0,"Respawn cannot immediately relaunch from a held stick")
@@ -199,12 +206,53 @@ func run()->void:
 	var ship_type=load("res://src/ship.gd")
 	ship_type.animate_controls(ship,pilot)
 	check(ship.get_node("WingControlL").rotation.x>.5 and ship.get_node("WingControlR").rotation.x>.5,"Pull-back visibly raises both trailing edges, even during countdown")
-	grid.step(1.0/120,[{"steer":1.0}])
+	grid.step(1.0/120,[{"strafe":1.0}])
 	ship_type.animate_controls(ship,pilot)
-	check(ship.get_node("WingControlL").rotation.x>0 and ship.get_node("WingControlR").rotation.x<0,"Steering moves ailerons in opposite directions")
-	grid.step(1.0/120,[{"strafe":1.0,"brake":1.0}])
+	check(ship.get_node("WingControlL").rotation.x>0 and ship.get_node("WingControlR").rotation.x<0,"Right-stick strafe/roll moves ailerons in opposite directions")
+	check(absf(ship.get_node("RudderL").rotation.y)<.001,"Right stick leaves rudders neutral")
+	grid.step(1.0/120,[{"steer":1.0,"brake":1.0}])
 	ship_type.animate_controls(ship,pilot)
-	check(ship.get_node("RudderL").rotation.y<-.5 and ship.get_node("WingControlL").rotation.x>.5,"Strafe moves rudders and braking deploys flaps")
+	check(ship.get_node("RudderL").rotation.y<-.5 and ship.get_node("WingControlL").rotation.x>.5,"Left-stick turn moves rudders and braking deploys flaps")
+	# Exercise the public airborne inputs independently, not just the integrator.
+	for control in ["steer","strafe"]:
+		var test:=Race.new([{"slot":0}],31,1,"easy")
+		test.countdown=0
+		var pilot_air:Dictionary=test.racers[0]
+		var node:Dictionary=test.track.sample(500.)
+		approach(pilot_air,node,500.)
+		pilot_air.air_position=Track.point(node,0,100.)
+		pilot_air.air_velocity=node.frame.z*265.
+		for tick in range(30): test.step(1./120.,[{control:1.,"throttle":1.}])
+		if control=="steer": check(pilot_air.air_rates.y<-.5 and absf(pilot_air.air_rates.z)<.001,"Left-stick input yaws without rolling")
+		else: check(pilot_air.air_rates.z>1.5 and absf(pilot_air.air_rates.y)<.001,"Right-stick input rolls without yawing")
+	# Reset cannot heal energy, repeat while held, or skip a flight section.
+	var reset_race:=Race.new([{"slot":0}],31,1,"normal")
+	reset_race.countdown=0
+	var reset_p:Dictionary=reset_race.racers[0]
+	reset_p.energy=40.
+	reset_race.step(.01,[{"reset":true}])
+	check(reset_p.recovery==0 and reset_p.energy==40.,"Y is ignored while on the road")
+	reset_race.step(.01,[{}])
+	var reset_takeoff:float=reset_race.track.jumps[0].takeoff
+	approach(reset_p,reset_race.track.sample(reset_takeoff),reset_takeoff)
+	reset_p.air_position+=Vector3.UP*80.
+	reset_race.step(.01,[{"reset":true}])
+	check(reset_p.recovery>1.9 and reset_p.manual_reset and reset_p.energy==15.,"Y spends 25 energy and starts two-second recovery")
+	for tick in range(239): reset_race.step(.01,[{"reset":true}])
+	check(reset_p.recovery==0 and reset_p.energy==15. and reset_p.distance<reset_takeoff,"Held Y resets once, preserves the cost and returns before the jump")
+	check(Track.supported(reset_race.track.sample(reset_p.distance),reset_p.x,5.8),"Manual recovery returns onto supported road")
+	reset_race.step(.01,[{}])
+	approach(reset_p,reset_race.track.sample(500.),500.)
+	reset_race.step(.01,[{"reset":true}])
+	for tick in range(239): reset_race.step(.01,[{}])
+	check(reset_p.energy==1. and reset_p.recovery==0,"Low-energy reset does not chain into a second wreck")
+	var input_bridge=load("res://src/bridge.gd").new()
+	input_bridge.frames={"owned":{"buttons":8},"other":{"buttons":0}}
+	input_bridge.frame_at=Time.get_ticks_msec()
+	check(input_bridge.controls("owned").reset and not input_bridge.controls("other").reset,"GameNight Y reset belongs only to its controller owner")
+	input_bridge.frame_at=-10000
+	check(not input_bridge.controls("owned").reset,"Stale controller frames release reset")
+	input_bridge.free()
 	ship.free()
 	print("FLIGHT_TESTS %d checks, %d failures"%[checks,failures])
 	quit(1 if failures else 0)

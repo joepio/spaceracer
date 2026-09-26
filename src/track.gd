@@ -30,6 +30,7 @@ const BIOMES := ["city","forest"]
 var biome := "city"
 var water_level:float=-INF
 var jumps:Array[Dictionary]=[]
+var obstacles:RefCounted
 
 func base_position(u: float) -> Vector3:
 	var a := u * TAU
@@ -38,8 +39,8 @@ func base_position(u: float) -> Vector3:
 	var corner_b := exp(-pow(angle_difference(a, 5.45-corner_shift) / corner_b_width, 2))
 	var r := radius + amplitude * sin(lobes * a + phase) + 260 * corner_a - 175 * corner_b
 	var ridge := 170 * exp(-pow((u - .55) / .075, 2))
-	var altitude:=200 + climb * sin(hills * a + phase) + 45 * sin(5*a) + ridge
-	if biome=="forest": altitude=80+climb*.42*sin(hills*a+phase)+20*sin(5*a)+ridge*.3
+	var altitude:=200 + climb * sin(hills * a + phase) + 12 * sin(3*a+phase*.4) + ridge
+	if biome=="forest": altitude=80+climb*.42*sin(hills*a+phase)+6*sin(3*a+phase*.4)+ridge*.3
 	return Vector3(sin(a) * r * stretch, altitude, cos(a) * r)
 
 static func smooth_phase(t: float) -> float:
@@ -63,6 +64,12 @@ func raw_position(u: float) -> Vector3:
 		elif t<land: height=lerpf(jump.rise,jump.drop,smooth_phase((t-lip)/(land-lip)))
 		else: height=jump.drop*(1.-smooth_phase((t-land)/(1.-land)))
 		p.y+=height
+		if difficulty=="hard" and t>lip:
+			# Offset the landing island across the gap, then ease back into the course.
+			var side:Vector3=(base_position(jump.start+.001)-base_position(jump.start)).normalized().cross(Vector3.UP).normalized()
+			var across:float=smooth_phase(clampf((t-lip)/(land-lip),0.,1.))
+			if t>land+.20: across=1.-smooth_phase(clampf((t-land-.20)/(1.-land-.20),0.,1.))
+			p+=side*float(jump.offset)*across
 	for loop in loops:
 		if u <= loop.start or u >= loop.end: continue
 		var q: float = (u-loop.start)/(loop.end-loop.start)
@@ -94,6 +101,9 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 	if difficulty=="easy":
 		corner_a_width*=1.35
 		corner_b_width*=1.35
+	elif difficulty=="hard":
+		corner_a_width*=.62
+		corner_b_width*=.70
 	layout = ["SKYLINE DIVE","ORBITAL SWITCHBACK","DOUBLE HELIX"][posmod(track_seed,3)]
 	var starts: Array[float] = [.16]
 	if posmod(track_seed,3)==2: starts.append(.68)
@@ -108,10 +118,10 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 		jump_rng.seed=track_seed+62041
 		var shift:=jump_rng.randf_range(-.002,.002)
 		jumps.append({"kind":"jump","start":.070+shift,"end":.152+shift,
-			"lip":.38,"land":.56 if difficulty=="normal" else .68,
-			"rise":12. if difficulty=="normal" else 25.,"drop":0.})
+			"lip":.38,"land":.56 if difficulty=="normal" else .61,
+			"rise":12. if difficulty=="normal" else 25.,"drop":0.,"offset":34.*(1. if track_seed%2==0 else -1.)})
 		if difficulty=="hard":
-			jumps.append({"kind":"flight","start":.927,"end":.994,"lip":.27,"land":.68,"rise":28.,"drop":0.})
+			jumps.append({"kind":"flight","start":.927,"end":.994,"lip":.27,"land":.58,"rise":28.,"drop":0.,"offset":46.*(-1. if track_seed%2==0 else 1.)})
 	var raw: Array[Vector3] = []
 	var distances: Array[float] = [0.0]
 	const RESOLUTION := 4096
@@ -147,13 +157,23 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 		nodes[i].forward=delta.normalized()
 		nodes[i].heading=atan2(-delta.x,delta.z)
 		nodes[i].slope=nodes[i].forward.y
+	var bank_targets:Array[float]=[]
+	for i in range(count):
+		var derivative:Vector3=(nodes[(i+1)%count].forward-nodes[posmod(i-1,count)].forward)/(2*step)
+		var limit:=.20 if difficulty=="easy" else (.34 if difficulty=="hard" else .28)
+		var bend:float=derivative.dot(nodes[i].right_hint)
+		bank_targets.append(clampf(-bend*48.,-limit,limit) if not nodes[i].loop else 0.)
 	for i in range(count):
 		var n:=nodes[i]
 		var f:Vector3=n.forward
 		var right:Vector3=(n.right_hint-f*n.right_hint.dot(f)).normalized()
 		var derivative:Vector3=(nodes[(i+1)%count].forward-nodes[posmod(i-1,count)].forward)/(2*step)
-		var bend:=derivative.dot(right)
-		n.bank=clampf(-bend*90,-.62,.62) * (.4 if n.loop else 1.0)
+		# Spatial smoothing spreads bank changes over ~220 metres, not one mesh seam.
+		var total:=0.;var weight:=0.
+		for offset in range(-12,13):
+			var w:=13.-absf(offset)
+			total+=bank_targets[posmod(i+offset,count)]*w;weight+=w
+		n.bank=total/weight
 		right=right.rotated(f,-n.bank)
 		var up:=right.cross(f).normalized()
 		n.frame=Basis(-right,up,f).orthonormalized()
@@ -218,8 +238,12 @@ func build_features()->void:
 			n.air_gap=t>=jump.lip and t<jump.land
 			n.rails=not n.air_gap
 			n.zone=""
-			n.width+=smooth_phase(clampf(minf(t,1.-t)/.2,0.,1.))*(18. if difficulty=="normal" else 8.)
+			n.width+=smooth_phase(clampf(minf(t,1.-t)/.2,0.,1.))*(18. if difficulty=="normal" else 2.)
 			n.section="FLIGHT GAP" if n.air_gap else ("JUMP · KEEP SPEED" if t<jump.lip else "LANDING ZONE")
+		if difficulty=="hard" and not n.loop and not n.tunnel and n.feature=="ribbon":
+			if (n.u>.02 and n.u<.05) or (n.u>.285 and n.u<.335) or (n.u>.64 and n.u<.68) or (n.u>.755 and n.u<.80):
+				n.rails=false
+				n.section="EXPOSED SKYWAY"
 	# Boundaries lie exactly on mesh nodes, shared by rendering and physics.
 	for jump in jumps:
 		var gap_indices:Array[int]=[]

@@ -11,6 +11,7 @@ var reflection_boxes:Array[Dictionary]=[]
 var groups:Dictionary={}
 var accent:Color
 var secondary:Color
+var obstacles:RefCounted
 
 static func mat(color:Color,emission:float=0.0)->StandardMaterial3D:
 	var m:=StandardMaterial3D.new()
@@ -38,6 +39,7 @@ static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int,layer:int=
 	return data
 
 func part(kind:int,position:Vector3,size:Vector3,color:Color)->void:
+	if obstacles: obstacles.add_box(Transform3D(Basis.IDENTITY.scaled(size),position))
 	if kind==3:
 		kind=0
 		color.a=0.0 # solid rooftop equipment shares the architecture draw batch
@@ -46,6 +48,7 @@ func part(kind:int,position:Vector3,size:Vector3,color:Color)->void:
 	groups[key].append({"transform":Transform3D(Basis.IDENTITY.scaled(size),position),"color":color})
 
 func build(parent:Node3D,race:RefCounted)->void:
+	obstacles=race.track.obstacles
 	accent=race.track.theme[3]
 	secondary=race.track.theme[4]
 	layout=Layout.new(race.track)
@@ -55,7 +58,8 @@ func build(parent:Node3D,race:RefCounted)->void:
 		var d:float=b.depth
 		var h:float=b.height
 		var tint:Color=b.color
-		part(0,c+Vector3.UP*h*.07,Vector3(w,h*.14,d),tint)
+		# Inset podium avoids coplanar faces with full-width lower building volumes.
+		part(0,c+Vector3.UP*h*.07,Vector3(w*.98,h*.14,d*.98),tint)
 		match b.kind:
 			0: # slab with a rooftop communications mast
 				part(0,c+Vector3.UP*h*.54,Vector3(w*.78,h*.92,d*.82),tint)
@@ -65,13 +69,13 @@ func build(parent:Node3D,race:RefCounted)->void:
 				for tier in range(3):
 					var scale_value:=1-tier*.23
 					part(0,c+Vector3.UP*h*(.2+tier*.3),Vector3(w*scale_value,h*.4,d*scale_value),tint)
-					part(2,c+Vector3.UP*h*(.4+tier*.3),Vector3(w*scale_value,1.8,d*scale_value),tint)
+					part(2,c+Vector3.UP*h*(.4+tier*.3),Vector3(w*scale_value-.5,1.8,d*scale_value-.5),tint)
 			3: # octagonal glass tower and inset penthouse
 				part(1,c+Vector3.UP*h*.48,Vector3(w*.92,h*.96,d*.92),tint)
 				part(1,c+Vector3.UP*h*.98,Vector3(w*.55,h*.12,d*.55),tint)
 			4: # stacked offset office volumes
 				for tier in range(3):
-					part(0,c+Vector3(w*(.12 if tier%2==0 else -.12),h*(.22+tier*.28),0),Vector3(w*.72,h*.42,d*.82),tint)
+					part(0,c+Vector3(w*(.12 if tier%2==0 else -.12),h*(.22+tier*.28),0),Vector3(w*.72,h*.42,d*(.82-tier*.04)),tint)
 			5: # broad commercial base and narrow illuminated spire
 				part(0,c+Vector3.UP*h*.23,Vector3(w,h*.46,d),tint)
 				part(0,c+Vector3.UP*h*.65,Vector3(w*.42,h*.7,d*.55),tint)
@@ -81,7 +85,7 @@ func build(parent:Node3D,race:RefCounted)->void:
 				part(0,c+Vector3(w*.21,h*.82,-d*.12),Vector3(w*.48,h*.36,d*.65),tint)
 			7: # L-shaped tower: two wings with a lower cross-wing
 				part(0,c+Vector3(-w*.29,h*.5,0),Vector3(w*.42,h,d),tint)
-				part(0,c+Vector3(w*.2,h*.32,d*.29),Vector3(w*.58,h*.64,d*.42),tint)
+				part(0,c+Vector3(w*.205,h*.32,d*.29),Vector3(w*.57,h*.64,d*.42),tint)
 		build_roof(b)
 		if b.get("landmark",false):
 			# Thin metal mullions and service floors give foreground towers depth.
@@ -130,12 +134,14 @@ func build(parent:Node3D,race:RefCounted)->void:
 
 func animate(time:float)->void:
 	animation_time=time
+	if obstacles: obstacles.moving.clear()
 	for i in range(traffic.instance_count):
 		var route:Dictionary=layout.routes[i/2]
 		var along:=fposmod(time*(58+i%5*9)+i*173,route.length)
 		var position:Vector3=route.start+Vector3.RIGHT*(along if route.direction>0 else route.length-along)
 		var basis:=Basis(Vector3.UP,PI*.5*route.direction)
 		traffic.set_instance_transform(i,Transform3D(basis.scaled(Vector3(4.8,1.6,9)),position))
+		if obstacles: obstacles.moving.append(Transform3D(basis.scaled(Vector3(4.8,2.6,9)),position+Vector3.UP*.5))
 		traffic.set_instance_color(i,Color("829cc0").lerp(Color("c35494"),float(i%5)/5))
 		cabins.set_instance_transform(i,Transform3D(basis.scaled(Vector3(3.4,1.0,4)),position+Vector3.UP*1.1))
 		lamps.set_instance_transform(i,Transform3D(basis.scaled(Vector3(3.8,.35,8)),position-basis.z*7))
@@ -205,7 +211,7 @@ func build_roof(b:Dictionary)->void:
 	if b.kind==2: w*=.54;d*=.54
 	if b.kind==5: w*=.42;d*=.55
 	if b.kind==1: c.x-=w*.255;w*=.36;d*=.72
-	if b.kind==4: c.y-=h*.01;c.x+=w*.12;w*=.72;d*=.82
+	if b.kind==4: c.y-=h*.01;c.x+=w*.12;w*=.72;d*=.74
 	var tint:Color=b.color
 	var top:float=b.roof_height
 	match b.roof:

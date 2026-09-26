@@ -12,8 +12,12 @@ are instanced in spatial chunks. Conservative geometry bounds exclude the
 swept road and flight corridors. The existing loops, tubes, splits and
 difficulty-dependent jumps remain; entering the lake triggers normal recovery.
 
-Daylight, green ambient fill and restrained mist distinguish this world from
-the night city. Shader wind and water ripples use the paused race clock.
+Bright daylight, a blue sky, soft procedural clouds and warm sunlight distinguish
+this world from the night city. A static five-octave cloud shader shares the sky
+and radiance across views, without animated cubemap refreshes. The visible sun
+matches the directional light. Thin blue distance haze replaces volumetric mist;
+subtle contrast and warmer greens preserve foliage detail. Forest HUD text has
+a dark outline for readability against clouds. Shader wind and water ripples use the paused race clock.
 Reflections use existing screen-space reflections and three static probes;
 the forest does not add per-tree lights or rebuild meshes each frame. Split
 screen shortens directional shadow distance; Performance disables these shadows.
@@ -47,3 +51,9 @@ Wall timings include this CPU contention and do not establish a guaranteed
 frame rate. Raw timings, CPU/GPU telemetry, screenshot and background-process
 snapshot are under `C:/dev/ion-rush-captures/lighting/forest-moving-4*`.
 Solo visual reference: `C:/dev/ion-rush-captures/forest/forest-refined.png`.
+
+The subsequent bright-day revision was inspected at 1080p solo and four-player.
+Its final static four-player check (600 samples, High, same hardware, old game
+closed) measured 4.608 ms GPU mean, 4.932 ms GPU p95 and 10.375 ms wall p95.
+This is a different scene from the moving baseline above, not a direct overhead
+comparison. Evidence: `C:/dev/ion-rush-captures/lighting/forest-day-final-4*`.

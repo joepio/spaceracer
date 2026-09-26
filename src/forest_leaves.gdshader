@@ -9,7 +9,7 @@ void vertex(){
     tint=COLOR.rgb;
 }
 void fragment(){
-    ALBEDO=tint*vec3(.12,.28,.14);
+    ALBEDO=tint*vec3(.105,.28,.085);
     ROUGHNESS=.78;
     BACKLIGHT=tint*vec3(.06,.12,.025);
 }

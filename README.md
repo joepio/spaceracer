@@ -33,7 +33,8 @@ scenery within the same game version. Write down the difficulty and world with
 the code; both appear beside the seed in the HUD and results.
 
 **World** switches between the neon **City** and **Forest — Verdant Reach**.
-The forest races over a reflective lake among 260–520 metre trees, branching
+The forest has a bright blue daytime sky, soft procedural clouds and warm sunlight.
+It races over a reflective lake among 260–520 metre trees, branching
 canopies, mossy islands and thousands of ferns. Lower hills bring portions of the
 course nearer the water, while the loops and difficulty-dependent flight gaps
 remain. Foliage and ripples follow the race clock, and hitting the water triggers

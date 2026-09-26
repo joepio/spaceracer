@@ -28,6 +28,8 @@ func _ready() -> void:
 func label(value: String, at: Vector2, size_value: int = 18, color: Color = Color("e1eef6")) -> void:
 	# Rasterize text at output size instead of enlarging small font glyphs.
 	draw_set_transform(Vector2.ZERO)
+	if race and race.track.biome=="forest":
+		draw_string_outline(font,at*draw_scale,value,HORIZONTAL_ALIGNMENT_LEFT,-1,ceili(size_value*draw_scale),maxi(1,ceili(draw_scale)),Color(.015,.035,.055,.75))
 	draw_string(font, at*draw_scale, value, HORIZONTAL_ALIGNMENT_LEFT, -1, ceili(size_value*draw_scale), color)
 	draw_set_transform(Vector2.ZERO,0,Vector2.ONE*draw_scale)
 

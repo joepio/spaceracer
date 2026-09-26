@@ -47,10 +47,10 @@ func build(state: RefCounted) -> void:
 	env.background_mode = Environment.BG_SKY
 	var sky := Sky.new()
 	var sky_material := ShaderMaterial.new()
-	sky_material.shader = load("res://src/sky.gdshader")
+	sky_material.shader = load("res://src/forest_sky.gdshader" if forest else "res://src/sky.gdshader")
 	var top:=Color("060a12")
 	var horizon:=Color("0c121c")
-	if forest: top=Color("263e58");horizon=Color("94aca8")
+	if forest: top=Color("2586d1");horizon=Color("b6e4f7")
 	if advanced_renderer:
 		top=top.srgb_to_linear()
 		horizon=horizon.srgb_to_linear()
@@ -68,11 +68,15 @@ func build(state: RefCounted) -> void:
 	env.fog_density = .00032
 	env.fog_sky_affect = 0.0
 	if forest:
-		env.ambient_light_color=Color("a7c9be")
-		env.ambient_light_energy=.6
-		env.fog_light_color=Color("537e7b")
-		env.fog_light_energy=.7
-		env.fog_density=.00022
+		env.ambient_light_color=Color("d6e9f4")
+		env.ambient_light_energy=.48
+		env.tonemap_exposure=1.
+		env.adjustment_enabled=true
+		env.adjustment_contrast=1.1
+		env.adjustment_saturation=1.08
+		env.fog_light_color=Color("b6dcf0")
+		env.fog_light_energy=1.
+		env.fog_density=.00004
 	if advanced_renderer:
 		env.ssr_enabled=true
 		env.ssr_max_steps=48
@@ -94,9 +98,8 @@ func build(state: RefCounted) -> void:
 		env.volumetric_fog_ambient_inject=.12
 		env.volumetric_fog_temporal_reprojection_amount=.65
 		if forest:
-			env.volumetric_fog_density=.0002
-			env.volumetric_fog_albedo=Color("aac2a3")
-			env.volumetric_fog_length=260.
+			env.volumetric_fog_enabled=false
+			env.glow_intensity=.35
 	environment.environment = env
 	add_child(environment)
 	var night_fill := DirectionalLight3D.new()
@@ -107,9 +110,10 @@ func build(state: RefCounted) -> void:
 	night_fill.shadow_enabled = false
 	if forest:
 		forest_sun=night_fill
-		night_fill.rotation_degrees=Vector3(-29,-65,0)
-		night_fill.light_color=Color("ffe4ad")
-		night_fill.light_energy=1.65
+		night_fill.rotation_degrees=Vector3(-48,-65,0)
+		night_fill.light_color=Color("fff2d9")
+		night_fill.light_energy=2.2
+		sky_material.set_shader_parameter("sun_direction",night_fill.basis.z)
 		night_fill.light_specular=.65
 		night_fill.shadow_enabled=true
 		night_fill.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
@@ -353,7 +357,7 @@ func set_quality(value:float,view_count:int)->void:
 		forest_sun.directional_shadow_max_distance=220. if view_count>1 else 380.
 	if not advanced_renderer: return
 	scene_environment.ssil_enabled=false
-	scene_environment.volumetric_fog_enabled=value>=1.
+	scene_environment.volumetric_fog_enabled=value>=1. and race.track.biome!="forest"
 	scene_environment.ssr_enabled=value>=.8
 	scene_environment.ssr_max_steps=32 if view_count>1 or value<1. else 48
 	scene_environment.ssao_enabled=value>=1.

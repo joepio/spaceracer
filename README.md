@@ -138,8 +138,13 @@ The same difficulty is available as a GameNight **Track difficulty (next race)**
 setting, or `--difficulty=easy|normal|hard` after Godot's `--` argument separator.
 
 The title screen keeps player selection and Race upfront; Controls expands the
-driving reference. The race HUD uses compact corner readouts and a thin energy
-bar. A small route map appears in single-player; split-screen keeps that space clear.
+driving reference. The race HUD projects through a curved, translucent helmet
+visor: luminous corner instruments, a segmented energy arc, subtle optical halos
+and a small flight attitude reference. A radar-style route map appears in
+single-player; split-screen keeps that space clear. Instruments stay at output
+resolution when 3D resolution is reduced. Missile brackets compensate for the
+visor curvature to remain aligned with the targeted ship. The visor hides and
+stops rendering while the shared start/pause menu is open.
 
 | Action | Controller | Keyboard P1 | Keyboard P2 |
 |---|---|---|---|

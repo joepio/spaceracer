@@ -90,6 +90,7 @@ func run()->void:
 		game.update_speed_effects(view,.21)
 		game.running=false
 		viewports.append(view.viewport.get_viewport_rid())
+		if view.has("visor"): viewports.append(view.visor.surface.get_viewport_rid())
 		view.hud.queue_redraw()
 	for rid in viewports: RenderingServer.viewport_set_measure_render_time(rid,true)
 	var env:Environment=game.world.scene_environment

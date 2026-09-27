@@ -1,5 +1,6 @@
 extends Control
 const World = preload("res://src/world.gd")
+const Visor = preload("res://src/visor.gd")
 var race: RefCounted
 var camera:Camera3D
 var player_index := 0
@@ -8,34 +9,19 @@ var avatar_key: String = ""
 var avatar: Texture2D
 var show_map := true
 var draw_scale := 1.0
-var top_fade:GradientTexture2D
-var bottom_fade:GradientTexture2D
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var gradient:=Gradient.new()
-	gradient.offsets=PackedFloat32Array([0,.4,1])
-	gradient.colors=PackedColorArray([Color(.01,.02,.04,.34),Color(.01,.02,.04,.12),Color(.01,.02,.04,0)])
-	top_fade=GradientTexture2D.new()
-	top_fade.gradient=gradient
-	top_fade.width=1
-	top_fade.height=64
-	top_fade.fill_from=Vector2.ZERO
-	top_fade.fill_to=Vector2(0,1)
-	bottom_fade=top_fade.duplicate()
-	bottom_fade.fill_from=Vector2(0,1)
-	bottom_fade.fill_to=Vector2.ZERO
 
 func label(value: String, at: Vector2, size_value: int = 18, color: Color = Color("e1eef6")) -> void:
 	# Rasterize text at output size instead of enlarging small font glyphs.
 	draw_set_transform(Vector2.ZERO)
-	if race:
-		draw_string_outline(font,at*draw_scale,value,HORIZONTAL_ALIGNMENT_LEFT,-1,ceili(size_value*draw_scale),maxi(1,ceili(draw_scale)),Color(.015,.035,.055,.75))
+	color=color.lerp(Color(.42,.88,.96,color.a),.16)
 	draw_string(font, at*draw_scale, value, HORIZONTAL_ALIGNMENT_LEFT, -1, ceili(size_value*draw_scale), color)
 	draw_set_transform(Vector2.ZERO,0,Vector2.ONE*draw_scale)
 
 func _draw() -> void:
-	if race == null or player_index >= race.racers.size(): return
+	if race == null or player_index >= race.racers.size() or size.x<1. or size.y<1.: return
 	var p: Dictionary = race.racers[player_index]
 	draw_scale=minf(size.x/800,size.y/450)
 	draw_set_transform(Vector2.ZERO,0,Vector2.ONE*draw_scale)
@@ -46,30 +32,25 @@ func _draw() -> void:
 		results(w,h,tint)
 		return
 	if p.finished:
-		draw_texture_rect(bottom_fade,Rect2(0,h-64,w,64),false)
+		draw_line(Vector2(24,h-65),Vector2(224,h-65),Color(tint,.30),1.,true)
 		label("WINNER" if p.rank==1 else "FINISHED · %d / %d"%[p.rank,race.racers.size()],Vector2(24,h-38),20,tint)
 		label("%s · %.2fs"%[str(p.get("name","Pilot")).left(18),p.time],Vector2(24,h-18),12)
 		right_label("%05d"%race.track.seed_value,Vector2(w-24,h-18),10)
 		return
-	# Soft edge contrast keeps the road open; no floating instrument panels.
+	visor_frame(w,h,tint,p)
 	draw_missile_targets(w,h)
-	draw_texture_rect(top_fade,Rect2(0,0,w,64),false)
-	draw_texture_rect(bottom_fade,Rect2(0,h-64,w,64),false)
-	portrait(p,Vector2(28,30),10)
-	label(str(p.get("name","Pilot")).left(18),Vector2(47,28),12)
-	label("LAP %d / %d"%[mini(p.lap,race.laps),race.laps],Vector2(47,44),10,Color("98aebb"))
-	right_label(str(p.rank),Vector2(w-47,40),30)
-	right_label("/ %d"%race.racers.size(),Vector2(w-20,38),13,Color("a0b2bf"))
-	right_label("%02d:%05.2f"%[int(race.clock)/60,fmod(race.clock,60)],Vector2(w-20,58),11,Color("a0b2bf"))
-	right_label(str(roundi(p.speed*3.6)),Vector2(w-60,h-35),32)
-	right_label("km/h",Vector2(w-20,h-37),11,Color("a0b2bf"))
+	portrait(p,Vector2(44,43),9)
+	label(str(p.get("name","Pilot")).left(18),Vector2(63,40),12,Color("adf2fa"))
+	label("LAP %d / %d"%[mini(p.lap,race.laps),race.laps],Vector2(63,56),10,Color("79b7c8"))
+	right_label(str(p.rank),Vector2(w-66,49),29,Color("b8f2fa"))
+	right_label("/ %d"%race.racers.size(),Vector2(w-38,47),12,Color("79b7c8"))
+	right_label("%02d:%05.2f"%[int(race.clock)/60,fmod(race.clock,60)],Vector2(w-38,68),10,Color("79b7c8"))
+	right_label(str(roundi(p.speed*3.6)),Vector2(w-73,h-64),31,Color("b8f2fa"))
+	right_label("km/h",Vector2(w-41,h-65),10,Color("79b7c8"))
 	var energy_color:=Color("ff6e84") if p.energy<25 else tint
 	if p.energy_fx>0.: energy_color=energy_color.lerp(Color("ffd369"),minf(1.,p.energy_fx*2.))
-	draw_rect(Rect2(w-176,h-25,156,3),Color(1,1,1,.13))
-	draw_rect(Rect2(w-176,h-25,156*p.energy/100,3),energy_color)
-	if p.energy_fx>0.: label("+%d"%roundi(p.energy_gained),Vector2(w-200,h-23-(.8-p.energy_fx)*10.),11,Color(1.,.83,.41,minf(1.,p.energy_fx*3.)))
-	for i in range(1,5):
-		draw_rect(Rect2(w-176+156*(i*22.0/100),h-25,1,3),Color(.015,.03,.05,.75))
+	energy_arc(Vector2(w-113,h-104),81.,p.energy,energy_color)
+	if p.energy_fx>0.: label("+%d"%roundi(p.energy_gained),Vector2(w-209,h-44-(.8-p.energy_fx)*10.),11,Color(1.,.83,.41,minf(1.,p.energy_fx*3.)))
 	var status:="Boost on lap 2" if p.lap<2 else "Boost ready"
 	if p.boost>0 or p.on_pad: status="Boosting"
 	elif p.energy<=22 and p.lap>1: status="Recharge"
@@ -81,19 +62,21 @@ func _draw() -> void:
 	if p.warp_time>0.: status="Autopilot"
 	if race.can_reset(p):
 		centered("Reset" if OS.has_feature("android") else "Y to reset",w,h*.80,12,Color("ffd08a"))
-	label(status,Vector2(w-176,h-10),9,energy_color if p.lap>1 else Color("8b9eac"))
-	if show_map: minimap(Vector2(61,h-48),44)
+	label(status.to_upper(),Vector2(w-172,h-16),8,energy_color if p.lap>1 else Color("79aabb"))
+	if show_map: minimap(Vector2(76,h-74),38)
 	var item:String=race.Weapons.NAMES.get(p.weapon,"")
 	if p.warp_time>0.: item="WARP  %.1f"%p.warp_time
 	elif p.drone_time>0.: item="SENTRY  %.1f"%p.drone_time
 	elif p.jammer_time>0.: item="JAMMER  %.1f"%p.jammer_time
 	elif not item.is_empty(): item=("" if OS.has_feature("android") else "X · ")+item
 	var item_flash:bool=p.pickup_fx>0. and not p.pickup_energy
-	if not item.is_empty(): centered(item,w,h-25,14 if item_flash else 12,Color("d8ffac") if item_flash else Color("97ffdf"))
+	if not item.is_empty():
+		draw_polyline(PackedVector2Array([Vector2(w*.5-94,h-47),Vector2(w*.5-94,h-30),Vector2(w*.5-85,h-21),Vector2(w*.5+85,h-21),Vector2(w*.5+94,h-30),Vector2(w*.5+94,h-47)]),Color(.3,.85,.88,.35),1.,true)
+		centered(item,w,h-32,14 if item_flash else 12,Color("d8ffac") if item_flash else Color("97ffdf"))
 	if p.evade_notice>0.: centered("EVADED",w,108,12,Color("97ffdf"))
 	if p.emp_time>0.: centered("ENGINE OFF  %.1f"%p.emp_time,w,132,13,Color("a6caff"))
 	elif p.jam_strength>.03: centered("SIGNAL JAMMED",w,132,12,Color("ffc58a"))
-	label("%05d · %s · %s"%[race.track.seed_value,race.track.difficulty.to_upper(),race.track.biome.to_upper()],Vector2(20,h-8),8,Color("98aebb"))
+	label("%05d · %s · %s"%[race.track.seed_value,race.track.difficulty.to_upper(),race.track.biome.to_upper()],Vector2(35,h-15),8,Color("79aabb"))
 	var jump:Dictionary=race.track.jump_at(p.distance,170.)
 	if not jump.is_empty() and not p.airborne and p.recovery==0 and race.countdown==0 and fposmod(p.distance,race.track.length)<jump.takeoff:
 		centered("JUMP %dm · KEEP SPEED"%roundi(jump.takeoff-fposmod(p.distance,race.track.length)),w,83,12,Color("ffc46b"))
@@ -107,8 +90,35 @@ func _draw() -> void:
 		centered("Finished  \u00b7  %d / %d"%[p.rank,race.racers.size()],w,h*.36,22)
 	elif p.lap==2 and race.clock-p.lap_start<2:
 		centered("Boost unlocked",w,84,13,tint)
-	if p.flash>0:
-		draw_rect(Rect2(0,0,w,h),Color(1,.2,.25,p.flash*.5),false,3)
+
+func visor_frame(w:float,h:float,tint:Color,p:Dictionary)->void:
+	var ink:=Color(.25,.73,.85,.34)
+	# Open, contoured brackets suggest the inner visor rim without a cockpit mask.
+	for side in [-1.,1.]:
+		var edge:float=w*.5+side*(w*.5-18.)
+		var inward:float=-side
+		draw_polyline(PackedVector2Array([Vector2(edge+inward*177,16),Vector2(edge+inward*20,16),Vector2(edge,37),Vector2(edge,97),Vector2(edge+inward*8,112)]),ink,1.1,true)
+		draw_polyline(PackedVector2Array([Vector2(edge,h-117),Vector2(edge,h-45),Vector2(edge+inward*28,h-18),Vector2(edge+inward*183,h-18)]),Color(ink,.20),1.,true)
+		for tick in range(7):
+			var y:=h*.5-32.+tick*10.
+			draw_line(Vector2(edge+inward*8,y),Vector2(edge+inward*(15. if tick%3==0 else 11.),y),Color(ink,.24),1.,true)
+	# A small roll reference belongs to the flight mode, not the racing apex.
+	if p.airborne and not p.crashed:
+		var center:=Vector2(w*.5,h*.43)
+		var slope:=clampf(p.air_roll,-.7,.7)
+		for side in [-1.,1.]:
+			var a:=Vector2(side*13,0).rotated(slope)
+			var b:=Vector2(side*31,0).rotated(slope)
+			draw_line(center+a,center+b,Color(tint,.48),1.,true)
+		draw_arc(center,4.,0.,TAU,16,Color(tint,.45),1.,true)
+
+func energy_arc(center:Vector2,radius:float,energy:float,color:Color)->void:
+	for i in range(24):
+		var a:=lerpf(PI*.16,PI*.84,float(i)/24.)
+		var b:=lerpf(PI*.16,PI*.84,float(i+1)/24.)-.009
+		var filled:=float(23-i)<energy*.24
+		draw_arc(center,radius,a,b,4,Color(color,.86) if filled else Color(.3,.65,.73,.16),2.5,true)
+	draw_arc(center,radius+5,PI*.16,PI*.84,40,Color(.3,.75,.83,.24),.8,true)
 
 func draw_missile_targets(w:float,h:float)->void:
 	if not is_instance_valid(camera) or int(race.vfx_clock*4.)%2!=0: return
@@ -135,15 +145,17 @@ func draw_missile_targets(w:float,h:float)->void:
 		var red:=Color(1.,.12,.2,.95)
 		for corner in [low,Vector2(high.x,low.y),high,Vector2(low.x,high.y)]:
 			var inward:=Vector2(1. if corner.x==low.x else -1.,1. if corner.y==low.y else -1.)
-			draw_line(corner,corner+Vector2(inward.x*length,0.),red,1.8,true)
-			draw_line(corner,corner+Vector2(0.,inward.y*length),red,1.8,true)
+			var dimensions:=Vector2(w,h)
+			draw_line(Visor.project_marker(corner,dimensions),Visor.project_marker(corner+Vector2(inward.x*length,0.),dimensions),red,1.8,true)
+			draw_line(Visor.project_marker(corner,dimensions),Visor.project_marker(corner+Vector2(0.,inward.y*length),dimensions),red,1.8,true)
 
 func right_label(value:String,at:Vector2,size_value:int,color:Color=Color("e1eef6"))->void:
 	label(value,at-Vector2(font.get_string_size(value,HORIZONTAL_ALIGNMENT_LEFT,-1,size_value).x,0),size_value,color)
 
 func results(w:float,h:float,tint:Color)->void:
 	var left:=24.
-	draw_rect(Rect2(12,54,294,72+race.racers.size()*28),Color(.01,.02,.04,.65))
+	var bottom:float=126.+race.racers.size()*28.
+	draw_polyline(PackedVector2Array([Vector2(12,95),Vector2(12,65),Vector2(24,53),Vector2(306,53),Vector2(306,bottom-12),Vector2(294,bottom),Vector2(12,bottom)]),Color(.25,.73,.85,.35),1.,true)
 	label("Race complete",Vector2(left,82),22)
 	var row:=112.
 	for item in race.standings():
@@ -159,6 +171,10 @@ func centered(value: String,w:float,y:float,size_value:int,color:Color=Color("db
 	label(value,Vector2((w-font.get_string_size(value,HORIZONTAL_ALIGNMENT_LEFT,-1,size_value).x)/2,y),size_value,color)
 
 func minimap(center:Vector2,radius:float)->void:
+	draw_arc(center,radius+8,PI*.15,PI*1.86,48,Color(.3,.72,.85,.30),1.,true)
+	for i in range(12):
+		var direction:=Vector2.from_angle(i*TAU/12.)
+		draw_line(center+direction*(radius+8),center+direction*(radius+11),Color(.3,.72,.85,.32),1.,true)
 	var points := PackedVector2Array()
 	for i in range(0,race.track.nodes.size(),4):
 		var p:Vector3=race.track.nodes[i].p

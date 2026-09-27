@@ -111,12 +111,14 @@ func run()->void:
 	check(not game.local_paused,"Back ignored")
 	await press(JOY_BUTTON_START)
 	check(game.local_paused and focus_id()=="race" and row("race").text=="Resume","Shared menu opens on Resume")
+	check(game.views.all(func(view):return not view.visor.visible and view.visor.surface.render_target_update_mode==SubViewport.UPDATE_DISABLED),"Pause hides the entire visor and stops instrument rendering")
 	check(row("players")!=null and row("seed")!=null and row("biome")!=null,"Pause exposes the same settings")
 	var clock:float=game.race.vfx_clock
 	for frame in range(8): await process_frame
 	check(game.race.vfx_clock==clock,"Pause freezes effects and simulation")
 	await press(JOY_BUTTON_START)
 	check(game.race==original and game.running,"Unchanged Start resumes current race")
+	check(game.views.all(func(view):return view.visor.visible and view.visor.surface.render_target_update_mode==SubViewport.UPDATE_ALWAYS),"Resume restores the visor projection")
 	await press(JOY_BUTTON_START)
 	row("seed").grab_focus()
 	await press(JOY_BUTTON_DPAD_RIGHT)
@@ -128,6 +130,7 @@ func run()->void:
 	row("graphics").grab_focus()
 	await press(JOY_BUTTON_DPAD_RIGHT)
 	check(game.quality==.6 and row("race").text=="Resume","Graphics adjusts without losing race")
+	check(game.views[0].visor.surface.size.x>game.views[0].viewport.size.x,"Performance keeps instruments sharp at output resolution")
 	if game.world.advanced_renderer:
 		row("lighting").grab_focus()
 		await press(JOY_BUTTON_DPAD_RIGHT)
@@ -139,6 +142,7 @@ func run()->void:
 	await press(JOY_BUTTON_DPAD_RIGHT)
 	await press(JOY_BUTTON_START)
 	check(game.views.size()==2 and game.race!=original and game.race.track.seed_value==421,"Start applies pending player count with same seed")
+	check(game.views[0].visor.surface!=game.views[1].visor.surface,"Each split-screen pilot owns a separate instrument surface")
 	print("MENU_TESTS ",failures," failures")
 	game.queue_free()
 	await process_frame

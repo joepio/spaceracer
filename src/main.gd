@@ -2,6 +2,7 @@ extends Node
 const Race = preload("res://src/race.gd")
 const World = preload("res://src/world.gd")
 const Hud = preload("res://src/hud.gd")
+const Visor = preload("res://src/visor.gd")
 const SpeedEffects = preload("res://src/speed_effects.gd")
 const Bridge = preload("res://src/bridge.gd")
 const KEYS = [
@@ -224,9 +225,12 @@ func new_race() -> void:
 		hud.race = race
 		hud.player_index = index
 		hud.show_map = indices.size() == 1
-		hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		holder.add_child(hud)
-		views.append({"holder":holder,"viewport":viewport,"camera":camera,"hud":hud,"index":index,"blur":blur,"speed_effects":speed_effects})
+		hud.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		var visor:=Visor.new()
+		visor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		holder.add_child(visor)
+		visor.setup(hud)
+		views.append({"holder":holder,"viewport":viewport,"camera":camera,"hud":hud,"visor":visor,"index":index,"blur":blur,"speed_effects":speed_effects})
 		world.update_camera(camera,index,0,true)
 	layout_views()
 
@@ -245,6 +249,8 @@ func layout_views() -> void:
 		var mobile_width:=1280. if quality<.8 else (1600. if quality<1. else 1920.)
 		var render_scale:=minf(1.,mobile_width/output_pixels.x) if mobile_mode else quality
 		views[i].viewport.size = Vector2i((cell/dimensions)*output_pixels*render_scale)
+		# Instruments retain output resolution even when 3D uses Performance scaling.
+		views[i].visor.set_resolution(Vector2i((cell/dimensions)*output_pixels))
 		configure_viewport_aa(views[i].viewport,quality)
 		views[i].viewport.positional_shadow_atlas_size=(2048 if count==1 and quality>=1. else 1024) if quality>=.8 else 0
 

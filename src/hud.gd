@@ -62,9 +62,7 @@ func _draw() -> void:
 	elif p.trim<-.2: status="Low grip"
 	if p.warp_time>0.: status="Autopilot"
 	if race.can_reset(p):
-		var reset_notice:="Reset" if OS.has_feature("android") else "Y to reset"
-		if p.checkpoint_missed: reset_notice="CHECKPOINT MISSED · "+("TAP RESET" if OS.has_feature("android") else "Y TO RETURN")
-		centered(reset_notice,w,h*.80,12,Color("ffd08a"))
+		reset_prompt(w,h*.80,p.checkpoint_missed)
 	elif p.checkpoint_flash>0.:
 		centered("CHECKPOINT",w,h*.25,10,Color(.65,1.,.9,p.checkpoint_flash/.7))
 	label(status.to_upper(),Vector2(w-172,h-16),8,energy_color if p.lap>1 else Color("79aabb"))
@@ -174,6 +172,25 @@ func results(w:float,h:float,tint:Color)->void:
 
 func centered(value: String,w:float,y:float,size_value:int,color:Color=Color("dbe7f1"))->void:
 	label(value,Vector2((w-font.get_string_size(value,HORIZONTAL_ALIGNMENT_LEFT,-1,size_value).x)/2,y),size_value,color)
+
+func reset_prompt(w:float,y:float,missed:bool)->void:
+	var color:=Color("ffd08a")
+	if OS.has_feature("android"):
+		centered("CHECKPOINT MISSED · TAP RESET" if missed else "Reset",w,y,12,color)
+		return
+	var prefix:="CHECKPOINT MISSED · " if missed else ""
+	var action:="TO RETURN" if missed else "TO RESET"
+	var prefix_width:=font.get_string_size(prefix,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x
+	var action_width:=font.get_string_size(action,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x
+	var left:=(w-prefix_width-28.-action_width)*.5
+	label(prefix,Vector2(left,y),12,color)
+	var center:=Vector2(left+prefix_width+10.,y-4.5)
+	var button_color:=Color("ffdb64")
+	draw_circle(center,10.,Color(button_color,.12))
+	draw_arc(center,10.,0.,TAU,48,button_color,1.5,true)
+	var glyph_width:=font.get_string_size("Y",HORIZONTAL_ALIGNMENT_LEFT,-1,12).x
+	label("Y",Vector2(center.x-glyph_width*.5,y),12,button_color)
+	label(action,Vector2(left+prefix_width+28.,y),12,color)
 
 func minimap(center:Vector2,radius:float)->void:
 	draw_arc(center,radius+8,PI*.15,PI*1.86,48,Color(.3,.72,.85,.30),1.,true)

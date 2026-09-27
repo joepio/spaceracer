@@ -104,7 +104,7 @@ func configure(state:RefCounted)->void:
 		var waves:Array=[]
 		for j in range(3):
 			var wave_mat:=ShaderMaterial.new();wave_mat.shader=load("res://src/jammer_wave.gdshader")
-			waves.append(mesh(self,ring(.993,1.),wave_mat))
+			waves.append(mesh(self,ring(.972,1.),wave_mat))
 		radio_waves.append(waves)
 		var pulse_mat:=ShaderMaterial.new();pulse_mat.shader=load("res://src/emp.gdshader")
 		var pulse_shape:=sphere(1.);pulse_shape.radial_segments=64;pulse_shape.rings=32
@@ -183,14 +183,20 @@ func make_missile()->Node3D:
 	var band:=mesh(root,cylinder(1.28,.5),flame,Vector3(0,0,2.8));band.rotation.x=PI*.5
 	for angle in [0.,PI*.5]:
 		var fin:=mesh(root,box(Vector3(5.8,.2,2.5)),steel,Vector3(0,0,-2.7));fin.rotation.z=angle
-	mesh(root,sphere(.9),material(Color("fff5c9"),4.),Vector3(0,0,-4.))
+	var engine:=Node3D.new();root.add_child(engine);root.set_meta("engine",engine)
+	mesh(engine,sphere(.9),material(Color("fff5c9"),4.),Vector3(0,0,-4.))
 	for angle in [0.,PI*.5]:
 		var ribbon:=QuadMesh.new();ribbon.size=Vector2(3.,10.)
-		var plume:=mesh(root,ribbon,bump_material,Vector3(0,0,-9.))
+		var plume:=mesh(engine,ribbon,bump_material,Vector3(0,0,-9.))
 		plume.basis=Basis(Vector3.BACK,angle)*Basis(Vector3.RIGHT,PI*.5)
-	var beam_material:StandardMaterial3D=laser_material.duplicate()
-	beam_material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
-	var beam:=mesh(self,cylinder(1.,1.),beam_material);root.set_meta("laser",beam)
+	var beam_material:=ShaderMaterial.new();beam_material.shader=load("res://src/missile_laser.gdshader")
+	var beam:=mesh(self,QuadMesh.new(),beam_material);root.set_meta("laser",beam)
+	var contact_material:=ShaderMaterial.new();contact_material.shader=load("res://src/missile_contact.gdshader")
+	var contact_quad:=QuadMesh.new();contact_quad.size=Vector2.ONE*2.2
+	root.set_meta("contact",mesh(self,contact_quad,contact_material))
+	var contact_light:=OmniLight3D.new();contact_light.omni_range=4.;contact_light.shadow_enabled=false
+	contact_light.light_color=Color("fff4ed");contact_light.light_bake_mode=Light3D.BAKE_DISABLED
+	add_child(contact_light);root.set_meta("contact_light",contact_light)
 	return root
 
 func puff(position_value:Vector3,radius:float,opacity:float,heat:float,seed_value:float)->void:
@@ -231,10 +237,12 @@ func update()->void:
 		pickup_bases[i].scale=Vector3.ONE*maxf(.001,reveal)
 	var active:Dictionary={}
 	for m in race.weapons.missiles:
-		for j in range(m.trail.size()): puff(m.trail[j],1.4+j*.22,(1.-j/16.)*.45,0.,j*1.37)
+		var tail_fade:float=clampf(m.fade/1.1,0.,1.) if m.get("disabled",false) else 1.
+		for j in range(m.trail.size()): puff(m.trail[j],1.4+j*.22,(1.-j/16.)*.45*tail_fade,0.,j*1.37)
 		active[m.id]=true
 		if not missile_nodes.has(m.id): missile_nodes[m.id]=make_missile()
 		var node:Node3D=missile_nodes[m.id]
+		node.get_meta("engine").visible=not m.get("disabled",false)
 		node.position=m.position
 		if m.velocity.length_squared()>.01:
 			var forward:Vector3=m.velocity.normalized()
@@ -244,15 +252,30 @@ func update()->void:
 		var beam:MeshInstance3D=node.get_meta("laser")
 		var warning:=1.-clampf(Weapons.missile_eta(race,m)/2.,0.,1.)
 		beam.visible=warning>0.
+		var contact:MeshInstance3D=node.get_meta("contact")
+		var contact_light:OmniLight3D=node.get_meta("contact_light")
+		contact.visible=beam.visible;contact_light.visible=beam.visible
 		if warning>0.:
 			var intensity:=smoothstep(0.,1.,warning)
-			var beam_material:StandardMaterial3D=beam.material_override
-			beam_material.albedo_color=Color(1.,.08,.16,intensity)
-			beam_material.emission_energy_multiplier=.2+intensity*6.
-			line(beam,m.position,Weapons.pose(race,race.racers[m.target]).origin,lerpf(.025,.11,intensity))
+			var target_frame:=Weapons.pose(race,race.racers[m.target])
+			# Contact sits on the exposed canopy instead of inside the hull.
+			var destination:=target_frame*Vector3(0.,1.45,-.6)
+			contact.position=destination
+			contact.material_override.set_shader_parameter("strength",intensity)
+			contact_light.position=destination+target_frame.basis.y*.3
+			contact_light.light_energy=intensity*2.5
+			var beam_material:ShaderMaterial=beam.material_override
+			beam_material.set_shader_parameter("strength",intensity)
+			beam_material.set_shader_parameter("beam_radius",lerpf(.012,.03,intensity))
+			beam_material.set_shader_parameter("head_world",m.position)
+			beam_material.set_shader_parameter("tail_world",destination)
+			# Vertex shader faces each camera; CPU bounds still span the real segment.
+			beam.custom_aabb=AABB(m.position,Vector3.ZERO).expand(destination).grow(1.)
 	for id in missile_nodes.keys():
 		if active.has(id): continue
 		missile_nodes[id].get_meta("laser").queue_free()
+		missile_nodes[id].get_meta("contact").queue_free()
+		missile_nodes[id].get_meta("contact_light").queue_free()
 		missile_nodes[id].queue_free();missile_nodes.erase(id)
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
@@ -284,7 +307,10 @@ func update()->void:
 			var ahead:=5.+phase*Weapons.JAMMER_RANGE
 			var radius:=ahead*tan(deg_to_rad(Weapons.JAMMER_HALF_ANGLE))
 			wave.transform=frame*Transform3D(Basis(Vector3.RIGHT,PI*.5).scaled(Vector3.ONE*radius),Vector3(0,0,ahead))
-			wave.material_override.set_shader_parameter("power",(1.-phase)*p.jammer_deploy)
+			var envelope:=smoothstep(0.,.10,phase)*pow(1.-phase,2.2)*smoothstep(0.,1.,p.jammer_time)
+			wave.material_override.set_shader_parameter("power",envelope*p.jammer_deploy)
+			wave.material_override.set_shader_parameter("phase",phase)
+			wave.material_override.set_shader_parameter("race_time",time)
 		var arcs:=emp_arcs[i]
 		arcs.visible=p.emp_time>0. and not p.crashed
 		arcs.transform=frame.scaled_local(Vector3(5.3,2.3,5.8))

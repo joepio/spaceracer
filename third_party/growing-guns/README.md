@@ -1,8 +1,9 @@
-# Growing Guns explosion port
+# Growing Guns effects adaptations
 
 Source: https://github.com/ontola/growing-guns
 Pinned revision: `68cd40fc080acf6b5016fa8fd49b909816bc3099` (verified against HEAD).
 Upstream file: `scripts/violence.gd`.
+Laser source: `shaders/laser_tracer.gdshader` at the same pinned revision.
 
 Ported at the repository owner's request for reuse of their Growing Guns effects.
 The upstream checkout has no standalone license file; this notice records the
@@ -22,3 +23,10 @@ Ion Rush uses reusable bounded layers, deterministic cosmetic seeds, and explici
 race-clock animation in place of upstream tweens, autoloads and spawn queues.
 Existing ship wreck physics, combat damage, missile trails and sound settings are
 preserved. No Growing Guns game content or audio samples are included.
+
+`src/missile_laser.gdshader` adapts the laser's exponential radial falloff and
+longitudinal taper. Ion Rush uses a camera-facing ribbon per view, UV-space
+cross-section and faint red scattering. A separate white contact glow and local
+light concentrate brightness on the target hull. Brightness follows the existing
+two-second warning timer. HDR radiance is supplied through ALBEDO for Godot's
+unshaded pass; the original solid cylinder has been removed.

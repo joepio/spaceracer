@@ -108,13 +108,14 @@ func activate(race:RefCounted,index:int)->bool:
 			serial+=1
 			pulses.append({"id":serial,"owner":index,"frame":pose(race,p),"age":0.,"radius":0.,"hit":{}})
 		"missile":
+			if p.emp_time>0.: return false
 			var leader:Dictionary=race.standings()[0]
 			if leader==p or not available(leader) or leader.warp_time>0.: return false
 			if missiles.any(func(m):return m.owner==index): return false
 			serial+=1
 			var frame:=pose(race,p)
 			missiles.append({"id":serial,"owner":index,"target":race.racers.find(leader),"distance":p.distance,
-				"position":frame.origin+frame.basis.y*9.,"velocity":frame.basis.z*MISSILE_SPEED,"x":p.x,"age":0.,"terminal":-1.,"evaded":false,"fade":.7,"trail":[],"trail_time":0.})
+				"position":frame.origin+frame.basis.y*9.,"velocity":frame.basis.z*MISSILE_SPEED,"x":p.x,"age":0.,"terminal":-1.,"evaded":false,"disabled":false,"fade":.7,"trail":[],"trail_time":0.})
 		"warp":
 			if p.airborne or p.emp_time>0.: return false
 			p.warp_time=WARP_DURATION;p.warp_age=0.;p.boost=0.;p.slide=0.;p.slip=0.;p.heading=0.
@@ -164,6 +165,7 @@ func jam_inputs(race:RefCounted,inputs:Array)->Array:
 
 func step_emp(race:RefCounted,dt:float)->void:
 	for pulse in pulses.duplicate():
+		pulse.active=pulse.age<=EMP_EXPAND
 		pulse.age+=dt
 		pulse.radius=EMP_RADIUS*minf(1.,pulse.age/EMP_EXPAND)
 		if pulse.age<=EMP_EXPAND+dt:
@@ -180,6 +182,19 @@ func step_emp(race:RefCounted,dt:float)->void:
 				p.warp_time=0.;p.boost=0.;p.on_pad=false
 				p.engine_power=0.;p.thrust=0.;p.acceleration=0.;p.input_throttle=0.;p.brake_vfx=0.
 		if pulse.age>1.05: pulses.erase(pulse)
+	for missile in missiles:
+		intercept_missile(missile,missile.position,missile.position)
+
+func intercept_missile(missile:Dictionary,from:Vector3,to:Vector3)->bool:
+	if missile.get("disabled",false): return true
+	for pulse in pulses:
+		# Only the active wave disables missiles; the lingering visual is harmless.
+		if not pulse.get("active",pulse.age<=EMP_EXPAND): continue
+		var nearest:=Geometry3D.get_closest_point_to_segment(pulse.frame.origin,from,to)
+		if nearest.distance_squared_to(pulse.frame.origin)>pulse.radius*pulse.radius: continue
+		missile.disabled=true;missile.evaded=true;missile.fade=1.1
+		return true
+	return false
 
 func step_warp(race:RefCounted,p:Dictionary,dt:float)->void:
 	var before:=pose(race,p)
@@ -336,6 +351,11 @@ func step_missile(race:RefCounted,m:Dictionary,dt:float)->void:
 	m.age+=dt
 	if not available(target) or target.warp_time>0. or not available(race.racers[m.owner]) or m.age>90.:
 		missiles.erase(m);return
+	if m.get("disabled",false):
+		# Dead electronics and motor: retain momentum, fall, and never detonate.
+		m.velocity+=Vector3.DOWN*24.*dt;m.position+=m.velocity*dt;m.fade-=dt
+		if m.fade<=0.: missiles.erase(m)
+		return
 	m.trail_time+=dt
 	if m.trail_time>=.05:
 		m.trail_time=fmod(m.trail_time,.05);m.trail.push_front(m.position)
@@ -370,8 +390,10 @@ func step_missile(race:RefCounted,m:Dictionary,dt:float)->void:
 			m.evaded=true;target.evade_notice=1.2
 			return
 		m.position+=direction*minf(MISSILE_SPEED*dt,distance)
+		if intercept_missile(m,previous,m.position): return
 		if distance<=MISSILE_SPEED*dt+4.:
 			damage(race,target,38.,.66)
 			bursts.append({"id":m.id,"position":destination,"life":MISSILE_BLAST_LIFE})
 			missiles.erase(m)
 	m.velocity=(m.position-previous)/maxf(dt,.001)
+	intercept_missile(m,previous,m.position)

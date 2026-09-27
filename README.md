@@ -193,6 +193,8 @@ Use buttons, timers and effects pause with the race; crashes discard items.
   including banks, loops and jump routes. It locks onto the leader at launch,
   marking the plane with four blinking red corners. The targeting laser appears
   only in the estimated final two seconds and grows brighter toward impact.
+  The airborne beam is thin and translucent; a bright white contact spot lights
+  the targeted hull, visible from every player's camera.
   A hit deals 38 shield damage and a speed hit. A fresh
   high-G turn in the last 230 ms breaks the lock. Brake hard and steer sharply on
   the road, or make a sharp flying manoeuvre. Early held turns do not automatically
@@ -216,13 +218,16 @@ Use buttons, timers and effects pause with the race; crashes discard items.
   boost and ground strafe. Warp is interrupted too, including a smooth
   transition into flight above gaps. Engines restart automatically; brief reboot
   and respawn protection prevent repeated shutdowns. No direct shield damage.
+  The affected helmet HUD goes dark too, then fades back in as systems recover.
+  Cruise missiles caught in the expanding pulse lose guidance and propulsion,
+  coast harmlessly, and disappear. Missile launches are blocked during shutdown.
 - **Jammer:** deploys an exterior satellite dish for six seconds. A 56-degree
   forward cone reaches 260 metres; rivals inside get signal tearing, static and
   bounded random steering/strafe/pitch input. Interference is strongest nearby
   and on-axis, fading with distance and at the cone edge. Escaping the cone clears
   it. Buttons, throttle and brake remain under player control. EMP silences the
-  transmitter; warp and fresh respawn protection resist it. Amber wavefronts show
-  the dish's transmission direction.
+  transmitter; warp and fresh respawn protection resist it. Subtle broken copper
+  and cyan traces show transmission, fading with travel and at the end of use.
 
 Touchdowns mildly damage shields according to descent speed, attitude
 against the deck and sideways slip. Small imperfections are free; a typical rough

@@ -72,6 +72,30 @@ func run()->void:
 	check(race.weapons.pulses.is_empty(),"Countdown cannot prefire EMP")
 	race.step(.01,[{},{},{},{}]);race.step(.01,[{"fire":true},{},{},{}])
 	check(race.weapons.pulses.size()==1,"Fresh X press activates through race input")
+	# EMP intercepts live ordnance, including fast segments through the sphere.
+	race=fresh();race.racers[2].weapon="missile"
+	check(race.weapons.activate(race,2),"Missile fixture launches")
+	var missile:Dictionary=race.weapons.missiles[0]
+	var center:Vector3=race.weapons.pose(race,race.racers[0]).origin
+	missile.position=center+Vector3.UP*40.
+	race.weapons.activate(race,0);race.weapons.step_emp(race,.2)
+	check(missile.disabled and is_inf(race.Weapons.missile_eta(race,missile)),"EMP disables missile guidance and warning")
+	var velocity:Vector3=missile.velocity
+	race.weapons.step_missile(race,missile,.1)
+	check(missile.velocity.y<velocity.y and race.weapons.bursts.is_empty(),"Disabled missile falls harmlessly without an explosion")
+	for tick in range(12): race.weapons.step_missile(race,missile,.1)
+	check(race.weapons.missiles.is_empty(),"Disabled missiles are cleaned up")
+	race.racers[1].weapon="missile";race.racers[1].emp_time=1.
+	check(not race.weapons.activate(race,1) and race.racers[1].weapon=="missile","Shutdown blocks launch without consuming inventory")
+	var far:Dictionary={"disabled":false}
+	check(not race.weapons.intercept_missile(far,center+Vector3.UP*300.,center+Vector3.UP*400.),"Distant missiles remain live")
+	var crossing:Dictionary={"disabled":false}
+	check(race.weapons.intercept_missile(crossing,center-Vector3.RIGHT*300.,center+Vector3.RIGHT*300.),"Fast swept missile cannot tunnel through EMP")
+	race.weapons.step_emp(race,.5)
+	var edge:Dictionary={"disabled":false}
+	check(race.weapons.intercept_missile(edge,center+Vector3.UP*219.,center+Vector3.UP*219.),"Last expansion step reaches full radius")
+	race.weapons.step_emp(race,.1)
+	check(not race.weapons.intercept_missile({"disabled":false},center,center),"Lingering pulse visual cannot intercept new missiles")
 	var rolls:=0
 	for i in range(6000):
 		if race.weapons.choose(3,6)=="emp": rolls+=1

@@ -15,6 +15,13 @@ less edge shading during replay. Interactive start/pause controls retain their
 normal hit targets; hiding the HUD also hides the compositor and disables its
 instrument viewport until resumed.
 
+EMP immediately blanks the affected player's instrument projection and suspends
+its 2D viewport updates. The faint physical glass remains. The emitter's visor
+stays powered; affected instruments fade back over 0.2 seconds after the existing
+2.2-second engine shutdown. A three-view native test verifies blackout, emitter
+immunity, update suspension and reboot. The instrument texture is explicitly
+bound as a sampler uniform so both headless and native shader compilation work.
+
 Native validation covered City, Forest and Cell, three-player Forest readability,
 two-player missile tracking (9 checks), controller menu navigation/pause/resume
 and graphics scaling (0 failures), and victory/results rendering (32 checks).

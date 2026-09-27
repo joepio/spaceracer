@@ -4,6 +4,8 @@ const CURVATURE:=.16
 var surface:SubViewport
 var projection:ShaderMaterial
 var hud:Control
+var systems_online:=true
+var brightness:=1.0
 
 func setup(instruments:Control)->void:
 	hud=instruments
@@ -21,6 +23,7 @@ func setup(instruments:Control)->void:
 	glass.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	projection=ShaderMaterial.new()
 	projection.shader=load("res://src/visor.gdshader")
+	projection.set_shader_parameter("instruments",surface.get_texture())
 	projection.set_shader_parameter("curvature",CURVATURE)
 	glass.material=projection
 	add_child(glass)
@@ -35,11 +38,17 @@ func set_resolution(pixels:Vector2i)->void:
 
 func sync_visibility()->void:
 	visible=hud.visible
-	surface.render_target_update_mode=SubViewport.UPDATE_ALWAYS if visible else SubViewport.UPDATE_DISABLED
+	surface.render_target_update_mode=SubViewport.UPDATE_ALWAYS if visible and systems_online else SubViewport.UPDATE_DISABLED
 
-func _process(_dt:float)->void:
+func _process(dt:float)->void:
 	if not is_instance_valid(hud) or hud.race==null: return
 	var p:Dictionary=hud.race.racers[hud.player_index]
+	var powered:bool=p.emp_time<=0.
+	if systems_online!=powered:
+		systems_online=powered
+		sync_visibility()
+	brightness=move_toward(brightness,1.,dt*5.) if powered else 0.
+	projection.set_shader_parameter("online",brightness)
 	projection.set_shader_parameter("damage",clampf(p.flash,0.,1.))
 	projection.set_shader_parameter("quiet",p.finished or hud.race.over)
 

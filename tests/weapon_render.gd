@@ -101,6 +101,13 @@ func run()->void:
 			gpu.append(sum_gpu);cpu.append(sum_cpu);frames.append((now-last)/1000.)
 		last=now
 	await RenderingServer.frame_post_draw
+	if "--emp-showcase" in OS.get_cmdline_user_args():
+		for view in game.views:
+			var powered:bool=race.racers[view.index].emp_time<=0.
+			assert(view.visor.systems_online==powered)
+			assert(is_equal_approx(view.visor.projection.get_shader_parameter("online"),1. if powered else 0.))
+			assert(view.visor.surface.render_target_update_mode==(SubViewport.UPDATE_ALWAYS if powered else SubViewport.UPDATE_DISABLED))
+		print("EMP_VISOR blackout and emitter immunity verified")
 	if "--pickup-showcase" in OS.get_cmdline_user_args():
 		var respawn:bool="--pickup-respawn" in OS.get_cmdline_user_args()
 		assert(game.world.weapon_vfx.pickup_bases[1].visible==respawn)
@@ -125,6 +132,14 @@ func run()->void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--output="): output=arg.trim_prefix("--output=")
 	root.get_texture().get_image().save_png(output)
+	if "--emp-showcase" in OS.get_cmdline_user_args():
+		for p in race.racers: p.emp_time=0.
+		for view in game.views:
+			view.visor._process(.1)
+			assert(view.visor.brightness>0. and view.visor.brightness<=1.)
+			view.visor._process(.2)
+			assert(view.visor.systems_online and view.visor.brightness==1.)
+		print("EMP_VISOR reboot verified")
 	print("WEAPON_RENDER views=",game.views.size()," draws=",Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)," primitives=",Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))
 	gpu.sort();cpu.sort();frames.sort()
 	print("WEAPON_BENCH ",JSON.stringify({"gpu_ms":gpu[90],"cpu_ms":cpu[90],"median_ms":frames[90],"p95_ms":frames[171],"viewport_size":str(game.views[0].viewport.size)}))

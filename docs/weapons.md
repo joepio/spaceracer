@@ -1,5 +1,22 @@
 # Pickup weapons
 
+Electronic warfare visual update: the jammer emits broken, translucent copper
+and cyan filaments. Each fades as it travels, with a final one-second fade as the
+transmitter expires. Cruise lasers use a thin, faint red beam in the air and a
+bright white contact spot with local hull lighting, adapting Growing Guns' radial
+falloff; the last-two-seconds timing is unchanged.
+
+EMP also blanks affected helmet instruments for the engine shutdown duration,
+then fades them back in over 0.2 seconds. All cruise missiles inside the active
+wave, including the emitter's own, lose propulsion and guidance. Their exhaust,
+laser and target brackets disappear; they fall harmlessly and expire after 1.1
+seconds. Swept collision catches fast missiles crossing the sphere before damage.
+Shutdown prevents launching a carried missile without consuming it.
+
+Validation: 31 EMP checks, 9,764 missile checks, 27 jammer checks and 15 native
+missile-warning checks passed. Three-player native captures verified individual
+visor blackout/reboot, emitter immunity, and the revised jammer appearance.
+
 Pickups use deterministic seed-based rolls and one carried item per racer. One
 in three of the original stations remains, with three lanes at each. Collecting
 a lane hides it globally for two seconds; other lanes stay available. A 450 ms

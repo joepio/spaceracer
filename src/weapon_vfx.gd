@@ -243,9 +243,19 @@ func make_missile()->Node3D:
 	root.scale=Vector3.ONE*.62
 	var engine:=Node3D.new();root.add_child(engine);root.set_meta("engine",engine)
 	engine.position.z=-4.2
-	mesh(engine,sphere(.9),material(Color("fff5c9"),4.))
-	var light:=OmniLight3D.new();light.light_color=Color("ffb460");light.omni_range=18.
-	light.shadow_enabled=false;light.light_bake_mode=Light3D.BAKE_DISABLED;light.position.z=-3.
+	mesh(engine,sphere(.9),material(Color("fff5dc"),12.))
+	var glow_material:=ShaderMaterial.new();glow_material.shader=load("res://src/engine_glow.gdshader")
+	glow_material.set_shader_parameter("jet_tint",Vector3(1.,.43,.10))
+	var glow_quad:=QuadMesh.new();glow_quad.size=Vector2.ONE*5.
+	mesh(engine,glow_quad,glow_material,Vector3(0,0,-.3));root.set_meta("motor_glow",glow_material)
+	var flare_material:=ShaderMaterial.new();flare_material.shader=load("res://src/jet_flare.gdshader")
+	flare_material.set_shader_parameter("jet_tint",Vector3(1.,.43,.10));flare_material.set_shader_parameter("boost_amount",1.)
+	flare_material.render_priority=2
+	var flare_quad:=QuadMesh.new();flare_quad.size=Vector2(16.,4.8)
+	var flare:=mesh(engine,flare_quad,flare_material,Vector3(0,0,-.5))
+	flare.custom_aabb=AABB(Vector3.ONE*-9.,Vector3.ONE*18.);root.set_meta("motor_flare",flare_material)
+	var light:=OmniLight3D.new();light.light_color=Color("ffb460");light.omni_range=32.
+	light.shadow_enabled=false;light.light_bake_mode=Light3D.BAKE_DISABLED;light.position.z=-4.4
 	root.add_child(light);root.set_meta("motor_light",light)
 	for angle in [0.,PI*.5]:
 		var ribbon:=QuadMesh.new();ribbon.size=Vector2(3.,10.)
@@ -305,9 +315,12 @@ func update()->void:
 		if not missile_nodes.has(m.id): missile_nodes[m.id]=make_missile()
 		var node:Node3D=missile_nodes[m.id]
 		var ignition:=smoothstep(.18,.65,m.age)
+		var motor_power:float=ignition*(.95+.05*sin(time*71.+m.id)) if not m.get("disabled",false) else 0.
 		node.get_meta("engine").visible=not m.get("disabled",false) and ignition>.01
 		node.get_meta("engine").scale=Vector3(lerpf(.4,1.,ignition),lerpf(.4,1.,ignition),lerpf(.35,1.,ignition))
-		node.get_meta("motor_light").light_energy=ignition*3. if not m.get("disabled",false) else 0.
+		node.get_meta("motor_light").light_energy=motor_power*8.
+		node.get_meta("motor_glow").set_shader_parameter("power",motor_power*4.)
+		node.get_meta("motor_flare").set_shader_parameter("power",motor_power*2.2)
 		node.position=m.position
 		if m.velocity.length_squared()>.01:
 			var forward:Vector3=m.velocity.normalized()

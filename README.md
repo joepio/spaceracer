@@ -225,14 +225,20 @@ compact jammer dish that extends when used. Separate mounting points keep an
 active sentry or jammer clear of newly collected equipment.
 
 - **Cruise missile:** a large finned rocket lifts off its mounting rail, inherits
-  the craft's motion, then ignites with a growing exhaust plume and warm light.
+  the craft's motion, then ignites with a growing exhaust plume, white-hot core,
+  warm lens streak and stronger dynamic light. The flare is depth-occluded and
+  faces each split-screen camera independently; EMP cuts all motor effects.
   It accelerates into track-following cruise over roughly one second at **1,500 km/h**,
   including banks, loops and jump routes. It locks onto the leader at launch,
   marking the plane with four blinking red corners. The targeting laser appears
   only in the estimated final two seconds and grows brighter toward impact.
   The airborne beam is thin and translucent; a bright white contact spot lights
   the targeted hull, visible from every player's camera.
-  A hit deals 38 shield damage and a speed hit. A fresh
+  A direct hit deals 38 shield damage and a speed hit. Its **32-metre blast radius**
+  also damages nearby opponents (up to 26, falling off with distance), throws them
+  sideways and briefly breaks road grip. Nearby airborne craft get a radial
+  velocity kick. The shooter is immune; warp/recovery protection also prevents
+  knockback. Direct victims are not charged a second splash hit. A fresh
   high-G turn in the last 230 ms breaks the lock. Brake hard and steer sharply on
   the road, or make a sharp flying manoeuvre. Early held turns do not automatically
   evade. A successful dodge sends the missile past; consecutive heavy hits get a

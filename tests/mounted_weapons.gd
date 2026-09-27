@@ -51,6 +51,14 @@ func run()->void:
 	p.drone_time=0.;p.weapon="drone";vfx.update();var stowed_basis:=head.basis
 	race.vfx_clock+=1.;vfx.update()
 	check(head.basis.is_equal_approx(stowed_basis) and led.material_override.emission_energy_multiplier==0.,"Held pickup stays stowed with LED off")
+	p.weapon="missile";race.weapons.activate(race,1)
+	var rocket:Dictionary=race.weapons.missiles[0];rocket.age=.15;vfx.update()
+	var motor:Node3D=vfx.missile_nodes[rocket.id]
+	check(not motor.get_meta("engine").visible and motor.get_meta("motor_light").light_energy==0.,"Rack ejection precedes motor ignition")
+	rocket.age=.7;vfx.update()
+	check(motor.get_meta("engine").visible and motor.get_meta("motor_flare").get_shader_parameter("power")>1. and motor.get_meta("motor_light").light_energy>7.,"Ignited missile powers flare, core and nearby lighting")
+	rocket.disabled=true;vfx.update()
+	check(not motor.get_meta("engine").visible and motor.get_meta("motor_light").light_energy==0. and motor.get_meta("motor_flare").get_shader_parameter("power")==0.,"EMP extinguishes the complete rocket engine effect")
 	p.crashed=true;vfx.update()
 	check(not vfx.turrets[1].visible and not vfx.dishes[1].visible and vfx.mounts[1].values().all(func(n):return not n.visible),"Crash hides mounted weapons")
 	vfx.queue_free();await process_frame

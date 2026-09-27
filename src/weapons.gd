@@ -18,6 +18,7 @@ const MISSILE_MOUNT:=Vector3(2.45,1.25,-.5)
 const SENTRY_MOUNT:=Vector3(0.,1.05,-1.9)
 const SENTRY_PIVOT:=Vector3(0.,.8,0.)
 const MISSILE_BLAST_LIFE:=2.4
+const MISSILE_BLAST_RADIUS:=32.
 var pulses:Array[Dictionary]=[]
 var pickups:Array[Dictionary]=[]
 var batteries:Array[Dictionary]=[]
@@ -306,6 +307,36 @@ static func drone_position(race:RefCounted,p:Dictionary)->Vector3:
 	# The legacy inventory key remains "drone"; the sentry is now hull-mounted.
 	return pose(race,p)*(SENTRY_MOUNT+SENTRY_PIVOT)
 
+func detonate_missile(race:RefCounted,m:Dictionary,center:Vector3,approach:Vector3)->void:
+	if not missiles.has(m) or m.get("disabled",false): return
+	# A single world-space sphere, so nearby airborne craft are affected too.
+	# The direct victim receives one full hit, never a second splash hit.
+	for i in range(race.racers.size()):
+		if i==m.owner: continue
+		var p:Dictionary=race.racers[i]
+		var offset:Vector3=pose(race,p).origin-center
+		var direct:bool=i==m.target
+		var strength:=1. if direct else pow(maxf(0.,1.-offset.length()/MISSILE_BLAST_RADIUS),.8)
+		if strength<=0.: continue
+		if not damage(race,p,38. if direct else 26.*strength,.66 if direct else 1.-.20*strength,approach if direct else center): continue
+		if p.crashed: continue
+		var surface:Basis=Track.surface_frame(race.track.sample(p.distance),p.x)
+		var sideways:Vector3=-surface.x
+		var side:=signf(offset.dot(sideways))
+		if absf(offset.dot(sideways))<.5:
+			side=signf((center-approach).dot(sideways))
+			if side==0.: side=1. if p.slot%2==0 else -1.
+		if p.airborne:
+			var direction:=offset.normalized() if offset.length_squared()>1. else (sideways*side+surface.y*.25).normalized()
+			p.air_velocity+=direction*60.*strength
+			p.speed=p.air_velocity.length()
+		else:
+			p.slip+=side*60.*strength
+			p.slide=maxf(p.slide,.9*strength)
+			p.slide_hold=maxf(p.slide_hold,.55*strength)
+	bursts.append({"id":m.id,"position":center,"life":MISSILE_BLAST_LIFE})
+	missiles.erase(m)
+
 static func sentry_basis(race:RefCounted,p:Dictionary)->Basis:
 	var frame:=pose(race,p)
 	if p.drone_target<0: return frame.basis
@@ -439,8 +470,6 @@ func step_missile(race:RefCounted,m:Dictionary,dt:float)->void:
 		m.position+=direction*minf(m.launch_speed*dt,distance)
 		if intercept_missile(m,previous,m.position): return
 		if distance<=m.launch_speed*dt+4.:
-			damage(race,target,38.,.66,previous)
-			bursts.append({"id":m.id,"position":destination,"life":MISSILE_BLAST_LIFE})
-			missiles.erase(m)
+			detonate_missile(race,m,destination,previous)
 	m.velocity=(m.position-previous)/maxf(dt,.001)
 	intercept_missile(m,previous,m.position)

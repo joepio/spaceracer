@@ -2,6 +2,7 @@ extends RefCounted
 ## Race-owned, deterministic combat. No rendering or wall-clock dependencies.
 const Track=preload("res://src/track.gd")
 const Flight=preload("res://src/flight.gd")
+const AirBatteries=preload("res://src/air_batteries.gd")
 const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry drone","emp":"EMP","jammer":"Jammer"}
 const WARP_DURATION:=2.8
 const JAMMER_RANGE:=260.
@@ -38,6 +39,7 @@ func _init(track:RefCounted)->void:
 			station+=1
 			distance+=760.
 		else: distance+=35.
+	AirBatteries.generate(track,batteries)
 
 static func initialize(p:Dictionary)->void:
 	p.merge({"weapon":"","fire_held":false,"weapon_acquired":0.,"warp_time":0.,"warp_age":0.,"warp_fx":0.,
@@ -75,6 +77,7 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
 		p.weapon_before=p.distance;p.weapon_x_before=p.x
+		p.weapon_position_before=p.air_position;p.weapon_was_airborne=p.airborne
 		p.weapon_velocity=p.air_velocity if p.airborne else p.ground_velocity
 		p.shield_hit=maxf(0.,p.shield_hit-dt)
 		p.weapon_guard=maxf(0.,p.weapon_guard-dt)
@@ -246,17 +249,21 @@ func collect(race:RefCounted,p:Dictionary)->void:
 		return
 
 func collect_energy(race:RefCounted,p:Dictionary)->void:
-	if not available(p) or p.airborne or p.warp_time>0. or p.warp_fx>.05 or p.energy>=100.: return
+	if not available(p) or p.warp_time>0. or p.warp_fx>.05 or p.energy>=100.: return
 	var start:float=p.weapon_before
 	var end:float=p.distance
-	if end<=start or end-start>120.: return
 	for battery in batteries:
 		if battery.cooldown>0.: continue
-		var circuit:=floori((end-battery.distance)/race.track.length)
-		var crossing:float=battery.distance+circuit*race.track.length
-		if circuit<0 or crossing<start or crossing>end or battery.claimed.get(p.slot,-1)>=circuit: continue
-		var lateral:=lerpf(p.weapon_x_before,p.x,(crossing-start)/maxf(.001,end-start))
-		if absf(lateral-battery.x)>5.: continue
+		var circuit:=maxi(0,p.lap-1)
+		if battery.get("air",false):
+			if battery.claimed.get(p.slot,-1)>=circuit or not AirBatteries.crossed(p,battery): continue
+		else:
+			if p.airborne or end<=start or end-start>120.: continue
+			circuit=floori((end-battery.distance)/race.track.length)
+			var crossing:float=battery.distance+circuit*race.track.length
+			if circuit<0 or crossing<start or crossing>end or battery.claimed.get(p.slot,-1)>=circuit: continue
+			var lateral:=lerpf(p.weapon_x_before,p.x,(crossing-start)/maxf(.001,end-start))
+			if absf(lateral-battery.x)>5.: continue
 		p.energy_gained=minf(BATTERY_ENERGY,100.-p.energy)
 		p.energy+=p.energy_gained;p.energy_fx=.8
 		p.pickup_fx=.45;p.pickup_pose=battery.pose;p.pickup_energy=true

@@ -175,6 +175,15 @@ The visor shows `SLIPSTREAM` while active. Flying, warp, crashed/recovering and
 EMP-disabled craft cannot draft or provide a wake. The same rules apply to bots,
 local controllers, touch and GameNight players.
 
+Up to four optional airborne batteries sit above and off to the side of the
+racing line, giving the same **25 energy** for a risky flying detour. Easy tracks
+keep them roughly 15–20 metres above the road; normal uses 22–27 metres, hard
+30–35 metres and farther sideways. Technical tracks can offer a higher, off-axis
+pickup over an existing jump. These batteries are slightly larger for visibility,
+require actual airborne contact, and share the two-second respawn and collection
+flash. Each racer can collect each battery once per lap. Blocked approach/return
+paths are omitted after scenery construction; no auto-landing is added.
+
 The shared shield/boost bar automatically refills at **1.5 energy per second**,
 after two seconds without boosting or taking damage. Refill also waits during
 warp, EMP shutdown and recovery. A spent boost takes about 15 seconds of refill;

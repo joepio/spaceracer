@@ -19,6 +19,7 @@ func run()->void:
 			var repeat:=Race.new([{"slot":2}],seed_value,3,"hard",biome)
 			check(race.weapons.batteries==repeat.weapons.batteries,"Battery placements reproduce from seed")
 			for battery in race.weapons.batteries:
+				if battery.get("air",false): continue
 				var n:Dictionary=race.track.sample(battery.distance)
 				check(Race.Track.supported(n,battery.x,5.8) and not n.loop and race.track.jump_at(battery.distance,220.).is_empty(),"Batteries sit on safe supported road away from jump lips")
 				check(race.weapons.pickups.all(func(item):return absf(item.distance-battery.distance)>100.),"Batteries and weapon stations remain separated")

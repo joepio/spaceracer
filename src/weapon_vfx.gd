@@ -213,7 +213,7 @@ func update()->void:
 		var frame:Transform3D=battery.pose
 		frame.origin+=frame.basis.y*sin(time*2.3+i)*.45
 		frame.basis=frame.basis*Basis(Vector3.UP,sin(time*.9+i)*.3)
-		frame.basis=frame.basis.scaled(Vector3.ONE*(battery.reveal if battery.cooldown<=0. else 0.))
+		frame.basis=frame.basis.scaled(Vector3.ONE*(1.35 if battery.get("air",false) else 1.)*(battery.reveal if battery.cooldown<=0. else 0.))
 		for batch in battery_batches: batch.set_instance_transform(i,frame)
 	for i in range(emp_fields.size()):
 		emp_fields[i].visible=i<race.weapons.pulses.size()

@@ -183,6 +183,7 @@ func build(state: RefCounted) -> void:
 		var crash:=CrashVfx.new();add_child(crash);crash.configure(ship);crashes.append(crash)
 		GlobalLighting.receive_only(crash)
 		ship_colors.append(color_for(p))
+	race.weapons.AirBatteries.validate(race.track,race.weapons.batteries)
 	weapon_vfx=WeaponVfx.new();add_child(weapon_vfx);weapon_vfx.configure(race)
 	GlobalLighting.receive_only(weapon_vfx)
 	update_ships()

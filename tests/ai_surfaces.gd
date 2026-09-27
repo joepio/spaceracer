@@ -24,6 +24,8 @@ func run()->void:
 	var ship:=Ship.build(Color.CYAN);root.add_child(ship)
 	for side in [-1.,1.]:
 		place(race,p,side)
+		# Over-speed entry must brake; hard pilots no longer brake safe sweepers.
+		p.speed=410.
 		check(p.distance>=0.,"Seed contains test corner")
 		var controls:Dictionary=race.bot(p)
 		check(controls.strafe*side>.1 and controls.steer*side>.1,"AI coordinates actual steering and strafe in corner")

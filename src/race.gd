@@ -49,17 +49,20 @@ func bot(p: Dictionary) -> Dictionary:
 	if p.crashed: return {}
 	if p.airborne: return air_bot(p)
 	var n:Dictionary=track.sample(p.distance)
+	var hard:bool=track.difficulty=="hard"
 	var peak:=absf(n.curve)
-	var safe_speed:=TOP_SPEED
-	# Brake before the apex, using available stopping distance rather than a late threshold.
-	for ahead in [30.0,65.0,110.0,165.0]:
-		var upcoming:Dictionary=track.sample(p.distance+ahead)
+	var safe_speed:=BOOST_SPEED if hard else TOP_SPEED
+	# Hard pilots carry speed with coordinated yaw/strafe instead of holding
+	# half brake through every bend. Ordinary pilots keep their gentler pace.
+	# Include the current apex on hard so late recovery still requests braking.
+	for ahead in ([0.,30.,65.,110.,165.] if hard else [30.,65.,110.,165.]):
+		var upcoming:Dictionary=n if ahead==0. else track.sample(p.distance+ahead)
 		var bend:=absf(upcoming.curve)
 		peak=maxf(peak,bend)
-		var corner_speed:=clampf(1.65/maxf(.001,bend),125,TOP_SPEED)
+		var corner_speed:=clampf((2.7 if hard else 1.65)/maxf(.001,bend),160. if hard else 125.,BOOST_SPEED if hard else TOP_SPEED)
 		safe_speed=minf(safe_speed,sqrt(corner_speed*corner_speed+2*150*ahead))
 	var brake:=clampf((p.speed-safe_speed)/35.0,0,1)
-	if absf(n.curve)>.006 and p.speed>145: brake=maxf(brake,.48)
+	if not hard and absf(n.curve)>.006 and p.speed>145: brake=maxf(brake,.48)
 	var target:float=-n.width*.63 if n.zone=="repair" and p.energy<85 else sin(p.slot*2)*4
 	if float(n.get("split_gap",0.))>.01:
 		var route:float=p.get("route",0.)
@@ -77,8 +80,13 @@ func bot(p: Dictionary) -> Dictionary:
 	# Keep momentum and a centred approach before a mandatory jump.
 	var jump:Dictionary=track.jump_at(p.distance,180.)
 	if not jump.is_empty() and fposmod(p.distance,track.length)<jump.takeoff: brake=0.
+	# Spend a useful burst on the exit, retaining enough hull energy for a hit.
+	# Never latch the boost button while EMP/recovery prevents activation, or
+	# waste the paid burst on a free pad that already supplies the same thrust.
+	var boost_ready:bool=p.recovery==0. and p.emp_time<=0. and p.warp_time<=0. and not p.boost_held
+	if hard: boost_ready=boost_ready and n.zone!="boost" and p.unload<.25 and absf(p.x-target)<n.width*.5
 	return {"steer":turn,"strafe":strafe,"throttle":1.0,"brake":brake,"left":false,"right":false,
-		"fire":p.weapon != "" and clock-p.weapon_acquired>.9 and not p.fire_held,"boost":p.lap>1 and p.energy>40 and peak<.0025 and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
+		"fire":p.weapon != "" and clock-p.weapon_acquired>.9 and not p.fire_held,"boost":boost_ready and p.lap>1 and p.energy>(30. if hard else 40.) and peak<(.0055 if hard else .0025) and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
 
 func air_bot(p:Dictionary)->Dictionary:
 	var hit:Dictionary=track.project(p.air_position,p.distance,p.air_travel*1.35+100.)

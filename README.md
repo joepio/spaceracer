@@ -413,6 +413,13 @@ is immediate; the hull and momentum retain their physical response time.
 AI cornering uses coordinated steering and strafe. Fixed wings stop at the hinge
 instead of overlapping the moving elevons; contrasting edges make small control
 movements readable. Victory-lap controls show turns, lane corrections and braking.
+Hard difficulty also makes opponents race more aggressively: they carry speed
+through sweepers, brake for the apex, and spend boost on more corner exits while
+keeping a small damage reserve. They use the same acceleration, grip, boost cost
+and lap-two unlock as players. Easy and normal retain their gentler corner pace.
+`tests/ai_pace.gd` compares three-lap runs across all six track families against
+the same steering/flight controller with ground braking and boost disabled;
+add `-- --race` to test that driver against five armed opponents.
 During the countdown, craft rest level near the deck until RT / A (or keyboard
 throttle) starts their engines. One side rises first, then the other, settling into
 hover. Engine sockets brighten and develop soft blue-white halos with throttle,

@@ -29,7 +29,7 @@ static func strike(race:RefCounted,attacker:Dictionary,target:Dictionary,toward:
 	var direction:Vector2=Vector2(cos(attacker.heading),-sin(attacker.heading))*attacker.bump_side
 	if direction.dot(toward)<.55: return # Front/rear contact is not a side attack.
 	attacker.bump_hits[target.slot]=true
-	if race.weapons.damage(race,target,DAMAGE,.97):
+	if race.weapons.damage(race,target,DAMAGE,.97,race.weapons.pose(race,attacker).origin):
 		target.bump_guard=.3
 		if not target.crashed:
 			target.slip+=direction.x*28.

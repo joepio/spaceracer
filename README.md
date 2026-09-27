@@ -22,9 +22,10 @@ godot --path .
 The portable Windows build runs by opening `IonRush.exe`. Start/Enter starts a race.
 For local development, run `tools/install_start_menu.ps1` to install
 **Ion Rush (Latest Debug)** in the Windows Start menu with the game's icon.
-It opens fullscreen and points directly to `build/warp-balance/IonRush.exe`;
-keep updating that directory's executable/PCK so the shortcut always opens the
-latest packaged debug build. The installer also accepts `-BuildDirectory`.
+It opens fullscreen from `build/warp-balance/IonRush.exe` with an immutable copy
+of its current PCK in `build/debug-sessions`. New builds cannot corrupt assets
+being read by an ongoing playtest. Keep updating the staged executable/PCK so
+the next launch uses the latest build. The installer accepts `-BuildDirectory`.
 
 The title and pause screens share the same menu: up/down selects a row; left/right
 immediately adjusts players, world, level, seed or graphics. The stick, D-pad,
@@ -32,7 +33,8 @@ keyboard arrows and on-screen arrow buttons all work. A/click activates actions.
 Standalone races have six machines, filling spare positions with AI.
 Start/Escape pauses. Unchanged settings resume the current race; changing a race
 setting changes the primary action to **Restart**. Graphics never resets progress.
-The paused track stays frozen until resuming or restarting. Back no longer pauses.
+The paused track keeps its last rendered frame behind a dark menu gradient until
+resuming or restarting. Back no longer pauses.
 
 Desktop Forward+ also has a **Lighting** row: **Direct** or experimental **SDFGI**.
 Switch it in the pause menu to compare the same view without restarting the race.
@@ -213,6 +215,10 @@ and expanding rings mark the pickup and collector, visible to all players; the
 inventory label briefly brightens. One inventory slot, one pickup per row per lap
 per player. Bots also collect and use items.
 Use buttons, timers and effects pause with the race; crashes discard items.
+Damage produces a compact flash, sparks, a short smoke puff and a few tumbling
+metal fragments at the contact point. These fade within half a second; no shield
+bubble covers the craft. Sentry fire, side bumps and damaging landings use this
+feedback, while missile detonations and full crashes keep their larger blasts.
 Every held item is visibly mounted before activation: a missile on a side rail,
 a rear sentry turret, a pulsing violet warp coil, a blue EMP capacitor, or a
 compact jammer dish that extends when used. Separate mounting points keep an

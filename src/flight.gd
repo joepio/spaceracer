@@ -3,6 +3,7 @@ extends RefCounted
 const HOVER:=1.3
 const AIR_SPEED:=235.
 const Track=preload("res://src/track.gd")
+const Impact=preload("res://src/impact_vfx.gd")
 
 static func ground_basis(frame:Basis,heading:float,trim:float,slip:float)->Basis:
 	# The mesh nose is +Z: negative X rotation raises it. Back-stick trim is negative.
@@ -183,6 +184,7 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 			p.energy=maxf(0.,p.energy-damage)
 			p.flash=maxf(p.flash,minf(.4,damage*.015))
 			p.shield_hit=maxf(float(p.get("shield_hit",0.)),minf(.28,damage*.02))
+			Impact.record(p,Transform3D(frame,position),Vector3(2.4 if frame.x.dot(surface.y)<0. else -2.4,-.4,-.5),damage)
 			if p.energy<=0.:
 				crash(p,surface.y)
 				return

@@ -2,13 +2,14 @@ extends Node3D
 const Weapons=preload("res://src/weapons.gd")
 const Blast=preload("res://src/blast_vfx.gd")
 const Ship=preload("res://src/ship.gd")
+const Impact=preload("res://src/impact_vfx.gd")
 var race:RefCounted
 var cores:MultiMesh
 var battery_batches:Array[MultiMesh]=[]
 var missile_nodes:Dictionary={}
 var turrets:Array[Node3D]=[]
 var mounts:Array[Dictionary]=[]
-var shields:Array[MeshInstance3D]=[]
+var impacts:Array[Node3D]=[]
 var warp_wakes:Array[MeshInstance3D]=[]
 var warp_lenses:Array[MeshInstance3D]=[]
 var tracers:Array[MeshInstance3D]=[]
@@ -141,8 +142,7 @@ func configure(state:RefCounted)->void:
 		var stored:=Node3D.new();rack.add_child(stored);missile_hull(stored)
 		stored.scale=Vector3.ONE*.62
 		mounts.append({"missile":rack,"warp":make_coil(true),"emp":make_coil(false)})
-		var shield_mat:=ShaderMaterial.new();shield_mat.shader=load("res://src/weapon_shield.gdshader")
-		var shield:=mesh(self,sphere(6.3),shield_mat);shields.append(shield)
+		var impact:=Impact.new();add_child(impact);impacts.append(impact)
 		var wake_material:=ShaderMaterial.new();wake_material.shader=load("res://src/warp_wake.gdshader")
 		warp_wakes.append(mesh(self,wake_shape,wake_material))
 		var lens_material:=ShaderMaterial.new();lens_material.shader=load("res://src/warp_refraction.gdshader")
@@ -415,11 +415,7 @@ func update()->void:
 		var barrels:Node3D=turret.get_meta("barrels");barrels.position.z=-recoil*.22
 		for barrel in barrels.get_children():
 			if str(barrel.name).begins_with("Muzzle"): barrel.visible=recoil>.5
-		var shield:=shields[i]
-		shield.visible=p.shield_hit>0. and not p.crashed
-		shield.transform=frame.scaled_local(Vector3(1.,.6,1.))
-		shield.material_override.set_shader_parameter("strength",p.shield_hit/.28)
-		shield.material_override.set_shader_parameter("race_time",time)
+		impacts[i].show_hit(p)
 		var wake:=warp_wakes[i]
 		wake.visible=p.warp_fx>.01 and not p.crashed
 		wake.transform=frame

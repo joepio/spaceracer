@@ -3,6 +3,7 @@ extends RefCounted
 const Track=preload("res://src/track.gd")
 const Flight=preload("res://src/flight.gd")
 const AirBatteries=preload("res://src/air_batteries.gd")
+const Impact=preload("res://src/impact_vfx.gd")
 const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry gun","emp":"EMP","jammer":"Jammer"}
 const WARP_DURATION:=2.8
 const JAMMER_RANGE:=260.
@@ -52,6 +53,7 @@ static func initialize(p:Dictionary)->void:
 		"landing_damage":0.,"emp_time":0.,"emp_guard":0.,
 		"jammer_time":0.,"jammer_deploy":0.,"jam_strength":0.,"pickup_fx":0.,"pickup_pose":Transform3D.IDENTITY,
 		"pickup_energy":false,"energy_fx":0.,"energy_gained":0.},true)
+	p.impact_id=0;p.impact_age=Impact.LIFE
 
 static func available(p:Dictionary)->bool:
 	return not p.finished and not p.crashed and p.recovery<=0.
@@ -84,6 +86,7 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 		p.weapon_position_before=p.air_position;p.weapon_was_airborne=p.airborne
 		p.weapon_velocity=p.air_velocity if p.airborne else p.ground_velocity
 		p.shield_hit=maxf(0.,p.shield_hit-dt)
+		p.impact_age=minf(Impact.LIFE,p.impact_age+dt)
 		p.weapon_guard=maxf(0.,p.weapon_guard-dt)
 		p.evade_notice=maxf(0.,p.evade_notice-dt)
 		p.pickup_fx=maxf(0.,p.pickup_fx-dt)
@@ -280,8 +283,14 @@ func collect_energy(race:RefCounted,p:Dictionary)->void:
 			if other.distance==battery.distance: other.claimed[p.slot]=circuit
 		return
 
-func damage(race:RefCounted,p:Dictionary,amount:float,slowdown:float)->bool:
+func damage(race:RefCounted,p:Dictionary,amount:float,slowdown:float,source:Vector3=Vector3.INF)->bool:
 	if not available(p) or p.warp_time>0. or p.weapon_guard>0.: return false
+	var hit_frame:=pose(race,p)
+	var local_hit:=Vector3(0.,.65,-2.2)
+	if source.is_finite():
+		var direction:Vector3=(hit_frame.basis.inverse()*(source-hit_frame.origin)).normalized()
+		local_hit=Vector3(direction.x*3.8,maxf(.2,direction.y*1.1),direction.z*2.8)
+	Impact.record(p,hit_frame,local_hit,amount)
 	p.energy=maxf(0.,p.energy-amount)
 	p.shield_hit=.28;p.flash=.16
 	p.speed*=slowdown
@@ -345,7 +354,7 @@ func end_step(race:RefCounted,dt:float)->void:
 		var from:=drone_position(race,p)+sentry_basis(race,p)*Vector3(0.,0.,2.6)
 		var to:=pose(race,target).origin
 		if race.track.obstacles!=null and not race.track.obstacles.trace(from,to,.1).is_empty(): continue
-		damage(race,target,4.,.995)
+		damage(race,target,4.,.995,from)
 		shots.append({"from":from,"to":to,"life":.12})
 	for m in missiles.duplicate(): step_missile(race,m,dt)
 	for list in [shots,bursts]:
@@ -430,7 +439,7 @@ func step_missile(race:RefCounted,m:Dictionary,dt:float)->void:
 		m.position+=direction*minf(m.launch_speed*dt,distance)
 		if intercept_missile(m,previous,m.position): return
 		if distance<=m.launch_speed*dt+4.:
-			damage(race,target,38.,.66)
+			damage(race,target,38.,.66,previous)
 			bursts.append({"id":m.id,"position":destination,"life":MISSILE_BLAST_LIFE})
 			missiles.erase(m)
 	m.velocity=(m.position-previous)/maxf(dt,.001)

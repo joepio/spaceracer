@@ -112,12 +112,20 @@ func run()->void:
 	await press(JOY_BUTTON_START)
 	check(game.local_paused and focus_id()=="race" and row("race").text=="Resume","Shared menu opens on Resume")
 	check(game.views.all(func(view):return not view.visor.visible and view.visor.surface.render_target_update_mode==SubViewport.UPDATE_DISABLED),"Pause hides the entire visor and stops instrument rendering")
+	check(game.views.all(func(view):return view.viewport.render_target_update_mode==SubViewport.UPDATE_DISABLED),"Pause retains the last rendered race frame")
+	var frozen:Image
+	if "--render" in OS.get_cmdline_user_args(): frozen=game.views[0].viewport.get_texture().get_image()
 	check(row("players")!=null and row("seed")!=null and row("biome")!=null,"Pause exposes the same settings")
 	var clock:float=game.race.vfx_clock
 	for frame in range(8): await process_frame
 	check(game.race.vfx_clock==clock,"Pause freezes effects and simulation")
+	if frozen!=null:
+		check(frozen.get_data()==game.views[0].viewport.get_texture().get_image().get_data(),"Paused world pixels remain exactly frozen")
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png("C:/dev/ion-rush-captures/gi/pause-frozen.png")
 	await press(JOY_BUTTON_START)
 	check(game.race==original and game.running,"Unchanged Start resumes current race")
+	check(game.views.all(func(view):return view.viewport.render_target_update_mode==SubViewport.UPDATE_ALWAYS),"Resume restarts world rendering")
 	check(game.views.all(func(view):return view.visor.visible and view.visor.surface.render_target_update_mode==SubViewport.UPDATE_ALWAYS),"Resume restores the visor projection")
 	await press(JOY_BUTTON_START)
 	row("seed").grab_focus()

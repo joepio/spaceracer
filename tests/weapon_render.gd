@@ -24,13 +24,15 @@ func run()->void:
 	missile.position=frame.origin+frame.basis*Vector3(12,7,-9)
 	missile.velocity=frame.basis.z*600.;missile.terminal=.3;missile.age=2.
 	race.racers[0].missile_warning=2.;race.racers[0].energy=62.;race.racers[0].shield_hit=.16
+	race.Weapons.Impact.record(race.racers[0],frame,Vector3(3.8,.4,-1.),12.)
+	race.racers[0].impact_age=.06
 	race.racers[1].warp_time=1.8;race.racers[1].warp_fx=1.;race.racers[1].warp_age=1.;race.racers[1].speed=510.
 	race.racers[2].drone_time=6.5;race.racers[2].drone_target=3
 	race.weapons.shots.append({"from":race.Weapons.drone_position(race,race.racers[2]),"to":race.Weapons.pose(race,race.racers[3]).origin,"life":.1})
 	if "--warp-showcase" in OS.get_cmdline_user_args():
 		race.weapons.missiles.clear();race.weapons.shots.clear()
 		for p in race.racers:
-			p.weapon="";p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.shield_hit=0.;p.missile_warning=0.
+			p.weapon="";p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.shield_hit=0.;p.missile_warning=0.;p.impact_age=1.
 		race.racers[0].warp_time=1.8;race.racers[0].warp_age=1.;race.racers[0].warp_fx=1.;race.racers[0].speed=510.
 		if "--warp-observer" in OS.get_cmdline_user_args():
 			race.racers[0].distance=250.
@@ -41,7 +43,7 @@ func run()->void:
 		for i in range(race.racers.size()):
 			var p:Dictionary=race.racers[i]
 			p.distance=start+[0.,65.,-75.,400.,500.,600.][i]
-			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.speed=240.
+			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.impact_age=1.;p.speed=240.
 		race.racers[0].weapon="emp";race.weapons.activate(race,0)
 		race.weapons.step_emp(race,.3)
 	if "--jammer-showcase" in OS.get_cmdline_user_args():
@@ -49,7 +51,7 @@ func run()->void:
 		for i in range(race.racers.size()):
 			var p:Dictionary=race.racers[i]
 			p.distance=start+[0.,50.,155.,400.,500.,600.][i]
-			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.speed=240.
+			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.impact_age=1.;p.speed=240.
 		race.racers[0].weapon="jammer";race.weapons.activate(race,0)
 		race.racers[0].jammer_deploy=1.
 		race.weapons.step_jammers(race)
@@ -59,7 +61,7 @@ func run()->void:
 		for i in range(race.racers.size()):
 			var p:Dictionary=race.racers[i]
 			p.distance=pickup.distance+[3.,-40.,-75.,400.,500.,600.][i]
-			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.speed=180.
+			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.impact_age=1.;p.speed=180.
 		var collector:Dictionary=race.racers[0]
 		collector.weapon="";collector.weapon_before=pickup.distance-4.;collector.weapon_x_before=pickup.x;collector.x=pickup.x
 		race.weapons.collect(race,collector)
@@ -70,7 +72,7 @@ func run()->void:
 			var p:Dictionary=race.racers[i]
 			p.distance=start+[0.,0.,-40.,400.,500.,600.][i]
 			p.x=-4. if i==0 else 4. if i==1 else 0.
-			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.speed=200.
+			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.impact_age=1.;p.speed=200.
 		race.Bump.begin(race.racers[0],{"right":true},.01,0.)
 		race.racers[0].bump_time=.12
 		race.resolve_contacts()
@@ -81,7 +83,7 @@ func run()->void:
 		for i in range(race.racers.size()):
 			var p:Dictionary=race.racers[i]
 			p.distance=battery.distance+[3.,-18.,-45.,400.,500.,600.][i];p.x=0.
-			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.speed=180.
+			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.impact_age=1.;p.speed=180.
 		var collector:Dictionary=race.racers[0]
 		collector.energy=35.;collector.weapon="missile"
 		collector.weapon_before=battery.distance-4.;collector.weapon_x_before=battery.x;collector.x=battery.x
@@ -130,7 +132,7 @@ func run()->void:
 		print("PICKUP_RENDER respawn=",respawn," collected=",race.racers[0].weapon)
 	if "--bump-showcase" in OS.get_cmdline_user_args():
 		assert(game.world.weapon_vfx.bump_jets[0].visible and not game.world.weapon_vfx.bump_jets[1].visible)
-		assert(game.world.weapon_vfx.shields[1].visible)
+		assert(game.world.weapon_vfx.impacts[1].visible)
 		print("BUMP_RENDER contact damage and opposing thruster verified")
 	if "--battery-showcase" in OS.get_cmdline_user_args():
 		var respawn:bool="--pickup-respawn" in OS.get_cmdline_user_args()
@@ -174,15 +176,15 @@ func run()->void:
 	if "--warp-showcase" in OS.get_cmdline_user_args():
 		var p:Dictionary=race.racers[0]
 		var effects:Node3D=game.world.weapon_vfx
-		assert(not effects.shields[0].visible and effects.warp_wakes[0].visible)
+		assert(not effects.impacts[0].visible and effects.warp_wakes[0].visible)
 		effects.update();assert(effects.warp_lenses[0].visible)
-		p.shield_hit=.2;effects.update()
-		assert(effects.shields[0].visible) # Actual damage still has feedback.
-		p.shield_hit=0.;p.warp_fx=.3;effects.update()
+		race.Weapons.Impact.record(p,race.Weapons.pose(race,p),Vector3(3.8,.3,0.),4.);effects.update()
+		assert(effects.impacts[0].visible) # Actual damage still has feedback.
+		p.impact_age=1.;p.shield_hit=0.;p.warp_fx=.3;effects.update()
 		assert(is_equal_approx(effects.warp_wakes[0].material_override.get_shader_parameter("strength"),.3))
 		assert(is_equal_approx(effects.warp_lenses[0].material_override.get_shader_parameter("strength"),.3))
 		p.warp_fx=0.;p.warp_time=0.;effects.update()
-		assert(not effects.warp_wakes[0].visible and not effects.shields[0].visible)
+		assert(not effects.warp_wakes[0].visible and not effects.impacts[0].visible)
 		assert(not effects.warp_lenses[0].visible)
 		print("WARP_RENDER exposed hull, hit feedback and fading wake verified")
 	if "--emp-showcase" in OS.get_cmdline_user_args():

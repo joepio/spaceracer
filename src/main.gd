@@ -253,6 +253,7 @@ func layout_views() -> void:
 		views[i].visor.set_resolution(Vector2i((cell/dimensions)*output_pixels))
 		configure_viewport_aa(views[i].viewport,quality)
 		views[i].viewport.positional_shadow_atlas_size=(2048 if count==1 and quality>=1. else 1024) if quality>=.8 else 0
+		views[i].viewport.render_target_update_mode=SubViewport.UPDATE_ONCE if local_paused else SubViewport.UPDATE_ALWAYS
 
 func _physics_process(dt: float) -> void:
 	if local_paused: return
@@ -325,7 +326,7 @@ func _process(dt: float) -> void:
 		world.update_ships()
 		for view in views: world.update_camera(view.camera,view.index,dt,false,running and not in_menu)
 	for view in views:
-		update_speed_effects(view,dt)
+		if not local_paused: update_speed_effects(view,dt)
 		view.hud.visible=not in_menu
 		view.hud.queue_redraw()
 	update_audio()
@@ -396,6 +397,7 @@ func resume_local()->void:
 	local_paused=false
 	in_menu=false
 	running=true
+	for view in views: view.viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS
 	if is_instance_valid(menu):
 		ui.remove_child(menu)
 		menu.queue_free()
@@ -406,6 +408,7 @@ func pause_local()->void:
 	local_paused=true
 	running=false
 	in_menu=true
+	for view in views: view.viewport.render_target_update_mode=SubViewport.UPDATE_DISABLED
 	menu_sticks.clear()
 	if is_instance_valid(touch_controls): touch_controls.clear_input()
 	selected_seed=race.track.seed_value
@@ -580,12 +583,16 @@ func make_menu()->void:
 	menu=Control.new()
 	menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(menu)
-	var shade:=ColorRect.new()
+	var shade:=TextureRect.new()
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shade.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	var fade:=ShaderMaterial.new()
-	fade.shader=load("res://src/menu_backdrop.gdshader")
-	shade.material=fade
+	shade.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
+	var gradient:=Gradient.new()
+	gradient.offsets=PackedFloat32Array([.1,.78])
+	gradient.colors=PackedColorArray([Color(.015,.025,.045,.93),Color(.015,.025,.045,.08)])
+	var fade:=GradientTexture2D.new();fade.gradient=gradient;fade.width=256;fade.height=1
+	fade.fill_from=Vector2.ZERO;fade.fill_to=Vector2.RIGHT
+	shade.texture=fade
 	menu.add_child(shade)
 	var content:=VBoxContainer.new()
 	content.position=Vector2(90,55)

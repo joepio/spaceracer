@@ -1,6 +1,8 @@
 extends RefCounted
 ## A dense, instanced city; all architecture is validated against the road ribbon.
 const Layout=preload("res://src/city_layout.gd")
+const Accents=preload("res://src/city_accents.gd")
+var neon:RefCounted
 var layout:RefCounted
 var traffic:MultiMesh
 var cabins:MultiMesh
@@ -24,7 +26,7 @@ static func mat(color:Color,emission:float=0.0)->StandardMaterial3D:
 		m.emission_energy_multiplier=emission
 	return m
 
-static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int,layer:int=1,dynamic:bool=false)->MultiMesh:
+static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int,layer:int=1,dynamic:bool=false,shadows:bool=true)->MultiMesh:
 	var data:=MultiMesh.new()
 	data.transform_format=MultiMesh.TRANSFORM_3D
 	data.use_colors=true
@@ -35,7 +37,7 @@ static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int,layer:int=
 	renderer.layers=layer
 	renderer.set_meta("gi_dynamic",dynamic or layer==2)
 	renderer.material_override=material
-	renderer.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_ON if layer==1 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	renderer.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_ON if layer==1 and shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(renderer)
 	return data
 
@@ -126,6 +128,8 @@ func build(parent:Node3D,race:RefCounted)->void:
 	ground.material_override=streets
 	parent.add_child(ground)
 	build_billboards(parent)
+	neon=Accents.new()
+	neon.build(self,parent,race.track)
 	var paint:=mat(Color("657892"))
 	paint.vertex_color_use_as_albedo=true
 	traffic=batch(parent,BoxMesh.new(),paint,layout.routes.size()*2,2)
@@ -149,6 +153,7 @@ func animate(time:float)->void:
 
 func build_billboards(parent:Node3D)->void:
 	var materials:Array[ShaderMaterial]=[]
+	var rim_groups:Dictionary={}
 	for variant in range(4):
 		var material:=ShaderMaterial.new()
 		material.shader=load("res://src/billboard.gdshader")
@@ -174,6 +179,15 @@ func build_billboards(parent:Node3D)->void:
 		screen.position.z=.3
 		screen.material_override=materials[item.variant]
 		mount.add_child(screen)
+		# Physical luminous frame ties the artwork to its building, with dark gaps.
+		var rim_color:Color=[Color("586fff"),Color("2cd4fa"),Color("90c867"),Color("ed3996")][item.variant]
+		var rim_key:=Vector2i(floori(mount.position.x/640.),floori(mount.position.z/640.))
+		if not rim_groups.has(rim_key): rim_groups[rim_key]=[]
+		for side in [-1.,1.]:
+			for axis in range(2):
+				var edge_size:=Vector3(.7,item.size.y*.94,.35) if axis==0 else Vector3(item.size.x*.85,.8,.35)
+				var edge_position:=Vector3(side*(item.size.x*.5+.1),0,.35) if axis==0 else Vector3(0,side*(item.size.y*.5+.1),.35)
+				rim_groups[rim_key].append({"transform":mount.transform*Transform3D(Basis.IDENTITY.scaled(edge_size),edge_position),"color":rim_color})
 		# Visible screens cast a localized wash throughout the lap, not just at start.
 		if local_lights.size()<48:
 			var landmark:bool=layout.buildings[item.building].get("landmark",false)
@@ -201,6 +215,13 @@ func build_billboards(parent:Node3D)->void:
 			label.modulate=Color("dbf4ff")
 			label.outline_size=0
 			mount.add_child(label)
+	var rim_material:=ShaderMaterial.new();rim_material.shader=load("res://src/city_neon.gdshader")
+	rim_material.set_shader_parameter("energy",2.4)
+	for key in rim_groups:
+		var records:Array=rim_groups[key]
+		var data:=batch(parent,BoxMesh.new(),rim_material,records.size(),1,false,false)
+		for i in range(records.size()):
+			data.set_instance_transform(i,records[i].transform);data.set_instance_color(i,records[i].color)
 
 func build_roof(b:Dictionary)->void:
 	var w:float=b.width

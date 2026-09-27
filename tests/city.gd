@@ -76,6 +76,11 @@ func run()->void:
 	var world:=Node3D.new()
 	root.add_child(world)
 	scenery.build(world,race)
+	check(scenery.neon.signs.size()>=8 and scenery.neon.signs.size()<=64,"City has a bounded set of attached neon signs")
+	check(scenery.local_lights.size()<=64,"Artwork and neon share a bounded local light budget")
+	for sign in scenery.neon.signs:
+		check(scenery.layout.buildings.any(func(building):return building.bounds.encloses(sign.bounds)),"Neon housing stays inside an audited building lot")
+		check(scenery.layout.clear(sign.bounds),"Neon housing clears the driving and flight corridors")
 	for child in world.get_children():
 		if not child is MultiMeshInstance3D: continue
 		var data:MultiMesh=child.multimesh

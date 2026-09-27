@@ -384,6 +384,14 @@ and L-shaped blocks. Six roof styles add penthouses, equipment and antenna clust
 Different window bands, warm offices and occasional neon break up repetition.
 Distant windows fade into the night haze to keep the racing surface readable.
 
+Building-mounted neon emblems, interrupted facade ribs, illuminated crowns and
+colored billboard frames now give the skyline more visible light sources.
+Their palette varies between city blocks while office windows retain natural
+warm/cool colors. Neon signs share the road's four nearby sign reflections with
+the artwork billboards; up to 16 additional distance-faded local lights provide
+colored spill. Facade strips and frames use spatial instance batches and do not
+add shadow passes. These accents work in Direct lighting as well as SDFGI.
+
 Large advertisements are mounted directly on buildings; floating text boards
 have been removed. Around 180–200 flying cars travel along reserved aerial lanes between city blocks, with
 separate hulls, canopies and bright engine trails. The enclosed expressway tunnel

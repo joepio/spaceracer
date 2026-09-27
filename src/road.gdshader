@@ -1,5 +1,6 @@
 shader_type spatial;
 #include "res://src/city_surface.gdshaderinc"
+#include "res://src/neon_sign.gdshaderinc"
 render_mode cull_disabled;
 uniform float race_time=0.;
 // Four nearby landmark screens: intersect their real planes with the reflected
@@ -15,6 +16,7 @@ uniform vec3 sign_centers[4];
 uniform vec3 sign_right[4];
 uniform vec3 sign_up[4];
 uniform vec3 sign_data[4]; // width, height, atlas panel
+uniform vec4 sign_colors[4]; // alpha selects mounted neon rather than billboard artwork
 varying vec3 road_position;
 void vertex(){road_position=(MODEL_MATRIX*vec4(VERTEX,1.)).xyz;}
 
@@ -106,6 +108,7 @@ void fragment(){
         // Narrow ripples stretch the reflected image along the road surface.
         uv.x=clamp(uv.x+(noise(vec2(UV.x*220.,UV.y*1.5))-.5)*.022,.003,.997);
         vec3 art=texture(billboard_art,vec2((sign_data[i].z+uv.x)*.25,uv.y)).rgb;
+        if(sign_colors[i].a>.5){art=neon_sign_art(uv,sign_data[i].z,sign_colors[i].rgb)*(3./2.2);}
         screens=art*2.2*mix(.18,.8,pow(1.-max(dot(n,eye),0.),3.))*exp(-distance*.0015);
     }
     EMISSION=light+reflection+screens*mix(.38,1.,grain);

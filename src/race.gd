@@ -65,12 +65,15 @@ func bot(p: Dictionary) -> Dictionary:
 	var grip:=lerpf(14,1.8,slide)
 	var inertia:=lerpf(.25,1,slide)
 	var desired_lateral:=clampf((target-p.x)*2.4,-45,45)
-	var desired_heading:=asin(clampf((desired_lateral+n.curve*p.speed*p.speed*inertia/grip)/maxf(p.speed,60),-.75,.75))
+	var lateral_demand:float=desired_lateral+n.curve*p.speed*p.speed*inertia/grip
+	# Share cornering between yaw and real right-stick strafe, just like a pilot.
+	var strafe:=clampf(lateral_demand*.30/46.,-.65,.65)
+	var desired_heading:=asin(clampf((lateral_demand-strafe*46.)/maxf(p.speed,60),-.75,.75))
 	var turn:=clampf((n.curve*p.speed+desired_heading*lerpf(3.5,.8,slide)+(desired_heading-p.heading)*3.8+(desired_lateral-p.slip)*.012)/lerpf(1.65,3.8,slide),-1,1)
 	# Keep momentum and a centred approach before a mandatory jump.
 	var jump:Dictionary=track.jump_at(p.distance,180.)
 	if not jump.is_empty() and fposmod(p.distance,track.length)<jump.takeoff: brake=0.
-	return {"steer":turn,"throttle":1.0,"brake":brake,"left":false,"right":false,
+	return {"steer":turn,"strafe":strafe,"throttle":1.0,"brake":brake,"left":false,"right":false,
 		"fire":p.weapon != "" and clock-p.weapon_acquired>.9 and not p.fire_held,"boost":p.lap>1 and p.energy>40 and peak<.0025 and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
 
 func air_bot(p:Dictionary)->Dictionary:

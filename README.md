@@ -371,6 +371,9 @@ travelled-distance check still rejects shortcuts that skip untravelled course.
 Hinged wing elevons and twin tail rudders respond directly to pitch, steering,
 strafing and braking, including during the starting countdown. Input deflection
 is immediate; the hull and momentum retain their physical response time.
+AI cornering uses coordinated steering and strafe. Fixed wings stop at the hinge
+instead of overlapping the moving elevons; contrasting edges make small control
+movements readable. Victory-lap controls show turns, lane corrections and braking.
 During the countdown, craft rest level near the deck until RT / A (or keyboard
 throttle) starts their engines. One side rises first, then the other, settling into
 hover. Engine sockets brighten and develop soft blue-white halos with throttle,

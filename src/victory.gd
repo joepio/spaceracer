@@ -20,6 +20,7 @@ static func step(p:Dictionary,track:RefCounted,dt:float,clock:float)->void:
 	var ahead:Dictionary=track.sample(p.distance+110.)
 	var target_speed:=clampf(1.3/maxf(.005,absf(ahead.curve)),140.,225.)
 	var previous_speed:float=p.speed
+	var previous_x:float=p.x
 	p.speed=move_toward(p.speed,target_speed,dt*45.)
 	p.acceleration=(p.speed-previous_speed)/maxf(dt,.00001)
 	p.distance+=p.speed*dt
@@ -31,10 +32,14 @@ static func step(p:Dictionary,track:RefCounted,dt:float,clock:float)->void:
 	p.x=lerpf(p.x,target_x,1.-exp(-dt*2.5))
 	if gap>.01: p.x=route*maxf(absf(p.x),gap+5.)
 	p.heading=lerp_angle(p.heading,0.,1.-exp(-dt*3.))
-	p.trim=0.;p.slip=0.;p.slide=0.;p.braking=0.;p.brake_vfx=0.;p.unload=0.
+	p.trim=0.;p.slip=0.;p.slide=0.;p.braking=0.;p.unload=0.
 	p.thrust=.72;p.input_throttle=.72;p.engine_power=lerpf(p.engine_power,.72,1.-exp(-dt*4.))
 	p.input_steer=clampf(n.curve*p.speed*.5,-1.,1.)
-	p.input_strafe=0.;p.input_pitch=0.;p.input_brake=0.
+	# Broadcast autopilot surfaces describe its turn, lane correction and braking.
+	p.input_strafe=clampf(n.curve*p.speed*.22+(p.x-previous_x)/maxf(dt,.00001)/46.,-.65,.65)
+	p.input_pitch=clampf(n.crest*p.speed*.25,-.25,.25)
+	p.input_brake=clampf(-p.acceleration/140.,0.,.4)
+	p.brake_vfx=lerpf(p.brake_vfx,p.input_brake,1.-exp(-dt*12.))
 	# Cruise over mandatory gaps on their displaced route, with a smooth arc.
 	var height:=Flight.HOVER
 	var jump:Dictionary=track.jump_at(p.distance)

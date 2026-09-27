@@ -66,24 +66,27 @@ static func build(tint:Color)->Node3D:
 	paint.set_shader_parameter("tint",Vector3(tint.r,tint.g,tint.b))
 	loft(root,"Body",[Vector3(-3.4,.1,.1),Vector3(-2.7,1.5,.8),Vector3(.2,1.65,1.2),Vector3(2.8,.8,.4),Vector3(5,.025,.03)],paint)
 	var alloy:=metal(Color("233045"),.24)
+	var control_edge:=metal(Color("93acb8"),.28)
 	var glass:=metal(Color("101e35"),.12)
 	glass.metallic=.85
 	loft(root,"Canopy",[Vector3(-1.7,.1,.1),Vector3(-.6,.78,.9),Vector3(.8,.52,.8),Vector3(1.9,.01,.01)],glass,Vector3(0,.75,0))
 	for side in [-1,1]:
 		loft(root,"Nacelle%d"%side,[Vector3(-3.7,.7,.6),Vector3(-2,.9,.7),Vector3(1.4,.63,.55),Vector3(3.2,.05,.08)],alloy,Vector3(side*2.45,-.15,0))
-		loft(root,"Wing%d"%side,[Vector3(-2.3,.05,.04),Vector3(-1.6,1.2,.18),Vector3(.4,.08,.1)],paint,Vector3(side*3.4,0,0))
+		# The fixed wing ends at the hinge; it must not cover the moving elevon.
+		loft(root,"Wing%d"%side,[Vector3(-1.24,1.15,.18),Vector3(.4,.08,.1)],paint,Vector3(side*3.4,0,0))
 		# Hinged elevons on the rear of each wing; inside the existing hull envelope.
 		var wing:=Node3D.new()
 		wing.name="WingControlL" if side<0 else "WingControlR"
 		wing.position=Vector3(side*3.4,.12,-1.45)
 		root.add_child(wing)
 		loft(wing,"Elevon",[Vector3(-1.0,.45,.13),Vector3(-.6,1.0,.16),Vector3(.1,.95,.14),Vector3(.2,.03,.03)],paint)
-		loft(wing,"FlapEdge",[Vector3(-1.01,.43,.03),Vector3(-.94,.49,.03)],alloy)
+		loft(wing,"FlapEdge",[Vector3(-1.01,.43,.045),Vector3(-.94,.49,.045)],control_edge)
 		var fin:=Node3D.new()
 		fin.name="RudderL" if side<0 else "RudderR"
 		fin.position=Vector3(side*1.05,.5,-2.35)
 		root.add_child(fin)
 		loft(fin,"TailFin",[Vector3(-1,.02,.15),Vector3(-.65,.09,1.55),Vector3(.4,.08,.3),Vector3(.55,.02,.05)],paint)
+		loft(fin,"RudderEdge",[Vector3(-1.015,.025,.18),Vector3(-.66,.105,1.58),Vector3(-.55,.095,1.43)],control_edge)
 		var strip:=StandardMaterial3D.new()
 		strip.albedo_color=tint
 		strip.emission_enabled=true
@@ -247,7 +250,8 @@ static func animate_controls(root:Node3D,p:Dictionary)->void:
 		wing.rotation.z=-p.input_strafe*.16
 		root.get_node("Airbrake%d"%side).rotation.x=p.brake_vfx*1.15
 		var rudder:Node3D=root.get_node("RudderL" if side<0 else "RudderR")
-		rudder.rotation.y=-p.input_steer*.55
+		# More readable small deflections, without changing the steering physics.
+		rudder.rotation.y=-signf(p.input_steer)*pow(absf(p.input_steer),.72)*.7
 
 static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)->void:
 	var alive:bool=p.recovery<=0 and (not p.finished or p.has("victory_pose")) and not p.crashed

@@ -53,6 +53,7 @@ func _draw() -> void:
 	if p.energy_fx>0.: label("+%d"%roundi(p.energy_gained),Vector2(w-209,h-44-(.8-p.energy_fx)*10.),11,Color(1.,.83,.41,minf(1.,p.energy_fx*3.)))
 	var status:="Boost on lap 2" if p.lap<2 else "Boost ready"
 	if p.boost>0 or p.on_pad: status="Boosting"
+	elif p.slipstream>.15: status="Slipstream"
 	elif p.energy<=22 and p.lap>1: status="Recharge"
 	if p.airborne: status="Flight"
 	elif p.unload>.45: status="Lifting"

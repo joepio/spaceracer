@@ -165,6 +165,16 @@ Standalone assigns connected controllers at race start and fills disconnected se
 
 ## Energy batteries
 
+**Slipstream:** follow a moving rival closely to reduce drag and build extra speed
+without spending energy. Stay directly behind them, ideally 20–45 metres back;
+the wake fades out by 145 metres and outside its narrow corridor. Full drafting
+reduces aerodynamic drag by 26%, bringing level-road full-throttle cruise from
+about 954 to 1,109 km/h. It builds over half a second and fades when pulling out
+to pass; braking remains fully effective. Boost gains a smaller 12% drag reduction.
+The visor shows `SLIPSTREAM` while active. Flying, warp, crashed/recovering and
+EMP-disabled craft cannot draft or provide a wake. The same rules apply to bots,
+local controllers, touch and GameNight players.
+
 The shared shield/boost bar automatically refills at **1.5 energy per second**,
 after two seconds without boosting or taking damage. Refill also waits during
 warp, EMP shutdown and recovery. A spent boost takes about 15 seconds of refill;

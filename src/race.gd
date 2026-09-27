@@ -4,6 +4,7 @@ const Weapons=preload("res://src/weapons.gd")
 const Flight=preload("res://src/flight.gd")
 const Bump=preload("res://src/bump.gd")
 const Victory=preload("res://src/victory.gd")
+const Slipstream=preload("res://src/slipstream.gd")
 const TOP_SPEED := 265.0
 const BOOST_SPEED := 390.0
 const CRASH_RESPAWN_DELAY := 2.0
@@ -30,7 +31,7 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 		var p: Dictionary = roster[i].duplicate(true)
 		p.wreck=null;p.crash_velocity=Vector3.ZERO;p.crash_normal=Vector3.ZERO
 		p.merge({"distance": -floorf(i / 3.0) * 13.0, "x": (i % 3 - (mini(3, roster.size()) - 1) / 2.0) * 12.0, "speed": 0.0,
-			"heading": 0.0, "slip": 0.0, "energy": 100.0, "boost": 0.0, "boost_held": false,"reset_held":false,"manual_reset":false,"wreck_wait":false,"wreck_time":0.,"crash_id":0,"air_entry_speed":235.,
+			"heading": 0.0, "slip": 0.0, "slipstream":0., "energy": 100.0, "boost": 0.0, "boost_held": false,"reset_held":false,"manual_reset":false,"wreck_wait":false,"wreck_time":0.,"crash_id":0,"air_entry_speed":235.,
 			"input_throttle":0.0,"engine_power":0.0,"startup":0.0,"ignited":false,"brake_vfx":0.0,"slide_hold":0.0,"acceleration":0.0,"input_steer":0.0,"input_strafe":0.0,"input_pitch":0.0,"input_brake":0.0,"air_position":Vector3.ZERO,"air_velocity":Vector3.ZERO,"air_frame":Basis.IDENTITY,
 			"ground_velocity":Vector3.ZERO,"air_rates":Vector3.ZERO,"unload":0.0,"landing_frame":Basis.IDENTITY,"landing_blend":0.0,"air_time":0.0,"air_travel":0.0,"air_roll":0.0,"launch_cooldown":0.0,"crashed":false,"trim": 0.0, "lift": 0.0, "lift_speed": 0.0, "airborne": false, "slide": 0.0, "braking": 0.0, "thrust": 0.0, "flash": 0.0, "recovery": 0.0, "lap": 1, "rank": i + 1, "finished": false,
 			"time": INF, "best_lap": INF, "lap_start": 0.0, "drifting": false, "on_pad": false}, true)
@@ -140,6 +141,7 @@ func step(dt: float, inputs: Array) -> void:
 		racers[i].input_pitch=clampf(input.get("trim",0.0),-1,1)
 		racers[i].input_strafe=clampf(float(input.get("strafe",0.0)),-1,1)
 		racers[i].input_brake=clampf(float(input.get("brake",0.0)),0,1)
+	Slipstream.update(self,dt)
 	if countdown > 0:
 		countdown = maxf(0, countdown - dt)
 		return
@@ -238,11 +240,12 @@ func step(dt: float, inputs: Array) -> void:
 		p.on_pad = n.zone == "boost" and absf(p.x) < n.width * .35 and brake<.05 and p.lift<1 and p.emp_time<=0.
 		var fast: bool = (p.boost > 0 or p.on_pad) and brake<.05
 		var target:float=(BOOST_SPEED if fast else TOP_SPEED)+loose*60-planted*35
-		var acceleration: float = throttle * (1-brake*.9) * 125 * (1 - pow(p.speed / target, 2))
+		var drag:float=Slipstream.drag_multiplier(p,fast)
+		var acceleration: float = throttle * (1-brake*.9) * 125 * (1 - pow(p.speed / target, 2)*drag)
 		if fast:
 			acceleration += maxf(0, target - p.speed) * 3
 		if throttle == 0:
-			acceleration -= 38
+			acceleration -= 38*drag
 		acceleration -= 240*brake+planted*p.speed*.12
 		acceleration -= absf(steer) * p.speed * lerpf(.045,.08,p.slide) + n.slope * 28*cos(p.heading)
 		p.acceleration=maxf(0,acceleration)

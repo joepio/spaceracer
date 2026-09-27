@@ -229,7 +229,9 @@ active sentry or jammer clear of newly collected equipment.
   An exhaust trail leads into a bright impact flash and expanding smoke. A cached
   procedural bang/rumble is ready when sound is enabled; playtests remain muted.
 - **Warp drive:** phases through traffic and follows the course for about 2.8
-  seconds, with refracted/rainbow screen distortion and expanding rings. It follows
+  seconds, with refracted/rainbow screen distortion and soft cyan-white filaments
+  streaming off the hull. The mounted coil brightens; the craft stays exposed
+  instead of being covered by a shield bubble. The wake fades out on release. It follows
   loops and split lanes and extends through a gap until it can release over deck.
   Speed tapers before handing back control, accounting for the next corner. It
   preserves lap/finish accounting and does not spend ordinary boost energy. It

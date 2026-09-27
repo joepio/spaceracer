@@ -9,7 +9,7 @@ var missile_nodes:Dictionary={}
 var turrets:Array[Node3D]=[]
 var mounts:Array[Dictionary]=[]
 var shields:Array[MeshInstance3D]=[]
-var rings:Array[Array]=[]
+var warp_wakes:Array[MeshInstance3D]=[]
 var tracers:Array[MeshInstance3D]=[]
 var explosions:Array[Node3D]=[]
 var blast_lights:Array[OmniLight3D]=[]
@@ -63,6 +63,24 @@ func battery_batch(parts:Array,mat:Material)->void:
 	var batch:=MultiMeshInstance3D.new();batch.multimesh=instances;batch.material_override=mat
 	batch.layers=2;batch.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(batch)
 
+func warp_wake_mesh()->ArrayMesh:
+	var surface:=SurfaceTool.new();surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# A handful of curved threads peel away from the hull into a long wake.
+	# One shared mesh and one draw per warping craft, without a translucent shell.
+	for strand in range(12):
+		var angle:=TAU*strand/12.
+		for segment in range(24):
+			for corner in [Vector2(0,0),Vector2(1,0),Vector2(0,1),Vector2(0,1),Vector2(1,0),Vector2(1,1)]:
+				var t:float=(segment+corner.y)/24.
+				var a:=angle+sin(t*2.5+angle)*.16
+				var spread:=1.+t*t*1.6
+				var center:=Vector3(cos(a)*4.9*spread,sin(a)*1.8*spread+.6,-1.-t*(32.+strand%3*6.))
+				var across:=Vector3(-sin(a),cos(a),0.)
+				surface.set_uv(Vector2(corner.x,t));surface.set_color(Color(strand/12.,0.,0.))
+				surface.set_normal(Vector3.UP)
+				surface.add_vertex(center+across*(corner.x-.5)*(.45+t*.6))
+	return surface.commit()
+
 func configure(state:RefCounted)->void:
 	race=state
 	steel=material(Color("283b50"));mint=material(Color("59ffda"),1.8)
@@ -83,6 +101,7 @@ func configure(state:RefCounted)->void:
 	var batch:=MultiMeshInstance3D.new();batch.multimesh=cores;batch.material_override=mint
 	batch.layers=2;batch.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(batch)
 	var hoop:=ring(3.8,4.15)
+	var wake_shape:=warp_wake_mesh()
 	for pickup in race.weapons.pickups:
 		var base:=mesh(self,hoop,mint)
 		pickup_bases.append(base)
@@ -123,11 +142,8 @@ func configure(state:RefCounted)->void:
 		mounts.append({"missile":rack,"warp":make_coil(true),"emp":make_coil(false)})
 		var shield_mat:=ShaderMaterial.new();shield_mat.shader=load("res://src/weapon_shield.gdshader")
 		var shield:=mesh(self,sphere(6.3),shield_mat);shields.append(shield)
-		var warp_rings:Array=[]
-		for i in range(3):
-			var hoop_node:=mesh(self,ring(7.,7.15),material(Color("b478ff"),2.))
-			warp_rings.append(hoop_node)
-		rings.append(warp_rings)
+		var wake_material:=ShaderMaterial.new();wake_material.shader=load("res://src/warp_wake.gdshader")
+		warp_wakes.append(mesh(self,wake_shape,wake_material))
 	for i in range(32): tracers.append(mesh(self,cylinder(1.,1.),flame))
 	for i in range(24):
 		var blast:=Blast.new();add_child(blast);explosions.append(blast);blast_lights.append(blast.flash)
@@ -328,6 +344,10 @@ func update()->void:
 			if kind!="missile":
 				var core:MeshInstance3D=attachment.get_meta("core")
 				core.scale=Vector3.ONE*(1.+sin(time*(10. if p.warp_time>0. else 2.5))*.08)
+				if kind=="warp":
+					core.material_override.albedo_color=Color("ac7aff").lerp(Color("c2f6ff"),p.warp_fx)
+					core.material_override.emission=core.material_override.albedo_color
+					core.material_override.emission_energy_multiplier=1.3+p.warp_fx*1.8
 		var side_jets:=bump_jets[i]
 		side_jets.visible=p.bump_time>0. and not p.crashed and not p.airborne
 		var pulse:=maxf(.05,sin(clampf(1.-p.bump_time/.24,0.,1.)*PI))
@@ -374,16 +394,15 @@ func update()->void:
 		for barrel in barrels.get_children():
 			if str(barrel.name).begins_with("Muzzle"): barrel.visible=recoil>.5
 		var shield:=shields[i]
-		shield.visible=(p.shield_hit>0. or p.warp_fx>.01) and not p.crashed
+		shield.visible=p.shield_hit>0. and not p.crashed
 		shield.transform=frame.scaled_local(Vector3(1.,.6,1.))
-		shield.material_override.set_shader_parameter("strength",maxf(p.shield_hit/.28,p.warp_fx*.45))
-		shield.material_override.set_shader_parameter("warp",p.warp_fx)
+		shield.material_override.set_shader_parameter("strength",p.shield_hit/.28)
 		shield.material_override.set_shader_parameter("race_time",time)
-		for j in range(3):
-			var hoop:MeshInstance3D=rings[i][j]
-			hoop.visible=p.warp_fx>.05 and not p.crashed
-			var phase:=fposmod(time*1.7+j/3.,1.)
-			hoop.transform=frame*Transform3D(Basis(Vector3.RIGHT,PI*.5).scaled(Vector3.ONE*(.6+phase*1.2)),Vector3(0,0,12.-phase*45.))
+		var wake:=warp_wakes[i]
+		wake.visible=p.warp_fx>.01 and not p.crashed
+		wake.transform=frame
+		wake.material_override.set_shader_parameter("strength",p.warp_fx)
+		wake.material_override.set_shader_parameter("race_time",time)
 	for i in range(tracers.size()):
 		tracers[i].visible=i<race.weapons.shots.size()
 		if tracers[i].visible:

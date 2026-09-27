@@ -7,6 +7,8 @@ func run()->void:
 	var game=load("res://main.tscn").instantiate();root.add_child(game)
 	if "--players=3" in OS.get_cmdline_user_args():
 		game.human_count=3;game.start_local()
+	elif "--warp-showcase" in OS.get_cmdline_user_args():
+		game.human_count=1;game.next_seed=31;game.start_local()
 	game.set_process(false);game.set_physics_process(false)
 	var race:RefCounted=game.race
 	race.countdown=0.;race.clock=12.;race.vfx_clock=12.
@@ -24,6 +26,11 @@ func run()->void:
 	race.racers[1].warp_time=1.8;race.racers[1].warp_fx=1.;race.racers[1].warp_age=1.;race.racers[1].speed=510.
 	race.racers[2].drone_time=6.5;race.racers[2].drone_target=3
 	race.weapons.shots.append({"from":race.Weapons.drone_position(race,race.racers[2]),"to":race.Weapons.pose(race,race.racers[3]).origin,"life":.1})
+	if "--warp-showcase" in OS.get_cmdline_user_args():
+		race.weapons.missiles.clear();race.weapons.shots.clear()
+		for p in race.racers:
+			p.weapon="";p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.shield_hit=0.;p.missile_warning=0.
+		race.racers[0].warp_time=1.8;race.racers[0].warp_age=1.;race.racers[0].warp_fx=1.;race.racers[0].speed=510.
 	if "--emp-showcase" in OS.get_cmdline_user_args():
 		race.weapons.missiles.clear();race.weapons.shots.clear()
 		for i in range(race.racers.size()):
@@ -134,6 +141,17 @@ func run()->void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--output="): output=arg.trim_prefix("--output=")
 	root.get_texture().get_image().save_png(output)
+	if "--warp-showcase" in OS.get_cmdline_user_args():
+		var p:Dictionary=race.racers[0]
+		var effects:Node3D=game.world.weapon_vfx
+		assert(not effects.shields[0].visible and effects.warp_wakes[0].visible)
+		p.shield_hit=.2;effects.update()
+		assert(effects.shields[0].visible) # Actual damage still has feedback.
+		p.shield_hit=0.;p.warp_fx=.3;effects.update()
+		assert(is_equal_approx(effects.warp_wakes[0].material_override.get_shader_parameter("strength"),.3))
+		p.warp_fx=0.;p.warp_time=0.;effects.update()
+		assert(not effects.warp_wakes[0].visible and not effects.shields[0].visible)
+		print("WARP_RENDER exposed hull, hit feedback and fading wake verified")
 	if "--emp-showcase" in OS.get_cmdline_user_args():
 		for p in race.racers: p.emp_time=0.
 		for view in game.views:

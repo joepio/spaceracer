@@ -24,7 +24,7 @@ static func mat(color:Color,emission:float=0.0)->StandardMaterial3D:
 		m.emission_energy_multiplier=emission
 	return m
 
-static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int,layer:int=1)->MultiMesh:
+static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int,layer:int=1,dynamic:bool=false)->MultiMesh:
 	var data:=MultiMesh.new()
 	data.transform_format=MultiMesh.TRANSFORM_3D
 	data.use_colors=true
@@ -33,6 +33,7 @@ static func batch(parent:Node3D,mesh:Mesh,material:Material,count:int,layer:int=
 	var renderer:=MultiMeshInstance3D.new()
 	renderer.multimesh=data
 	renderer.layers=layer
+	renderer.set_meta("gi_dynamic",dynamic or layer==2)
 	renderer.material_override=material
 	renderer.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_ON if layer==1 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(renderer)
@@ -173,12 +174,14 @@ func build_billboards(parent:Node3D)->void:
 		screen.position.z=.3
 		screen.material_override=materials[item.variant]
 		mount.add_child(screen)
-		if layout.buildings[item.building].get("landmark",false):
+		# Visible screens cast a localized wash throughout the lap, not just at start.
+		if local_lights.size()<48:
+			var landmark:bool=layout.buildings[item.building].get("landmark",false)
 			var light:=OmniLight3D.new()
 			light.position=Vector3(0,-item.size.y*.22,12.)
 			light.light_color=[Color("9caaff"),Color("7fcfff"),Color("b9db95"),Color("f7a8ca")][item.variant]
-			light.light_energy=4.0
-			light.omni_range=210.
+			light.light_energy=4.0 if landmark else 2.8
+			light.omni_range=210. if landmark else clampf(item.size.y*1.2,75.,150.)
 			light.omni_attenuation=1.8
 			light.light_specular=.6
 			light.shadow_enabled=false

@@ -14,10 +14,12 @@ var quality:=1.0
 var landmark:=""
 var speed:=250.
 var boost:=false
+var spread:=false
 func _initialize()->void:
 	root.unfocusable=true
 	for arg in OS.get_cmdline_user_args():
 		if arg=="--moving": moving=true
+		elif arg=="--spread": spread=true
 		elif arg=="--scripted-motion": moving=true;scripted_motion=true
 		elif arg=="--boost": boost=true
 		elif arg.begins_with("--speed="): speed=float(arg.trim_prefix("--speed="))
@@ -72,6 +74,7 @@ func run()->void:
 	for i in range(game.race.racers.size()):
 		var p:Dictionary=game.race.racers[i]
 		p.distance=game.race.track.length*fraction+[0.,18.,62.,105.,145.,190.][i]
+		if spread and i<players: p.distance+=game.race.track.length*i/players
 		p.x=[0.,9.,-9.,5.,-6.,3.][i]
 		p.startup=1.
 		p.engine_power=1.
@@ -156,6 +159,11 @@ func run()->void:
 	var result:={"moving":moving,"quality":quality,"seed":seed_value,"fraction":fraction,"views":players,"resolution":root.size,"samples":samples,"ablation":ablation,"wall_ms":stats(frame_ms),"gpu_ms":stats(gpu_ms),"render_cpu_ms":stats(cpu_ms),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"video_mem_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.,"device":RenderingServer.get_video_adapter_name(),"camera":str(game.views[0].camera.global_transform)}
 	result.sample_start_utc=sample_start
 	result.scripted_motion=scripted_motion
+	result.sdfgi=env.sdfgi_enabled
+	result.spread=spread
+	result.sdfgi_range=env.sdfgi_max_distance
+	result.sdfgi_cell_size=env.sdfgi_min_cell_size
+	result.billboard_lights=game.world.scenery.local_lights.size()
 	result.difficulty=game.race.track.difficulty
 	result.biome=game.race.track.biome
 	result.speed=speed

@@ -19,7 +19,7 @@ void city_surface(sampler2D facade_texture,highp vec3 world_position,highp vec3 
     float occupancy=.16+.84*step(.24,fract(sin(floor_band*17.17+floor(face/7.)*3.73+tint.r*33.)*433.1));
     occupancy=mix(occupancy,.80,smoothstep(.35,1.5,footprint));
     vec3 tone=mix(vec3(1.,.64,.30),vec3(.76,.88,1.),tint.g*.65);
-    albedo=mix(vec3(.025,.033,.048),tex*.38*mix(vec3(.65,.78,.88),vec3(1.,.87,.74),tint.b)*structure,wall);
-    float haze=exp(-distance_to_eye*.00032);
-    emission=tex*tone*room*occupancy*2.2*haze;
+    albedo=mix(vec3(.075,.09,.115),tex*.52*mix(vec3(.65,.78,.88),vec3(1.,.87,.74),tint.b)*structure,wall);
+    // Fog handles distance; source radiance must stay stable in GI captures.
+    emission=tex*tone*room*occupancy*2.2;
 }

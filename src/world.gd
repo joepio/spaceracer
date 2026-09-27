@@ -13,6 +13,9 @@ const Flight=preload("res://src/flight.gd")
 const Chase=preload("res://src/chase.gd")
 const Victory=preload("res://src/victory.gd")
 const Shadows=preload("res://src/shadows.gd")
+const GlobalLighting=preload("res://src/global_lighting.gd")
+var bounce_lighting:=false
+var city_moon:DirectionalLight3D
 var shadows:=Shadows.new()
 const Showpiece=preload("res://src/showpiece.gd")
 var showpiece:RefCounted
@@ -74,7 +77,7 @@ func build(state: RefCounted) -> void:
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("b7c2d2")
-	env.ambient_light_energy = .28
+	env.ambient_light_energy = .12
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
 	env.fog_light_color = Color("182437")
@@ -129,7 +132,7 @@ func build(state: RefCounted) -> void:
 	var night_fill := DirectionalLight3D.new()
 	night_fill.rotation_degrees = Vector3(-35, -35, 0)
 	night_fill.light_color = Color("d3e5ff")
-	night_fill.light_energy = .18
+	night_fill.light_energy = .12
 	night_fill.light_specular = 0.0
 	night_fill.shadow_enabled = false
 	if forest:
@@ -148,6 +151,9 @@ func build(state: RefCounted) -> void:
 		var rim:=DirectionalLight3D.new();rim.rotation_degrees=Vector3(22,125,0)
 		rim.light_color=Color("76dfcd");rim.light_energy=.45;rim.light_specular=.45;add_child(rim)
 	if forest or cell: Shadows.configure_sun(night_fill,1.,1,RenderingServer.get_current_rendering_method())
+	else:
+		city_moon=night_fill
+		if advanced_renderer: Shadows.configure_sun(night_fill,1.,1,RenderingServer.get_current_rendering_method())
 	add_child(night_fill)
 	road_material = ShaderMaterial.new()
 	road_material.shader = load("res://src/road.gdshader")
@@ -161,14 +167,24 @@ func build(state: RefCounted) -> void:
 	if forest or cell: showpiece.probes=scenery.probes
 	else: showpiece.build(self,race.track)
 	race.track.obstacles.add_visual_boxes(self)
+	GlobalLighting.prepare(self)
+	for child in get_children():
+		if child is MeshInstance3D and child.get_meta("road_bounce",false): GlobalLighting.surface_proxy(self,child)
+		elif child is MeshInstance3D and child.name=="NeonExpresswayTunnel":
+			var capture:=tunnel_material.duplicate() as ShaderMaterial
+			capture.set_shader_parameter("gi_capture",true)
+			GlobalLighting.surface_proxy(self,child,capture)
+	for light in tunnel_lights: light.light_bake_mode=Light3D.BAKE_DISABLED
 	for p in race.racers:
 		var ship := build_ship(color_for(p))
 		set_dynamic_layer(ship)
 		add_child(ship)
 		ships.append(ship)
 		var crash:=CrashVfx.new();add_child(crash);crash.configure(ship);crashes.append(crash)
+		GlobalLighting.receive_only(crash)
 		ship_colors.append(color_for(p))
 	weapon_vfx=WeaponVfx.new();add_child(weapon_vfx);weapon_vfx.configure(race)
+	GlobalLighting.receive_only(weapon_vfx)
 	update_ships()
 
 func vertex(surface: SurfaceTool, n: Dictionary, x: float, h: float, uv: Vector2, normal:Vector3=Vector3.ZERO) -> void:
@@ -230,6 +246,7 @@ func build_track() -> void:
 			var mesh := MeshInstance3D.new()
 			mesh.mesh = pair[0].commit()
 			mesh.material_override = pair[1]
+			if pair[1]==local_road: mesh.set_meta("road_bounce",true)
 			mesh.layers = 4 # Road excluded from static city captures; cameras still see it.
 			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 			add_child(mesh)
@@ -392,6 +409,8 @@ func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false, 
 	Chase.update(camera,Flight.pose(p,n,race.clock),p.speed,p.boost>0 or p.on_pad,dt,snap,p.acceleration,effects_enabled and race.countdown<=0 and p.recovery<=0 and not p.finished)
 
 static func set_dynamic_layer(node:Node)->void:
+	if node is GeometryInstance3D: node.gi_mode=GeometryInstance3D.GI_MODE_DISABLED
+	if node is Light3D: node.light_bake_mode=Light3D.BAKE_DISABLED
 	if node is VisualInstance3D: node.layers=2
 	for child in node.get_children(): set_dynamic_layer(child)
 
@@ -400,6 +419,16 @@ func set_quality(value:float,view_count:int)->void:
 	lighting_clock=-1.
 	if is_instance_valid(forest_sun):
 		Shadows.configure_sun(forest_sun,value,view_count,RenderingServer.get_current_rendering_method())
+	if is_instance_valid(city_moon):
+		Shadows.configure_sun(city_moon,value,view_count,RenderingServer.get_current_rendering_method())
+		city_moon.shadow_enabled=advanced_renderer and value>=.8
+	GlobalLighting.configure(scene_environment,bounce_lighting and advanced_renderer and value>=.8,race.track.biome)
+	for child in get_children():
+		if child.has_meta("road_source"):
+			child.visible=scene_environment.sdfgi_enabled
+			var source:MeshInstance3D=child.get_meta("road_source")
+			source.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if child.visible else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	for probe in showpiece.probes: probe.ambient_mode=ReflectionProbe.AMBIENT_DISABLED if scene_environment.sdfgi_enabled else ReflectionProbe.AMBIENT_ENVIRONMENT
 	shadows.selection_clock=-1.
 	if not advanced_renderer: return
 	scene_environment.ssil_enabled=false

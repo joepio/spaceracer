@@ -27,6 +27,14 @@ Standalone races have six machines, filling spare positions with AI.
 Start/Escape pauses. Unchanged settings resume the current race; changing a race
 setting changes the primary action to **Restart**. Graphics never resets progress.
 The paused track stays frozen until resuming or restarting. Back no longer pauses.
+
+Desktop Forward+ also has a **Lighting** row: **Direct** or experimental **SDFGI**.
+Switch it in the pause menu to compare the same view without restarting the race.
+SDFGI adds environmental bounce light and is opt-in; selecting it raises Performance
+graphics to Balanced. Selecting Performance disables it again. Mobile keeps direct
+lighting and does not show the unsupported option. `--sdfgi` enables the trial at
+launch; `--direct-lighting` selects the fallback. See [the lighting experiment](docs/gi-experiment.md)
+for measurements and limitations.
 F5 starts a fresh track. Three laps by default; results last eight seconds.
 After finishing, an autonomous victory lap keeps your ship moving while a replay
 camera cycles through rear-quarter, front, side and overhead shots. Other players

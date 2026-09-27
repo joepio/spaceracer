@@ -229,9 +229,9 @@ func build(parent:Node3D,race:RefCounted)->void:
 		for i in range(group.items.size()):
 			data.set_instance_transform(i,group.items[i].frame);data.set_instance_color(i,group.items[i].color)
 	groups.clear()
-	bodies=Batch.batch(parent,sphere,tissue,walkers.size()*2)
-	legs=Batch.batch(parent,rod,tissue,walkers.size()*12)
-	feet=Batch.batch(parent,sphere,tissue,walkers.size()*6)
+	bodies=Batch.batch(parent,sphere,tissue,walkers.size()*2,1,true)
+	legs=Batch.batch(parent,rod,tissue,walkers.size()*12,1,true)
+	feet=Batch.batch(parent,sphere,tissue,walkers.size()*6,1,true)
 	for i in range(bodies.instance_count): bodies.set_instance_color(i,Color("dc9dac") if i%2==0 else Color("88d6c0"))
 	for i in range(legs.instance_count): legs.set_instance_color(i,Color("dbb679"))
 	for i in range(feet.instance_count): feet.set_instance_color(i,Color("aee7c2"))

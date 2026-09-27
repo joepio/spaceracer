@@ -30,6 +30,7 @@ var laps := 3
 var difficulty := "normal"
 var biome := "city"
 var quality := 1.0
+var bounce_lighting:=false
 var results_clock := 0.0
 var back_release := 0.0
 var activity_clock := 0.0
@@ -94,6 +95,8 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	for arg in args:
 		if arg == "--demo": demo = true
+		elif arg=="--sdfgi": bounce_lighting=true
+		elif arg=="--direct-lighting": bounce_lighting=false
 		elif arg.begins_with("--players="): human_count = clampi(int(arg.get_slice("=",1)),1,4)
 		elif arg.begins_with("--seed="): next_seed = int(arg.get_slice("=",1))
 		elif arg.begins_with("--difficulty=") and arg.get_slice("=",1) in Race.Track.DIFFICULTIES: difficulty=arg.get_slice("=",1)
@@ -184,6 +187,7 @@ func new_race() -> void:
 	next_seed = next_seed%MAX_SEED+1
 	results_clock = 0
 	world = World.new()
+	world.bounce_lighting=bounce_lighting
 	add_child(world)
 	world.build(race)
 	var indices: Array[int] = []
@@ -503,6 +507,14 @@ func adjust_menu(id:String,step:int)->void:
 		"graphics":
 			var levels:=[.6,.8,1.0]
 			quality=levels[posmod(levels.find(quality)+step,3)]
+			if quality<.8: bounce_lighting=false
+			world.bounce_lighting=bounce_lighting
+			layout_views()
+		"lighting":
+			if not world.advanced_renderer: return
+			bounce_lighting=not bounce_lighting
+			if bounce_lighting: quality=maxf(quality,.8)
+			world.bounce_lighting=bounce_lighting
 			layout_views()
 	refresh_menu_values()
 
@@ -516,6 +528,7 @@ func refresh_menu_values()->void:
 			"biome": row.text="World                           %s"%("The Cell" if biome=="cell" else biome.capitalize())
 			"difficulty": row.text="Level                            %s"%difficulty.capitalize()
 			"graphics": row.text="Graphics                       %s"%{.6:"Performance",.8:"Balanced",1.0:"High"}.get(quality,"Balanced")
+			"lighting": row.text="Lighting                         %s"%("SDFGI" if bounce_lighting else "Direct")
 
 func _unhandled_input(event:InputEvent)->void:
 	if bridge.launched_by_daemon: return
@@ -575,7 +588,9 @@ func make_menu()->void:
 	menu.add_child(content)
 	menu_label(content,"ION RUSH",58,Color("edf7ff"))
 	var start:=menu_button(content,"race","Race",start_selected,true)
-	for id in ["players","biome","difficulty","seed","graphics"]:
+	var settings:=["players","biome","difficulty","seed","graphics"]
+	if world.advanced_renderer: settings.append("lighting")
+	for id in settings:
 		var row:=HBoxContainer.new()
 		row.add_theme_constant_override("separation",6)
 		content.add_child(row)

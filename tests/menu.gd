@@ -128,6 +128,13 @@ func run()->void:
 	row("graphics").grab_focus()
 	await press(JOY_BUTTON_DPAD_RIGHT)
 	check(game.quality==.6 and row("race").text=="Resume","Graphics adjusts without losing race")
+	if game.world.advanced_renderer:
+		row("lighting").grab_focus()
+		await press(JOY_BUTTON_DPAD_RIGHT)
+		check(game.bounce_lighting and game.world.scene_environment.sdfgi_enabled and game.quality>=.8,"Lighting row enables SDFGI and a supported graphics tier")
+		check(game.race==original and game.local_paused and row("race").text=="Resume","Lighting comparison preserves the paused race")
+		await press(JOY_BUTTON_DPAD_LEFT)
+		check(not game.bounce_lighting and not game.world.scene_environment.sdfgi_enabled,"Lighting row restores the direct comparison")
 	row("players").grab_focus()
 	await press(JOY_BUTTON_DPAD_RIGHT)
 	await press(JOY_BUTTON_START)

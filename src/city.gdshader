@@ -10,6 +10,6 @@ varying flat float facade_weight;
 void vertex(){world_position=(MODEL_MATRIX*vec4(VERTEX,1.)).xyz;world_normal=normalize(transpose(inverse(mat3(MODEL_MATRIX)))*NORMAL);tint=COLOR.rgb;facade_weight=COLOR.a;}
 void fragment(){
     city_surface(facade,world_position,world_normal,tint,facade_weight,length(VERTEX),ALBEDO,EMISSION);
-    METALLIC=.62;
-    ROUGHNESS=.35;
+    METALLIC=mix(.15,.38,tint.b);
+    ROUGHNESS=mix(.42,.65,tint.r);
 }

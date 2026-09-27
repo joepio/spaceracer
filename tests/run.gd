@@ -127,6 +127,7 @@ func run() -> void:
 	var finish := Race.new(roster(2),2,1)
 	finish.countdown=0
 	finish.racers[0].distance=finish.track.length-1
+	finish.racers[0].checkpoint_index=finish.checkpoints.gates.size()
 	finish.racers[0].speed=200.0
 	finish.step(.01,[{"throttle":1.0},{}])
 	check(finish.racers[0].finished and not finish.over,"First finisher gives rivals a grace period")

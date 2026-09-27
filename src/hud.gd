@@ -62,7 +62,11 @@ func _draw() -> void:
 	elif p.trim<-.2: status="Low grip"
 	if p.warp_time>0.: status="Autopilot"
 	if race.can_reset(p):
-		centered("Reset" if OS.has_feature("android") else "Y to reset",w,h*.80,12,Color("ffd08a"))
+		var reset_notice:="Reset" if OS.has_feature("android") else "Y to reset"
+		if p.checkpoint_missed: reset_notice="CHECKPOINT MISSED · "+("TAP RESET" if OS.has_feature("android") else "Y TO RETURN")
+		centered(reset_notice,w,h*.80,12,Color("ffd08a"))
+	elif p.checkpoint_flash>0.:
+		centered("CHECKPOINT",w,h*.25,10,Color(.65,1.,.9,p.checkpoint_flash/.7))
 	label(status.to_upper(),Vector2(w-172,h-16),8,energy_color if p.lap>1 else Color("79aabb"))
 	if show_map: minimap(Vector2(76,h-74),38)
 	var item:String=race.Weapons.NAMES.get(p.weapon,"")

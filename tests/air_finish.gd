@@ -13,6 +13,7 @@ func run()->void:
 		race.countdown=0.;race.clock=90.
 		var p:Dictionary=race.racers[0]
 		p.lap=1 if case=="lap" else 3
+		p.checkpoint_index=0 if case=="shortcut" else race.checkpoints.gates.size()
 		p.distance=race.track.length*p.lap-30.
 		if case=="shortcut": p.distance=500.
 		var n:Dictionary=race.track.sample(0.)

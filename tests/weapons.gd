@@ -126,6 +126,7 @@ func run()->void:
 			if owner.warp_time<=0.: break
 		check(not owner.crashed and not owner.airborne and not race.track.sample(owner.distance).air_gap,"Warp crosses difficult flight gaps and releases over supported deck")
 	race=fresh(1);owner=race.racers[2];owner.distance=race.track.length-50.;owner.weapon="warp"
+	owner.checkpoint_index=race.checkpoints.gates.size()
 	race.weapons.activate(race,2)
 	for tick in range(100):
 		race.step(.01,neutral())

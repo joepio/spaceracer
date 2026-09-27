@@ -18,6 +18,7 @@ func run()->void:
 	race.countdown=0.
 	var p:Dictionary=race.racers[0]
 	p.distance=race.track.length-1.;p.speed=225.;p.startup=1.
+	p.checkpoint_index=race.checkpoints.gates.size()
 	race.step(.02,[{"throttle":1.},{}])
 	check(p.finished and not race.over,"First finisher starts a victory lap while opponents race")
 	var finish_time:float=p.time
@@ -75,6 +76,7 @@ func render_scene()->void:
 	game.race.countdown=0.;game.race.clock=90.;game.race.vfx_clock=90.
 	var p:Dictionary=game.race.racers[0]
 	p.distance=game.race.track.length*game.race.laps-1.;p.speed=225.;p.startup=1.
+	p.lap=game.race.laps;p.checkpoint_index=game.race.checkpoints.gates.size()
 	game.world.update_camera(game.views[0].camera,0,0.,true)
 	game.race.step(.02,[{"throttle":1.},{},{},{},{},{}])
 	var output:="C:/dev/ion-rush-captures/victory"

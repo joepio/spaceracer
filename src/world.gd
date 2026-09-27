@@ -186,6 +186,7 @@ func build(state: RefCounted) -> void:
 	race.weapons.AirBatteries.validate(race.track,race.weapons.batteries)
 	weapon_vfx=WeaponVfx.new();add_child(weapon_vfx);weapon_vfx.configure(race)
 	GlobalLighting.receive_only(weapon_vfx)
+	race.checkpoints.build(self)
 	update_ships()
 
 func vertex(surface: SurfaceTool, n: Dictionary, x: float, h: float, uv: Vector2, normal:Vector3=Vector3.ZERO) -> void:

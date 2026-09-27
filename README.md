@@ -374,8 +374,12 @@ without awarding progress. Holding Y cannot trigger repeated resets. Recovery pr
 Flight has no hidden time or distance limit. Impacts with scenery, road undersides,
 city ground or water still cause crashes; Y remains available when lost off course.
 Ordinary flight progress is credited on landing. Flying forward through the lap
-line over the road also counts immediately, up to 120 m above the deck. The
-travelled-distance check still rejects shortcuts that skip untravelled course.
+line over the road also counts immediately, up to 120 m above the deck.
+Each course has a few ordered checkpoint gates, including halfway through every
+loop. Pass through them on the road or in the air; shortcuts between gates are
+allowed. Skipping a gate prevents lap credit and displays
+`CHECKPOINT MISSED · Y TO RETURN`. Y returns to the missing gate's approach
+(before the entrance for loops), using the usual recovery delay and energy cost.
 
 Hinged wing elevons and twin tail rudders respond directly to pitch, steering,
 strafing and braking, including during the starting countdown. Input deflection

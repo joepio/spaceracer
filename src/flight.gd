@@ -156,8 +156,8 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 	var frame:Basis=p.air_frame
 	p.air_travel+=previous.distance_to(position)
 	# Ordinary route progress is credited on landing; lap gates also work in air.
-	var nearest:Dictionary=track.project(position,p.distance,p.air_travel*1.35+100)
-	var previous_hit:Dictionary=track.project(previous,p.distance,p.air_travel*1.35+100)
+	var nearest:Dictionary=track.project(position,p.distance,track.length)
+	var previous_hit:Dictionary=track.project(previous,p.distance,track.length)
 	var n:Dictionary=nearest.node
 	var surface:=Track.surface_frame(n,nearest.lateral)
 	var surface_position:=Track.point(n,nearest.lateral)
@@ -169,7 +169,6 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 	p.lift=after
 	p.lift_speed=velocity.dot(surface.y)
 	var inside:=Track.supported(n,nearest.lateral,5.8)
-	var legal_progress:bool=nearest.distance-p.distance<=p.air_travel*1.05+25.
 	if p.air_time>.10 and inside and before>0 and after<=0:
 		var nose_alignment:float=frame.z.dot(surface.z)
 		var upright:float=frame.y.dot(surface.y)
@@ -178,7 +177,7 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 		# Purpose-built landing decks have stronger magnetic capture. A hard
 		# touchdown still costs speed/energy; steep or misaligned impacts crash.
 		var descent_limit:=140. if landing_pad else 115.
-		if nose_alignment>.4 and upright>.4 and p.lift_speed> -descent_limit and approach>45 and legal_progress:
+		if nose_alignment>.4 and upright>.4 and p.lift_speed> -descent_limit and approach>45:
 			var damage:=touchdown_damage(frame,surface,velocity)
 			p.landing_damage=damage
 			p.energy=maxf(0.,p.energy-damage)
@@ -213,9 +212,7 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 
 static func cross_lap_gate(p:Dictionary,track:RefCounted,previous:Vector3,position:Vector3)->void:
 	var distance:float=p.lap*track.length
-	# Same travelled-distance check as landing: cutting across a whole circuit
-	# cannot award its untravelled length just by passing the finish structure.
-	if distance-p.distance>p.air_travel*1.05+25.: return
+	# Race validates ordered checkpoints; free flight between them is legal.
 	var gate:Dictionary=track.sample(distance)
 	var before:float=(previous-gate.p).dot(gate.frame.z)
 	var after:float=(position-gate.p).dot(gate.frame.z)

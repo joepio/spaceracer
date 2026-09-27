@@ -5,6 +5,7 @@ const Flight=preload("res://src/flight.gd")
 const Bump=preload("res://src/bump.gd")
 const Victory=preload("res://src/victory.gd")
 const Slipstream=preload("res://src/slipstream.gd")
+const Checkpoints=preload("res://src/checkpoints.gd")
 const TOP_SPEED := 265.0
 const BOOST_SPEED := 390.0
 const CRASH_RESPAWN_DELAY := 2.0
@@ -15,6 +16,7 @@ const HULL_HALF_WIDTH := 4.7
 const HULL_HALF_LENGTH := 4.45
 const HULL_CENTER := .65
 var weapons:RefCounted
+var checkpoints:RefCounted
 var track: RefCounted
 var racers: Array[Dictionary] = []
 var countdown := 3.0
@@ -26,6 +28,7 @@ var finish_deadline := INF
 
 func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String="normal", biome:String="city") -> void:
 	track = Track.new(track_seed,difficulty,biome)
+	checkpoints=Checkpoints.new(track)
 	laps = lap_count
 	for i in range(roster.size()):
 		var p: Dictionary = roster[i].duplicate(true)
@@ -37,6 +40,7 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 			"time": INF, "best_lap": INF, "lap_start": 0.0, "drifting": false, "on_pad": false}, true)
 		Weapons.initialize(p)
 		Bump.initialize(p)
+		checkpoints.initialize(p)
 		p.energy_previous=p.energy;p.energy_refill_delay=ENERGY_REFILL_DELAY
 		racers.append(p)
 	weapons=Weapons.new(track)
@@ -99,7 +103,7 @@ func air_bot(p:Dictionary)->Dictionary:
 		"strafe":clampf(-atan2(aim.frame.y.dot(frame.x),aim.frame.y.dot(frame.y))*1.37,-1.,1.)}
 
 static func can_reset(p:Dictionary)->bool:
-	return p.airborne and p.air_time>.3 and not p.crashed and p.recovery<=0 and not p.finished
+	return ((p.airborne and p.air_time>.3) or p.get("checkpoint_missed",false)) and not p.crashed and p.recovery<=0 and not p.finished
 
 static func begin_recovery(p:Dictionary,delay:float)->void:
 	# Crashing already charged the penalty; preserve it during either recovery path.
@@ -120,9 +124,14 @@ func step(dt: float, inputs: Array) -> void:
 		var input:Dictionary=inputs[i]
 		var pilot:Dictionary=racers[i]
 		if pilot.finished: continue
+		pilot.checkpoint_before=Flight.pose(pilot,track.sample(pilot.distance),clock).origin
+		pilot.checkpoint_flash=maxf(0.,pilot.checkpoint_flash-dt)
 		Bump.begin(pilot,input,dt,countdown)
 		var reset_pressed:bool=input.get("reset",false)
 		if countdown<=0 and reset_pressed and not pilot.reset_held and can_reset(pilot):
+			if not pilot.airborne:
+				var reset_pose:=Flight.pose(pilot,track.sample(pilot.distance),clock)
+				pilot.air_position=reset_pose.origin;pilot.air_frame=reset_pose.basis
 			Flight.crash(pilot)
 			begin_recovery(pilot,CRASH_RESPAWN_DELAY)
 		pilot.reset_held=reset_pressed
@@ -222,6 +231,8 @@ func step(dt: float, inputs: Array) -> void:
 				if not p.manual_reset: p.energy=65.
 				elif p.energy<=1.: p.energy=25. # Rebuilt hull must survive the next mandatory landing.
 				p.manual_reset=false
+				if p.checkpoint_missed:
+					p.distance=checkpoints.return_distance(p);p.checkpoint_missed=false
 				p.x = 0.0
 				p.route=0.
 				if track.has_method("safe_respawn"): p.distance=track.safe_respawn(p.distance)
@@ -236,7 +247,7 @@ func step(dt: float, inputs: Array) -> void:
 			var previous_speed:float=p.speed
 			Flight.step(p,track,dt,steer,strafe,throttle,brake)
 			p.acceleration=maxf(0,(p.speed-previous_speed)/dt)
-			if not p.crashed and p.recovery==0 and (not p.airborne or p.get("air_gate_crossed",false)):
+			if not p.crashed and p.recovery==0:
 				update_lap(p)
 				if p.finished and p.get("air_gate_crossed",false): p.time=clock-dt*(1.-p.air_gate_fraction)
 			continue
@@ -318,11 +329,19 @@ static func refill_energy(p:Dictionary,dt:float)->void:
 	p.energy_previous=p.energy
 
 func update_lap(p:Dictionary)->void:
+	checkpoints.advance(p,Flight.pose(p,track.sample(p.distance),clock).origin)
+	if not checkpoints.complete(p) and p.distance>checkpoints.progress(p)+90.:
+		p.checkpoint_missed=true
 	var lap:=int(p.distance/track.length)+1
 	if lap>p.lap:
+		if not checkpoints.complete(p):
+			p.checkpoint_missed=true
+			p.distance=(p.lap-1)*track.length+fposmod(p.distance,track.length)
+			return
 		p.best_lap=minf(p.best_lap,clock-p.lap_start)
 		p.lap_start=clock
 		p.lap=lap
+		p.checkpoint_index=0;p.checkpoint_missed=false
 		if lap>laps:
 			p.finished=true
 			p.time=clock-(p.distance-track.length*laps)/maxf(1,p.speed)
@@ -415,6 +434,7 @@ func standings() -> Array:
 	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		if a.finished != b.finished: return a.finished
 		if a.finished: return a.time < b.time
-		if a.distance == b.distance: return a.slot < b.slot
-		return a.distance > b.distance)
+		var ap:float=checkpoints.progress(a);var bp:float=checkpoints.progress(b)
+		if ap == bp: return a.slot < b.slot
+		return ap > bp)
 	return ordered

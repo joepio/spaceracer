@@ -20,11 +20,11 @@ static func build(parent:Node3D,track:RefCounted)->void:
 	# Read the first significant bend ahead, rather than a later opposite S-bend.
 	for distance in range(0,int(track.length),72):
 		var n:Dictionary=track.sample(distance)
-		if n.loop or n.tunnel or n.air_gap or n.feature!="ribbon" or not n.rails: continue
+		if n.loop or n.tunnel or n.air_gap or n.feature not in ["ribbon","hairpin","spiral"] or (not n.rails and n.feature!="hairpin"): continue
 		var turn:=0.
 		for ahead in range(0,321,24):
 			var next:Dictionary=track.sample(distance+ahead)
-			if next.loop or next.air_gap or next.feature!="ribbon": break
+			if next.loop or next.air_gap or next.feature not in ["ribbon","hairpin","spiral"]: break
 			if absf(next.curve)>.0035:
 				turn=signf(next.curve)
 				break

@@ -224,6 +224,7 @@ func build_track() -> void:
 			if maxf(a.split_gap,b.split_gap)>.0001:
 				# Two separate decks around a real opening, tapering back to one road.
 				for side in [-1.,1.]:
+					if a.dead_gap and side==a.dead_side: continue
 					fork_strip(surface,a,b,side,0.,distance)
 					fork_strip(underside,a,b,side,-1.4,distance)
 					inner_rail(rail,a,b,side,distance)
@@ -236,11 +237,11 @@ func build_track() -> void:
 					strip(surface,a,b,left,right,0.,distance)
 					strip(underside,a,b,left,right,-1.4,distance)
 			if a.rails and b.rails and not (Track.closed_tube(a) and Track.closed_tube(b)):
-				strip(rail,a,b,-1.015,-1.,RAIL_HEIGHT,distance)
-				strip(rail,a,b,1.,1.015,RAIL_HEIGHT,distance)
+				if not (a.dead_gap and a.dead_side<0.): strip(rail,a,b,-1.015,-1.,RAIL_HEIGHT,distance)
+				if not (a.dead_gap and a.dead_side>0.): strip(rail,a,b,1.,1.015,RAIL_HEIGHT,distance)
 			if not (Track.closed_tube(a) and Track.closed_tube(b)):
-				wall(underside,a,b,-1.,distance)
-				wall(underside,a,b,1.,distance)
+				if not (a.dead_gap and a.dead_side<0.): wall(underside,a,b,-1.,distance)
+				if not (a.dead_gap and a.dead_side>0.): wall(underside,a,b,1.,distance)
 		var local_road:=road_material.duplicate() as ShaderMaterial
 		road_sections.append(local_road)
 		configure_reflections(local_road,nodes[mini(chunk+16,nodes.size()-1)].p,chunk<float(nodes.size())*.16)
@@ -254,6 +255,7 @@ func build_track() -> void:
 			add_child(mesh)
 	build_tunnel()
 	build_jump_markers()
+	build_dead_ends()
 	TurnMarkers.build(self,race.track)
 	# Tunnel ribs are static geometry.
 	var rib := material(Color("31465d"))
@@ -267,6 +269,40 @@ func build_track() -> void:
 			box(frame, Vector3(n.width + 3, 11, 0), Vector3(1.7, 22, 2.2), rib)
 			box(frame, Vector3(0, 22, 0), Vector3(n.width * 2 + 8, 1.8, 2.2), rib)
 			box(frame, Vector3(0, 20.8, -.1), Vector3(n.width * 2 + 4, .3, 1.3), rail_material)
+
+func build_dead_ends()->void:
+	var red:=material(Color("ff4c30"),2.)
+	var green:=material(Color("59efc7"),1.7)
+	var metal:=material(Color("252e3c"))
+	for hazard in race.track.dead_ends:
+		if hazard.wall:
+			var block:=box(self,hazard.pose.origin,hazard.size,metal)
+			block.basis=hazard.pose.basis
+			block.set_meta("track_surface",true)
+			for x in [-.32,0.,.32]:
+				var bar:=box(self,hazard.pose*Vector3(hazard.size.x*x,0.,-1.6),Vector3(1.5,12.,.18),red)
+				bar.basis=hazard.pose.basis*Basis(Vector3.FORWARD,.35)
+				bar.set_meta("track_surface",true)
+		var entry:=0.
+		for i in range(race.track.nodes.size()):
+			if race.track.nodes[i].u>=hazard.start: entry=i*race.track.step;break
+		for distance in [entry-145.,entry-70.,hazard.distance-65.]:
+			var n:Dictionary=race.track.sample(distance)
+			var frame:=Node3D.new();add_child(frame);frame.transform=Transform3D(n.frame,n.p)
+			var x:float=-hazard.side*(n.width+8.)
+			box(frame,Vector3(x,5.,0.),Vector3(.7,10.,.7),metal)
+			box(frame,Vector3(x,10.,0.),Vector3(14.,7.,.6),metal)
+			var text:=Label3D.new();frame.add_child(text)
+			text.text="DEAD END\n"+("< KEEP LEFT" if hazard.side>0. else "KEEP RIGHT >")
+			text.font_size=64;text.pixel_size=.042;text.modulate=Color("ffb15d")
+			text.no_depth_test=false;text.position=Vector3(x,10.,-.36);text.rotation.y=PI
+		for distance in [hazard.distance-105.,hazard.distance-65.,hazard.distance-25.]:
+			var n:Dictionary=race.track.sample(distance)
+			for side in [-1.,1.]:
+				var at:Vector3=Track.point(n,side*(n.width+n.split_gap)*.5,.12)
+				for angle in ([-.7,.7] if side==hazard.side else [0.]):
+					var stripe:=box(self,at,Vector3(12.,.12,1.),red if side==hazard.side else green)
+					stripe.basis=n.frame*Basis(Vector3.UP,angle);stripe.set_meta("track_surface",true)
 
 func build_jump_markers()->void:
 	var amber:=material(Color("ffc46b"),2.)

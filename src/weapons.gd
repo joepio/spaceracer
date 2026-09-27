@@ -225,7 +225,10 @@ func step_warp(race:RefCounted,p:Dictionary,dt:float)->void:
 	# Phase over missing deck, and do not hand back control in the middle of a gap.
 	if n.air_gap and p.warp_time<.65: p.warp_time=.65
 	var lane:=0.
-	if n.split_gap>.01: lane=(1. if p.slot%2==0 else -1.)*(n.split_gap+(n.width-n.split_gap)*.5)
+	if n.split_gap>.01:
+		var route:float=n.get("preferred_route",0.)
+		if route==0.: route=1. if p.slot%2==0 else -1.
+		lane=route*(n.split_gap+(n.width-n.split_gap)*.5)
 	p.x=move_toward(p.x,lane,dt*90.)
 	p.heading=0.;p.slip=0.;p.trim=0.;p.unload=0.;p.lift=0.;p.slide=0.;p.drifting=false
 	p.airborne=false;p.landing_blend=0.;p.braking=0.;p.on_pad=false;p.thrust=1.;p.engine_power=1.;p.input_throttle=1.

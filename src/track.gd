@@ -1,4 +1,6 @@
 extends RefCounted
+const Components=preload("res://src/track_components.gd")
+const HazardCollision=preload("res://src/obstacles.gd")
 const Profiles=preload("res://src/track_profiles.gd")
 ## Closed magnetic ribbon with continuous frames through inverted sections.
 const THEMES = [
@@ -33,6 +35,9 @@ var biome := "city"
 var water_level:float=-INF
 var jumps:Array[Dictionary]=[]
 var obstacles:RefCounted
+var hazards:=HazardCollision.new()
+var components:Array[Dictionary]=[]
+var dead_ends:Array[Dictionary]=[]
 
 func base_position(u: float) -> Vector3:
 	var a := u * TAU
@@ -57,6 +62,8 @@ static func smooth_phase(t: float) -> float:
 	return t*t*t*(t*(t*6-15)+10)
 
 func raw_position(u: float) -> Vector3:
+	var component:=Components.at(components,u)
+	if not component.is_empty(): return component.curve.sample_baked((u-component.start)/(component.end-component.start)*component.length,true)
 	var p := base_position(u)
 	for jump in jumps:
 		if u<=jump.start or u>=jump.end: continue
@@ -70,7 +77,8 @@ func raw_position(u: float) -> Vector3:
 		var lip:float=jump.lip
 		var land:float=jump.land
 		var height:float
-		if t<lip: height=jump.rise*smooth_phase(t/lip)
+		if t<lip:
+			height=jump.rise*(pow(t/lip,2.) if jump.get("turbo",false) else smooth_phase(t/lip))
 		elif t<land: height=lerpf(jump.rise,jump.drop,smooth_phase((t-lip)/(land-lip)))
 		else: height=jump.drop*(1.-smooth_phase((t-land)/(1.-land)))
 		p.y+=height
@@ -133,6 +141,10 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 				"rise":12. if difficulty=="normal" else 25.,"drop":0.,"offset":34.*(1. if track_seed%2==0 else -1.)})
 		if difficulty=="hard" and profile.hard_flight:
 			jumps.append({"kind":"flight","start":.927,"end":.994,"lip":.27,"land":.58,"rise":28.,"drop":0.,"offset":46.*(-1. if track_seed%2==0 else 1.)})
+	components=Components.build(self)
+	if difficulty=="hard" and Profiles.index(seed_value) in [0,3,4]:
+		var turbo:Dictionary=jumps[0]
+		turbo.turbo=true;turbo.rise=38.;turbo.drop=-38.;turbo.land=.68;turbo.offset*=1.4
 	var raw: Array[Vector3] = []
 	var distances: Array[float] = [0.0]
 	const RESOLUTION := 4096
@@ -171,6 +183,8 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 		nodes[i].forward=delta.normalized()
 		nodes[i].heading=atan2(-delta.x,delta.z)
 		nodes[i].slope=nodes[i].forward.y
+		if not Components.at(components,nodes[i].u).is_empty():
+			nodes[i].right_hint=nodes[i].forward.cross(Vector3.UP).normalized()
 	var bank_targets:Array[float]=[]
 	for i in range(count):
 		var derivative:Vector3=(nodes[(i+1)%count].forward-nodes[posmod(i-1,count)].forward)/(2*step)
@@ -221,6 +235,7 @@ func build_features()->void:
 		n.split_gap=0.
 		n.rails=true
 		n.feature="ribbon"
+		n.dead_side=0.;n.dead_gap=false;n.preferred_route=0.
 		for feature in features:
 			if n.u<=feature.start or n.u>=feature.end: continue
 			var q:float=(n.u-feature.start)/(feature.end-feature.start)
@@ -249,7 +264,19 @@ func build_features()->void:
 					n.split_gap=18.*feature.size*blend
 					n.width+=n.split_gap
 					n.section="SPLIT ROUTE"
+					if difficulty=="hard":
+						n.dead_side=1. if seed_value%2==0 else -1.
+						n.preferred_route=-n.dead_side
+						n.dead_gap=q>=.59
+						n.section="DEAD END · "+("KEEP LEFT" if n.dead_side>0. else "KEEP RIGHT")
 			break
+		var component:=Components.at(components,n.u)
+		if not component.is_empty():
+			n.feature=component.kind;n.shape_angle=0.;n.split_gap=0.;n.tunnel=false;n.zone=""
+			n.section="SPIRAL ASCENT" if component.kind=="spiral" else "HAIRPIN · BRAKE"
+			if component.kind=="hairpin":
+				var q:float=(n.u-component.start)/(component.end-component.start)
+				n.width=lerpf(n.width,16.,smooth_phase(clampf(minf(q,1.-q)/.12,0.,1.)));n.rails=false
 		for jump in jumps:
 			if n.u<=jump.start or n.u>=jump.end: continue
 			var t:float=(n.u-jump.start)/(jump.end-jump.start)
@@ -258,7 +285,9 @@ func build_features()->void:
 			n.rails=not n.air_gap
 			n.zone=""
 			n.width+=smooth_phase(clampf(minf(t,1.-t)/.2,0.,1.))*(18. if difficulty=="normal" else 2.)
+			if jump.get("turbo",false) and t>jump.lip-.19 and t<jump.lip-.025: n.zone="boost"
 			n.section="FLIGHT GAP" if n.air_gap else ("JUMP · KEEP SPEED" if t<jump.lip else "LANDING ZONE")
+			if jump.get("turbo",false): n.section="TURBO JUMP · NOSE DOWN" if t<jump.land else "LANDING ZONE"
 		if difficulty=="hard" and not n.loop and not n.tunnel and n.feature=="ribbon":
 			if (n.u>.02 and n.u<.05) or (n.u>.285 and n.u<.335) or (n.u>.64 and n.u<.68) or (n.u>.755 and n.u<.80):
 				n.rails=false
@@ -272,6 +301,18 @@ func build_features()->void:
 		jump.landing=(gap_indices[-1]+1)*step
 		jump.respawn=jump.takeoff-260.
 		features.append(jump.duplicate())
+	if difficulty=="hard":
+		for feature in features:
+			if feature.kind!="split": continue
+			var terminal_u:float=lerpf(feature.start,feature.end,.59)
+			var index:=0
+			while nodes[index].u<terminal_u: index+=1
+			var n:Dictionary=nodes[index]
+			var wall:bool=posmod(seed_value/6,2)==1
+			var size:=Vector3(n.width-n.split_gap,14.,3.)
+			var pose:=Transform3D(n.frame,point(n,n.dead_side*(n.width+n.split_gap)*.5,7.))
+			dead_ends.append({"distance":index*step,"start":feature.start,"end":feature.end,"wall":wall,"pose":pose,"size":size,"side":n.dead_side})
+			if wall: hazards.add_box(Transform3D(pose.basis.scaled_local(size),pose.origin))
 	for n in nodes: n.geometry=geometry_data(n)
 	for i in range(nodes.size()):
 		nodes[i].before=nodes[posmod(i-1,nodes.size())].geometry
@@ -291,7 +332,7 @@ func sample(distance: float) -> Dictionary:
 		"heading":lerp_angle(a.heading,b.heading,f),"slope":lerpf(a.slope,b.slope,f),
 		"crest":lerpf(a.crest,b.crest,f),"curve":lerpf(a.curve,b.curve,f),"bank":lerpf(a.bank,b.bank,f),
 		"shape_angle":lerpf(a.shape_angle,b.shape_angle,f),"split_gap":lerpf(a.split_gap,b.split_gap,f),
-		"air_gap":a.air_gap,"rails":a.rails,"feature":a.feature,"zone":a.zone,"tunnel":a.tunnel,"loop":a.loop,"section":a.section}
+		"dead_side":a.dead_side,"dead_gap":a.dead_gap,"preferred_route":a.preferred_route,"air_gap":a.air_gap,"rails":a.rails,"feature":a.feature,"zone":a.zone,"tunnel":a.tunnel,"loop":a.loop,"section":a.section}
 
 func jump_at(distance:float,approach:float=0.)->Dictionary:
 	var local:=fposmod(distance,length)
@@ -300,6 +341,12 @@ func jump_at(distance:float,approach:float=0.)->Dictionary:
 	return {}
 
 func safe_respawn(distance:float)->float:
+	var u:float=nodes[int(fposmod(distance,length)/step)].u
+	for hazard in dead_ends:
+		if u>=hazard.start and u<hazard.end:
+			for i in range(nodes.size()):
+				if nodes[i].u>=hazard.start:
+					return floorf(distance/length)*length+i*step-180.
 	var jump:=jump_at(distance,260.)
 	if not jump.is_empty() and fposmod(distance,length)<jump.landing:
 		return floorf(distance/length)*length+jump.respawn
@@ -348,6 +395,7 @@ static func lateral_at(n:Dictionary,position:Vector3)->float:
 
 static func supported(n:Dictionary,lateral:float,margin:float=0.)->bool:
 	if n.get("air_gap",false): return false
+	if n.get("dead_gap",false) and lateral*float(n.get("dead_side",0.))>0.: return false
 	if not closed_tube(n) and absf(lateral)>n.width-margin: return false
 	var gap:float=n.get("split_gap",0.)
 	return gap<.01 or absf(lateral)>gap+margin

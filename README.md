@@ -82,6 +82,18 @@ revision intentionally changes older layouts outside the Grand Circuit family;
 sharing a seed requires the same game version. See [track generation notes](docs/track-identities.md).
 
 **World** switches between the neon **City**, **Forest — Verdant Reach**, and **The Cell**.
+Hard mode adds distinct hazard components to the layout families:
+- Grand Circuit has a rising 360-degree spiral (a wider version also appears on Normal).
+- Switchback has a narrow, unguarded double hairpin: brake before the apex and use yaw/strafe to hold the slide.
+- Grand Circuit, Sky Circus and Velocity have a turbo launch ramp and a lower, offset landing. Push the nose down after takeoff and aim for the landing lights.
+- Split routes on Hard include a warning-marked dead branch. Red Xs lead to a crash barrier or an open drop; the other branch remains passable. Signs precede the fork, and the seed selects the blocked side and ending.
+
+Try Hard seeds **00031** (spiral, turbo jump and barrier), **00033** (exposed hairpins),
+or **00037** (spiral and broken branch). Components work in all three biomes.
+Easy keeps its continuous guarded road. This geometry revision changes affected seeds;
+sharing a seed requires the same game build. Spiral checkpoints prevent skipping the
+entire coil while preserving legal flight shortcuts between gates.
+
 The forest has a bright blue daytime sky, soft procedural clouds and warm sunlight.
 It races through rolling grassy hills, wooded banks and connected lakes beneath a dense canopy dominated by 340–650 metre trees.
 Authored pine and birch models replace the homemade tree generator. Random rotation,

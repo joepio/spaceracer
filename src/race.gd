@@ -70,14 +70,19 @@ func bot(p: Dictionary) -> Dictionary:
 		var bend:=absf(upcoming.curve)
 		peak=maxf(peak,bend)
 		var corner_speed:=clampf((2.7 if hard else 1.65)/maxf(.001,bend),160. if hard else 125.,BOOST_SPEED)
+		if upcoming.feature=="hairpin": corner_speed=clampf(1.5/maxf(.001,bend),75.,BOOST_SPEED)
 		safe_speed=minf(safe_speed,sqrt(corner_speed*corner_speed+2*150*ahead))
 	var brake:=clampf((p.speed-safe_speed)/35.0,0,1)
 	if not hard and absf(n.curve)>.006 and p.speed>145: brake=maxf(brake,.48)
 	var target:float=-n.width*.63 if n.zone=="repair" and p.energy<85 else sin(p.slot*2)*4
 	if float(n.get("split_gap",0.))>.01:
-		var route:float=p.get("route",0.)
+		var route:float=n.get("preferred_route",0.)
+		if route==0.: route=p.get("route",0.)
 		if route==0: route=1. if p.slot%2==0 else -1.
 		target=route*(n.split_gap+(n.width-n.split_gap)*.5)
+	# Move before the fork locks the pilot to a branch.
+	var fork:Dictionary=track.sample(p.distance+120.)
+	if n.split_gap<.01 and fork.preferred_route!=0.: target=fork.preferred_route*15.
 	var slide:float=p.slide
 	var grip:=lerpf(14,1.8,slide)
 	var inertia:=lerpf(.25,1,slide)
@@ -323,11 +328,16 @@ func step(dt: float, inputs: Array) -> void:
 		constrain_surface(p,next_node)
 		var next_pose:=Flight.ground_pose(p,next_node,clock)
 		p.ground_velocity=(next_pose.origin-previous_pose.origin)/dt
+		var contact:Dictionary=track.hazards.trace(previous_pose.origin,next_pose.origin)
+		if not contact.is_empty() and not p.finished:
+			p.air_position=contact.position;p.air_frame=next_pose.basis;p.air_velocity=p.ground_velocity
+			Flight.crash(p,contact.normal)
+			continue
 		var rotation:=Quaternion(previous_pose.basis.inverse()*next_pose.basis).normalized()
 		if rotation.w<0: rotation=-rotation
 		p.air_rates=(rotation.get_axis()*rotation.get_angle()/dt).limit_length(3.0)
 		var over_edge:bool=not next_node.get("rails",true) and not Track.closed_tube(next_node) and absf(p.x)>next_node.width
-		if (launch or over_edge or next_node.get("air_gap",false)) and not p.finished: Flight.launch(p,next_node,clock)
+		if (launch or over_edge or not Track.supported(next_node,p.x)) and not p.finished: Flight.launch(p,next_node,clock)
 		if p.energy <= 0:
 			p.air_position=next_pose.origin;p.air_frame=next_pose.basis
 			Flight.crash(p)

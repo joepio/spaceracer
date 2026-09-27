@@ -37,7 +37,8 @@ static func step(p:Dictionary,track:RefCounted,dt:float,clock:float)->void:
 	p.distance+=p.speed*dt
 	n=track.sample(p.distance)
 	var gap:float=n.get("split_gap",0.)
-	var route:float=p.get("route",0.)
+	var route:float=n.get("preferred_route",0.)
+	if route==0.: route=p.get("route",0.)
 	if route==0.: route=1. if p.slot%2==0 else -1.
 	var target_x:float=route*(gap+(n.width-gap)*.5) if gap>.01 else 0.
 	p.x=lerpf(p.x,target_x,1.-exp(-dt*2.5))

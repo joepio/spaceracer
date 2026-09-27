@@ -147,6 +147,9 @@ static func step(p:Dictionary,track:RefCounted,dt:float,steer:float,strafe:float
 	var previous:Vector3=p.air_position
 	integrate_air(p,dt,strafe,steer,throttle,brake)
 	var position:Vector3=p.air_position
+	var hazard:Dictionary=track.hazards.trace(previous,position)
+	if not hazard.is_empty():
+		p.air_position=hazard.position;crash(p,hazard.normal);return
 	if track.get("obstacles")!=null:
 		var contact:Dictionary=track.obstacles.trace(previous,position)
 		if not contact.is_empty():

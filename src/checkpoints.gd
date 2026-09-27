@@ -7,6 +7,8 @@ func _init(course:RefCounted)->void:
 	track=course
 	for loop in track.loops:
 		add_at((loop.start+loop.end)*.5,true,loop.start)
+	for component in track.components:
+		if component.kind=="spiral": add_at(lerpf(component.start,component.end,.48),true,component.start)
 	for u in [.25,.55,.80]:
 		if gates.any(func(g):return absf(g.u-u)<.14): continue
 		add_at(u,false,u)

@@ -19,10 +19,12 @@ func run()->void:
 		while m.distance<race.track.length:
 			var before:float=m.distance
 			race.weapons.step_missile(race,m,1./60.)
-			check(absf((m.distance-before)*60.-1500./3.6)<.001,"Cruise advances at 1500 km/h, independent of lead gap")
+			check(absf((m.distance-before)*60.-m.launch_speed)<.001,"Missile advances at its accelerating motor speed")
 			var n:Dictionary=race.track.sample(m.distance)
 			features[n.feature]=true
-			check(m.position.distance_to(Race.Track.point(n,m.x,10.))<.001,"Cruise follows banked road, loops and gaps without corner cutting")
+			if m.age>=race.Weapons.MISSILE_LAUNCH_TIME:
+				check(absf(m.launch_speed-1500./3.6)<.001,"Cruise reaches 1500 km/h independent of lead gap")
+				check(m.position.distance_to(Race.Track.point(n,m.x,10.))<.001,"Cruise follows banked road, loops and gaps without corner cutting")
 		check(m.terminal<0. and race.weapons.missiles.size()==1,"Far-away leader does not force an early terminal dive or timeout")
 		check(m.trail.size()<=16 and features.size()>1,"Trail stays bounded through varied track features")
 	# Terminal travel also respects the speed cap and produces exactly one hit.
@@ -30,7 +32,7 @@ func run()->void:
 	race.countdown=0.;race.clock=5.
 	var leader:Dictionary=race.racers[0];var owner:Dictionary=race.racers[1]
 	leader.distance=700.;owner.distance=500.;owner.weapon="missile";race.weapons.activate(race,1)
-	var m:Dictionary=race.weapons.missiles[0];m.terminal=.2
+	var m:Dictionary=race.weapons.missiles[0];m.terminal=.2;m.age=2.
 	m.position=race.Weapons.pose(race,leader).origin-race.track.sample(leader.distance).frame.z*30.
 	var before:Vector3=m.position
 	race.weapons.step_missile(race,m,.01)

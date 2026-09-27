@@ -28,7 +28,7 @@ func run()->void:
 		missile.position=race.Track.point(race.track.sample(missile.distance),0.,10.)
 		# Offset the close approach so the beam profile is visible beside the hull.
 		if eta<1.: missile.position+=race.track.sample(missile.distance).frame.x*18.
-		missile.terminal=-1.
+		missile.terminal=-1.;missile.age=2.
 		check(is_equal_approx(race.Weapons.missile_eta(race,missile),eta),"Cruise warning accounts for target speed and route distance")
 		game.world.update_ships()
 		var beam:MeshInstance3D=game.world.weapon_vfx.missile_nodes[missile.id].get_meta("laser")

@@ -207,8 +207,14 @@ and expanding rings mark the pickup and collector, visible to all players; the
 inventory label briefly brightens. One inventory slot, one pickup per row per lap
 per player. Bots also collect and use items.
 Use buttons, timers and effects pause with the race; crashes discard items.
+Every held item is visibly mounted before activation: a missile on a side rail,
+a rear sentry turret, a pulsing violet warp coil, a blue EMP capacitor, or a
+compact jammer dish that extends when used. Separate mounting points keep an
+active sentry or jammer clear of newly collected equipment.
 
-- **Cruise missile:** a large finned rocket follows the track at **1,500 km/h**,
+- **Cruise missile:** a large finned rocket lifts off its mounting rail, inherits
+  the craft's motion, then ignites with a growing exhaust plume and warm light.
+  It accelerates into track-following cruise over roughly one second at **1,500 km/h**,
   including banks, loops and jump routes. It locks onto the leader at launch,
   marking the plane with four blinking red corners. The targeting laser appears
   only in the estimated final two seconds and grows brighter toward impact.
@@ -228,9 +234,10 @@ Use buttons, timers and effects pause with the race; crashes discard items.
   Speed tapers before handing back control, accounting for the next corner. It
   preserves lap/finish accounting and does not spend ordinary boost energy. It
   activates only on the track, so it cannot teleport a failed flight to safety.
-- **Sentry drone:** a quadcopter escorts the craft for eight seconds and fires at
+- **Sentry gun:** a hull-mounted turret operates for eight seconds and fires at
   the nearest valid rival ahead, within 190 metres in space / 220 along the course.
-  Bursts deal 4 shield damage every 0.4 seconds. Buildings/terrain block its shots.
+  Its head aims independently, with barrel recoil and muzzle flashes. Bursts deal
+  4 shield damage every 0.4 seconds. Buildings/terrain block its shots.
 - **EMP:** an expanding blue-violet electrical sphere reaches 220 metres in
   0.65 seconds, cutting every rival's engines inside it for 2.2 seconds. Your own
   engines are unaffected. Rivals coast and can steer/brake, but lose throttle,
@@ -260,8 +267,8 @@ Catch-up bias affects only random item odds. First place never receives warp.
 Warp odds increase with position and actual distance behind the leader: last
 place has a 14% chance nearby, rising smoothly to 42% at 1,500 metres behind.
 The distance bonus starts at 150 metres and also works in two-player races.
-EMP stays at 16% and Jammer at 14%; other rolls use the missile/warp/drone pool.
-A leader's missile roll becomes a drone. There is no hidden handling or
+EMP stays at 16% and Jammer at 14%; other rolls use the missile/warp/sentry pool.
+A leader's missile roll becomes a sentry. There is no hidden handling or
 engine-speed penalty for leading. Items earned before taking the lead stay usable.
 Damage uses the existing shield/boost-energy bar; depletion produces the normal
 wreck and automatic recovery after two seconds. Respawning grants two seconds of weapon protection.

@@ -3,7 +3,7 @@ extends RefCounted
 const Track=preload("res://src/track.gd")
 const Flight=preload("res://src/flight.gd")
 const AirBatteries=preload("res://src/air_batteries.gd")
-const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry drone","emp":"EMP","jammer":"Jammer"}
+const NAMES:={"missile":"Cruise missile","warp":"Warp drive","drone":"Sentry gun","emp":"EMP","jammer":"Jammer"}
 const WARP_DURATION:=2.8
 const JAMMER_RANGE:=260.
 const JAMMER_HALF_ANGLE:=28.
@@ -12,6 +12,10 @@ const EMP_EXPAND:=.65
 const EMP_DURATION:=2.2
 const BATTERY_ENERGY:=25.
 const MISSILE_SPEED:=1500./3.6
+const MISSILE_LAUNCH_TIME:=1.05
+const MISSILE_MOUNT:=Vector3(2.45,1.25,-.5)
+const SENTRY_MOUNT:=Vector3(0.,1.05,-1.9)
+const SENTRY_PIVOT:=Vector3(0.,.8,0.)
 const MISSILE_BLAST_LIFE:=2.4
 var pulses:Array[Dictionary]=[]
 var pickups:Array[Dictionary]=[]
@@ -117,8 +121,12 @@ func activate(race:RefCounted,index:int)->bool:
 			if missiles.any(func(m):return m.owner==index): return false
 			serial+=1
 			var frame:=pose(race,p)
+			var inherited:Vector3=p.air_velocity if p.airborne else frame.basis.z*p.speed
+			var origin:=frame*MISSILE_MOUNT
 			missiles.append({"id":serial,"owner":index,"target":race.racers.find(leader),"distance":p.distance,
-				"position":frame.origin+frame.basis.y*9.,"velocity":frame.basis.z*MISSILE_SPEED,"x":p.x,"age":0.,"terminal":-1.,"evaded":false,"disabled":false,"fade":.7,"trail":[],"trail_time":0.})
+				"position":origin,"velocity":inherited,"launch_origin":origin,"launch_basis":frame.basis,
+				"launch_velocity":inherited,"launch_speed":minf(MISSILE_SPEED,p.speed),"launch_travel":0.,
+				"x":p.x,"age":0.,"terminal":-1.,"evaded":false,"disabled":false,"fade":.7,"trail":[],"trail_time":0.})
 		"warp":
 			if p.airborne or p.emp_time>0.: return false
 			p.warp_time=WARP_DURATION;p.warp_age=0.;p.boost=0.;p.slide=0.;p.slip=0.;p.heading=0.
@@ -286,9 +294,15 @@ func damage(race:RefCounted,p:Dictionary,amount:float,slowdown:float)->bool:
 	return true
 
 static func drone_position(race:RefCounted,p:Dictionary)->Vector3:
+	# The legacy inventory key remains "drone"; the sentry is now hull-mounted.
+	return pose(race,p)*(SENTRY_MOUNT+SENTRY_PIVOT)
+
+static func sentry_basis(race:RefCounted,p:Dictionary)->Basis:
 	var frame:=pose(race,p)
-	var orbit:float=race.clock*.7+p.slot
-	return frame.origin+frame.basis*Vector3(cos(orbit)*7.,4.5+sin(orbit*2.)*.35,3.+sin(orbit)*5.)
+	if p.drone_target<0: return frame.basis
+	var direction:=pose(race,race.racers[p.drone_target]).origin-drone_position(race,p)
+	if direction.length_squared()<.01: return frame.basis
+	return Basis.looking_at(direction.normalized(),frame.basis.y,true)
 
 func drone_target(race:RefCounted,owner:int)->int:
 	var p:Dictionary=race.racers[owner]
@@ -328,7 +342,7 @@ func end_step(race:RefCounted,dt:float)->void:
 		if p.drone_target<0 or p.drone_cooldown>0.: continue
 		p.drone_cooldown=.4
 		var target:Dictionary=race.racers[p.drone_target]
-		var from:=drone_position(race,p)
+		var from:=drone_position(race,p)+sentry_basis(race,p)*Vector3(0.,0.,2.6)
 		var to:=pose(race,target).origin
 		if race.track.obstacles!=null and not race.track.obstacles.trace(from,to,.1).is_empty(): continue
 		damage(race,target,4.,.995)
@@ -351,7 +365,7 @@ static func missile_eta(race:RefCounted,m:Dictionary)->float:
 	var progress:float=target.distance
 	if target.airborne: progress=race.track.project(target.air_position,target.distance,target.air_travel*1.35+100.).distance
 	var closing:=maxf(1.,MISSILE_SPEED-target.speed*cos(target.heading))
-	return maxf(0.,progress-m.distance)/closing
+	return maxf(0.,progress-m.distance)/closing+maxf(0.,MISSILE_LAUNCH_TIME-m.age)
 
 func step_missile(race:RefCounted,m:Dictionary,dt:float)->void:
 	var target:Dictionary=race.racers[m.target]
@@ -373,14 +387,31 @@ func step_missile(race:RefCounted,m:Dictionary,dt:float)->void:
 		return
 	var destination:=pose(race,target).origin
 	var previous:Vector3=m.position
+	if m.age<MISSILE_LAUNCH_TIME:
+		m.launch_speed=move_toward(m.launch_speed,MISSILE_SPEED,620.*maxf(0.,m.age-maxf(.18,m.age-dt)))
+	else: m.launch_speed=MISSILE_SPEED
 	if m.terminal<0.:
 		# Cruise follows the seeded ribbon, including banks, loops and jump paths.
 		# No rubber-band speed or world-space lerp that cuts across tight corners.
-		m.distance+=MISSILE_SPEED*dt
+		m.distance+=m.launch_speed*dt
+		m.launch_travel+=m.launch_speed*dt
 		var n:Dictionary=race.track.sample(m.distance)
 		m.x=move_toward(m.x,clampf(target.x,-n.width*.7,n.width*.7),dt*18.)
 		if n.split_gap>0.: m.x=(1. if m.x>=0. else -1.)*maxf(absf(m.x),n.split_gap+6.)
 		m.position=Track.point(n,m.x,10.)
+		if m.age<MISSILE_LAUNCH_TIME:
+			# Inherit the craft's motion, eject upward, then blend smoothly onto the
+			# cruise ribbon as the rocket accelerates. No spawn teleport or speed snap.
+			var inherited_speed:float=minf(MISSILE_SPEED,m.launch_velocity.length())
+			var free:Vector3=m.launch_origin+m.launch_velocity*m.age+m.launch_basis.z*(m.launch_travel-inherited_speed*m.age)
+			free+=m.launch_basis.y*7.*smoothstep(0.,.38,m.age)
+			m.position=free.lerp(m.position,smoothstep(.18,MISSILE_LAUNCH_TIME,m.age))
+			m.velocity=(m.position-previous)/maxf(dt,.001)
+			# Nearby targets can be acquired after clearing the rack, even if the
+			# launch has already carried the missile past their route position.
+			if m.age>.38 and m.position.distance_to(destination)<180. and target.distance-m.distance<100.: m.terminal=1.
+			intercept_missile(m,previous,m.position)
+			return
 		var range_to_target:float=m.position.distance_to(destination)
 		var target_progress:float=target.distance
 		if target.airborne: target_progress=race.track.project(target.air_position,target.distance,target.air_travel*1.35+100.).distance
@@ -390,15 +421,15 @@ func step_missile(race:RefCounted,m:Dictionary,dt:float)->void:
 		var distance:=offset.length()
 		var direction:=offset.normalized()
 		var target_velocity:Vector3=target.air_velocity if target.airborne else target.ground_velocity
-		var closing:=maxf(1.,MISSILE_SPEED-target_velocity.dot(direction))
+		var closing:=maxf(1.,m.launch_speed-target_velocity.dot(direction))
 		m.terminal=maxf(0.,distance-4.)/closing
 		# The leader can still break lock with a fresh, late high-G manoeuvre.
 		if m.terminal<.23 and race.clock-target.last_jink<.23 and target.last_jink>=race.clock-dt-.001:
 			m.evaded=true;target.evade_notice=1.2
 			return
-		m.position+=direction*minf(MISSILE_SPEED*dt,distance)
+		m.position+=direction*minf(m.launch_speed*dt,distance)
 		if intercept_missile(m,previous,m.position): return
-		if distance<=MISSILE_SPEED*dt+4.:
+		if distance<=m.launch_speed*dt+4.:
 			damage(race,target,38.,.66)
 			bursts.append({"id":m.id,"position":destination,"life":MISSILE_BLAST_LIFE})
 			missiles.erase(m)

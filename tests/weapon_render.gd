@@ -5,6 +5,8 @@ func _initialize()->void:
 	call_deferred("run")
 func run()->void:
 	var game=load("res://main.tscn").instantiate();root.add_child(game)
+	if "--players=3" in OS.get_cmdline_user_args():
+		game.human_count=3;game.start_local()
 	game.set_process(false);game.set_physics_process(false)
 	var race:RefCounted=game.race
 	race.countdown=0.;race.clock=12.;race.vfx_clock=12.
@@ -17,7 +19,7 @@ func run()->void:
 	var missile:Dictionary=race.weapons.missiles[0]
 	var frame:Transform3D=race.Weapons.pose(race,race.racers[0])
 	missile.position=frame.origin+frame.basis*Vector3(12,7,-9)
-	missile.velocity=frame.basis.z*600.;missile.terminal=.3
+	missile.velocity=frame.basis.z*600.;missile.terminal=.3;missile.age=2.
 	race.racers[0].missile_warning=2.;race.racers[0].energy=62.;race.racers[0].shield_hit=.16
 	race.racers[1].warp_time=1.8;race.racers[1].warp_fx=1.;race.racers[1].warp_age=1.;race.racers[1].speed=510.
 	race.racers[2].drone_time=6.5;race.racers[2].drone_target=3

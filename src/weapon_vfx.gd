@@ -1,11 +1,13 @@
 extends Node3D
 const Weapons=preload("res://src/weapons.gd")
 const Blast=preload("res://src/blast_vfx.gd")
+const Ship=preload("res://src/ship.gd")
 var race:RefCounted
 var cores:MultiMesh
 var battery_batches:Array[MultiMesh]=[]
 var missile_nodes:Dictionary={}
-var drones:Array[Node3D]=[]
+var turrets:Array[Node3D]=[]
+var mounts:Array[Dictionary]=[]
 var shields:Array[MeshInstance3D]=[]
 var rings:Array[Array]=[]
 var tracers:Array[MeshInstance3D]=[]
@@ -113,17 +115,12 @@ func configure(state:RefCounted)->void:
 		var arc_mat:=pulse_mat.duplicate() as ShaderMaterial
 		arc_mat.set_shader_parameter("shutdown",true)
 		emp_arcs.append(mesh(self,sphere(1.),arc_mat))
-		var drone:=Node3D.new();add_child(drone);drones.append(drone)
-		mesh(drone,box(Vector3(1.5,.65,2.)),steel)
-		mesh(drone,sphere(.35),mint,Vector3(0,.05,1.))
-		for side in [-1.,1.]:
-			for front in [-1.,1.]:
-				var arm:=mesh(drone,box(Vector3(2.3,.16,.22)),steel,Vector3(side*.9,0,front*.8))
-				arm.rotation.y=-side*front*.65
-				var motor:=mesh(drone,cylinder(.38,.35),steel,Vector3(side*1.9,.12,front*1.5))
-				mesh(motor,ring(.58,.69),mint,Vector3(0,.18,0))
-				var blade:=mesh(motor,box(Vector3(1.25,.05,.12)),steel,Vector3(0,.22,0));blade.name="Rotor"
-		var gun:=mesh(drone,cylinder(.2,1.6),steel,Vector3(0,-.5,1.2));gun.rotation.x=PI*.5
+		turrets.append(make_turret())
+		var rack:=Node3D.new();add_child(rack)
+		mesh(rack,box(Vector3(.8,.35,4.6)),steel,Vector3(0,-.65,-.3))
+		var stored:=Node3D.new();rack.add_child(stored);missile_hull(stored)
+		stored.scale=Vector3.ONE*.62
+		mounts.append({"missile":rack,"warp":make_coil(true),"emp":make_coil(false)})
 		var shield_mat:=ShaderMaterial.new();shield_mat.shader=load("res://src/weapon_shield.gdshader")
 		var shield:=mesh(self,sphere(6.3),shield_mat);shields.append(shield)
 		var warp_rings:Array=[]
@@ -175,19 +172,59 @@ static func line(node:MeshInstance3D,from:Vector3,to:Vector3,width:float)->void:
 	node.transform=Transform3D(Basis(right,direction,right.cross(direction)).scaled_local(Vector3(width,length,width)),(from+to)*.5)
 	node.visible=true
 
-func make_missile()->Node3D:
+func make_turret()->Node3D:
 	var root:=Node3D.new();add_child(root)
+	mesh(root,box(Vector3(1.6,.25,1.7)),steel)
+	mesh(root,cylinder(.68,.6),steel,Vector3(0,.3,0))
+	mesh(root,ring(.57,.69),mint,Vector3(0,.58,0))
+	var head:=Node3D.new();root.add_child(head);head.position=Weapons.SENTRY_PIVOT;root.set_meta("head",head)
+	var armor:=material(Color("8394a6"));armor.cull_mode=BaseMaterial3D.CULL_DISABLED
+	var housing:=Ship.loft(head,"ArmoredHead",[Vector3(-.8,.48,.6),Vector3(-.5,.8,.85),Vector3(.45,.7,.65),Vector3(.75,.5,.45)],armor,Vector3.ZERO,true)
+	housing.layers=2;housing.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mesh(head,sphere(.18),mint,Vector3(0,.18,.7))
+	var barrels:=Node3D.new();head.add_child(barrels);root.set_meta("barrels",barrels)
+	for side in [-1.,1.]:
+		var barrel:=mesh(barrels,cylinder(.17,2.2),steel,Vector3(side*.48,-.06,1.5));barrel.rotation.x=PI*.5
+		var collar:=mesh(barrels,cylinder(.24,.4),steel,Vector3(side*.48,-.06,2.3));collar.rotation.x=PI*.5
+		var flash:=mesh(barrels,sphere(.23),flame,Vector3(side*.48,-.06,2.65));flash.name="MuzzleL" if side<0. else "MuzzleR"
+	return root
+
+func make_coil(warp:bool)->Node3D:
+	var root:=Node3D.new();add_child(root)
+	mesh(root,box(Vector3(1.5,.35,2.2)),steel)
+	var ink:=material(Color("ac7aff") if warp else Color("72cfff"),1.3)
+	var core:=mesh(root,sphere(.55),ink,Vector3(0,.6,0));root.set_meta("core",core)
+	for i in range(3):
+		if warp:
+			var coil:=mesh(root,ring(.68,.83),steel,Vector3(0,.65,(i-1)*.66));coil.rotation.x=PI*.5
+			mesh(coil,ring(.58,.64),ink)
+		else:
+			mesh(root,ring(.55,.76),steel,Vector3(0,.32+i*.3,0))
+	for side in [-1.,1.]: mesh(root,box(Vector3(.16,.75,1.8)),steel,Vector3(side*.67,.4,0))
+	return root
+
+func missile_hull(root:Node3D)->void:
 	var hull:=material(Color("c4c9ce"));hull.metallic=.7
 	var body:=mesh(root,cylinder(1.25,8.),hull);body.rotation.x=PI*.5
 	var nose:=mesh(root,cylinder(1.25,3.,true),laser_material,Vector3(0,0,5.5));nose.rotation.x=PI*.5
 	var band:=mesh(root,cylinder(1.28,.5),flame,Vector3(0,0,2.8));band.rotation.x=PI*.5
+	var nozzle:=mesh(root,cylinder(.9,.12),material(Color("080d17")),Vector3(0,0,-4.08));nozzle.rotation.x=PI*.5
+	var rim:=mesh(root,ring(.82,1.04),steel,Vector3(0,0,-4.15));rim.rotation.x=PI*.5
 	for angle in [0.,PI*.5]:
-		var fin:=mesh(root,box(Vector3(5.8,.2,2.5)),steel,Vector3(0,0,-2.7));fin.rotation.z=angle
+		var fin:=mesh(root,box(Vector3(4.8 if angle==0. else 2.8,.2,2.5)),steel,Vector3(0,0,-2.7));fin.rotation.z=angle
+
+func make_missile()->Node3D:
+	var root:=Node3D.new();add_child(root);missile_hull(root)
+	root.scale=Vector3.ONE*.62
 	var engine:=Node3D.new();root.add_child(engine);root.set_meta("engine",engine)
-	mesh(engine,sphere(.9),material(Color("fff5c9"),4.),Vector3(0,0,-4.))
+	engine.position.z=-4.2
+	mesh(engine,sphere(.9),material(Color("fff5c9"),4.))
+	var light:=OmniLight3D.new();light.light_color=Color("ffb460");light.omni_range=18.
+	light.shadow_enabled=false;light.light_bake_mode=Light3D.BAKE_DISABLED;light.position.z=-3.
+	root.add_child(light);root.set_meta("motor_light",light)
 	for angle in [0.,PI*.5]:
 		var ribbon:=QuadMesh.new();ribbon.size=Vector2(3.,10.)
-		var plume:=mesh(engine,ribbon,bump_material,Vector3(0,0,-9.))
+		var plume:=mesh(engine,ribbon,bump_material,Vector3(0,0,-5.))
 		plume.basis=Basis(Vector3.BACK,angle)*Basis(Vector3.RIGHT,PI*.5)
 	var beam_material:=ShaderMaterial.new();beam_material.shader=load("res://src/missile_laser.gdshader")
 	var beam:=mesh(self,QuadMesh.new(),beam_material);root.set_meta("laser",beam)
@@ -242,13 +279,16 @@ func update()->void:
 		active[m.id]=true
 		if not missile_nodes.has(m.id): missile_nodes[m.id]=make_missile()
 		var node:Node3D=missile_nodes[m.id]
-		node.get_meta("engine").visible=not m.get("disabled",false)
+		var ignition:=smoothstep(.18,.65,m.age)
+		node.get_meta("engine").visible=not m.get("disabled",false) and ignition>.01
+		node.get_meta("engine").scale=Vector3(lerpf(.4,1.,ignition),lerpf(.4,1.,ignition),lerpf(.35,1.,ignition))
+		node.get_meta("motor_light").light_energy=ignition*3. if not m.get("disabled",false) else 0.
 		node.position=m.position
 		if m.velocity.length_squared()>.01:
 			var forward:Vector3=m.velocity.normalized()
 			var up:Vector3=race.track.sample(m.distance).frame.y
 			if absf(forward.dot(up))>.98: up=Vector3.UP if absf(forward.y)<.98 else Vector3.RIGHT
-			node.basis=Basis.looking_at(forward,up,true)
+			node.basis=m.launch_basis.slerp(Basis.looking_at(forward,up,true),smoothstep(.12,.65,m.age)).scaled(Vector3.ONE*.62)
 		var beam:MeshInstance3D=node.get_meta("laser")
 		var warning:=1.-clampf(Weapons.missile_eta(race,m)/2.,0.,1.)
 		beam.visible=warning>0.
@@ -280,6 +320,14 @@ func update()->void:
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
 		var frame:=Weapons.pose(race,p)
+		for kind in mounts[i]:
+			var attachment:Node3D=mounts[i][kind]
+			attachment.visible=not p.crashed and (p.weapon==kind or (kind=="warp" and p.warp_fx>.01))
+			var socket:Vector3=Weapons.MISSILE_MOUNT if kind=="missile" else (Vector3(-2.45,.65,1.35) if kind=="warp" else Vector3(0.,.55,2.1))
+			attachment.transform=frame*Transform3D(Basis.IDENTITY,socket)
+			if kind!="missile":
+				var core:MeshInstance3D=attachment.get_meta("core")
+				core.scale=Vector3.ONE*(1.+sin(time*(10. if p.warp_time>0. else 2.5))*.08)
 		var side_jets:=bump_jets[i]
 		side_jets.visible=p.bump_time>0. and not p.crashed and not p.airborne
 		var pulse:=maxf(.05,sin(clampf(1.-p.bump_time/.24,0.,1.)*PI))
@@ -298,8 +346,9 @@ func update()->void:
 		pickup_lights[i].position=frame.origin+frame.basis.y*3.
 		pickup_lights[i].light_energy=flash*3.
 		var dish:=dishes[i]
-		dish.visible=p.jammer_deploy>.01 and not p.crashed
-		dish.transform=frame*Transform3D(Basis.IDENTITY.scaled(Vector3(1.,maxf(.01,p.jammer_deploy),1.)),Vector3(0,2.,-1.5))
+		dish.visible=(p.weapon=="jammer" or p.jammer_deploy>.01) and not p.crashed
+		var deployment:=maxf(.3 if p.weapon=="jammer" else .01,p.jammer_deploy)
+		dish.transform=frame*Transform3D(Basis.IDENTITY.scaled(Vector3(.65,deployment*.65,.65)),Vector3(-2.45,.65,-1.4))
 		for j in range(3):
 			var wave:MeshInstance3D=radio_waves[i][j]
 			wave.visible=p.jammer_time>0. and p.emp_time<=0. and not p.crashed
@@ -316,14 +365,14 @@ func update()->void:
 		arcs.transform=frame.scaled_local(Vector3(5.3,2.3,5.8))
 		arcs.material_override.set_shader_parameter("age",time+p.slot)
 		arcs.material_override.set_shader_parameter("strength",minf(1.,p.emp_time*4.))
-		var drone:=drones[i];drone.visible=p.drone_time>0. and not p.crashed
-		drone.transform=Transform3D(frame.basis.scaled(Vector3.ONE*1.35),Weapons.drone_position(race,p))
-		if drone.visible:
-			for rotor in drone.find_children("Rotor","MeshInstance3D",true,false): rotor.rotation.y=time*75.
-			if p.drone_target>=0:
-				var target:=Weapons.pose(race,race.racers[p.drone_target]).origin
-				if target.distance_squared_to(drone.position)>.1: drone.look_at(target,frame.basis.y,true)
-			drone.scale=Vector3.ONE*1.35
+		var turret:=turrets[i];turret.visible=(p.weapon=="drone" or p.drone_time>0.) and not p.crashed
+		turret.transform=frame*Transform3D(Basis.IDENTITY,Weapons.SENTRY_MOUNT)
+		var head:Node3D=turret.get_meta("head")
+		head.basis=frame.basis.inverse()*Weapons.sentry_basis(race,p)
+		var recoil:=clampf((p.drone_cooldown-.30)/.10,0.,1.) if p.drone_target>=0 and p.drone_time>0. else 0.
+		var barrels:Node3D=turret.get_meta("barrels");barrels.position.z=-recoil*.22
+		for barrel in barrels.get_children():
+			if str(barrel.name).begins_with("Muzzle"): barrel.visible=recoil>.5
 		var shield:=shields[i]
 		shield.visible=(p.shield_hit>0. or p.warp_fx>.01) and not p.crashed
 		shield.transform=frame.scaled_local(Vector3(1.,.6,1.))

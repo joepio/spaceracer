@@ -87,7 +87,7 @@ func run()->void:
 	for late in [true,false]:
 		race=fresh();owner=race.racers[2];leader=race.racers[0];owner.weapon="missile"
 		race.weapons.activate(race,2)
-		var missile:Dictionary=race.weapons.missiles[0];missile.terminal=.20
+		var missile:Dictionary=race.weapons.missiles[0];missile.terminal=.20;missile.age=2.
 		missile.position=race.Weapons.pose(race,leader).origin-Vector3(0,0,25.)
 		race.weapons.begin_step(race,.01,neutral())
 		leader.weapon_velocity=Vector3(0,0,250.);leader.ground_velocity=Vector3(200.,0,150.)
@@ -100,7 +100,7 @@ func run()->void:
 	leader.ground_velocity=race.track.sample(leader.distance).frame.z*300.
 	race.racers[1].distance=leader.distance-60.
 	owner.distance=leader.distance-100.;owner.weapon="missile";race.weapons.activate(race,2)
-	var physical_missile:Dictionary=race.weapons.missiles[0];physical_missile.terminal=.22
+	var physical_missile:Dictionary=race.weapons.missiles[0];physical_missile.terminal=.22;physical_missile.age=2.
 	physical_missile.position=race.Weapons.pose(race,leader).origin-race.track.sample(leader.distance).frame.z*40.
 	for tick in range(24):
 		race.step(.01,[{"throttle":1.,"steer":1.,"brake":1.},{},{}])

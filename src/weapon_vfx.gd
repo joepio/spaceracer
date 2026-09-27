@@ -10,6 +10,7 @@ var turrets:Array[Node3D]=[]
 var mounts:Array[Dictionary]=[]
 var shields:Array[MeshInstance3D]=[]
 var warp_wakes:Array[MeshInstance3D]=[]
+var warp_lenses:Array[MeshInstance3D]=[]
 var tracers:Array[MeshInstance3D]=[]
 var explosions:Array[Node3D]=[]
 var blast_lights:Array[OmniLight3D]=[]
@@ -144,6 +145,11 @@ func configure(state:RefCounted)->void:
 		var shield:=mesh(self,sphere(6.3),shield_mat);shields.append(shield)
 		var wake_material:=ShaderMaterial.new();wake_material.shader=load("res://src/warp_wake.gdshader")
 		warp_wakes.append(mesh(self,wake_shape,wake_material))
+		var lens_material:=ShaderMaterial.new();lens_material.shader=load("res://src/warp_refraction.gdshader")
+		lens_material.render_priority=-30
+		var lens:=mesh(self,QuadMesh.new(),lens_material)
+		lens.custom_aabb=AABB(Vector3(-15.,-15.,-15.),Vector3.ONE*30.)
+		warp_lenses.append(lens)
 	for i in range(32): tracers.append(mesh(self,cylinder(1.,1.),flame))
 	for i in range(24):
 		var blast:=Blast.new();add_child(blast);explosions.append(blast);blast_lights.append(blast.flash)
@@ -403,6 +409,10 @@ func update()->void:
 		wake.transform=frame
 		wake.material_override.set_shader_parameter("strength",p.warp_fx)
 		wake.material_override.set_shader_parameter("race_time",time)
+		var lens:=warp_lenses[i]
+		lens.visible=wake.visible;lens.transform=frame
+		lens.material_override.set_shader_parameter("strength",p.warp_fx)
+		lens.material_override.set_shader_parameter("race_time",time)
 	for i in range(tracers.size()):
 		tracers[i].visible=i<race.weapons.shots.size()
 		if tracers[i].visible:

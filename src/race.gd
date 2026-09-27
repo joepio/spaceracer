@@ -42,16 +42,26 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 		Bump.initialize(p)
 		checkpoints.initialize(p)
 		p.energy_previous=p.energy;p.energy_refill_delay=ENERGY_REFILL_DELAY
+		p.ai_boost_lap=1;p.ai_boost_cycle=0;p.ai_boost_seen=false;p.ai_boost_ready_at=0.
 		racers.append(p)
 	weapons=Weapons.new(track)
 
 func bot(p: Dictionary) -> Dictionary:
-	if p.crashed: return {}
+	if p.crashed or p.finished: return {}
+	if p.lap>p.ai_boost_lap:
+		p.ai_boost_lap=p.lap
+		p.ai_boost_ready_at=clock+bot_boost_delay(p,.15,1.5)
+	if p.boost>0. and not p.ai_boost_seen:
+		p.ai_boost_seen=true;p.ai_boost_cycle+=1
+		p.ai_boost_ready_at=clock+p.boost+bot_boost_delay(p,.2,1.1)
+	elif p.boost<=0.: p.ai_boost_seen=false
 	if p.airborne: return air_bot(p)
 	var n:Dictionary=track.sample(p.distance)
 	var hard:bool=track.difficulty=="hard"
 	var peak:=absf(n.curve)
-	var safe_speed:=BOOST_SPEED if hard else TOP_SPEED
+	# Corner limits constrain braking; cruising speed is not a braking limit.
+	# Otherwise normal/easy bots brake away their own boost on straight road.
+	var safe_speed:=BOOST_SPEED
 	# Hard pilots carry speed with coordinated yaw/strafe instead of holding
 	# half brake through every bend. Ordinary pilots keep their gentler pace.
 	# Include the current apex on hard so late recovery still requests braking.
@@ -59,7 +69,7 @@ func bot(p: Dictionary) -> Dictionary:
 		var upcoming:Dictionary=n if ahead==0. else track.sample(p.distance+ahead)
 		var bend:=absf(upcoming.curve)
 		peak=maxf(peak,bend)
-		var corner_speed:=clampf((2.7 if hard else 1.65)/maxf(.001,bend),160. if hard else 125.,BOOST_SPEED if hard else TOP_SPEED)
+		var corner_speed:=clampf((2.7 if hard else 1.65)/maxf(.001,bend),160. if hard else 125.,BOOST_SPEED)
 		safe_speed=minf(safe_speed,sqrt(corner_speed*corner_speed+2*150*ahead))
 	var brake:=clampf((p.speed-safe_speed)/35.0,0,1)
 	if not hard and absf(n.curve)>.006 and p.speed>145: brake=maxf(brake,.48)
@@ -83,10 +93,15 @@ func bot(p: Dictionary) -> Dictionary:
 	# Spend a useful burst on the exit, retaining enough hull energy for a hit.
 	# Never latch the boost button while EMP/recovery prevents activation, or
 	# waste the paid burst on a free pad that already supplies the same thrust.
-	var boost_ready:bool=p.recovery==0. and p.emp_time<=0. and p.warp_time<=0. and not p.boost_held
+	var boost_ready:bool=clock>=p.ai_boost_ready_at and p.recovery==0. and p.emp_time<=0. and p.warp_time<=0. and not p.boost_held
 	if hard: boost_ready=boost_ready and n.zone!="boost" and p.unload<.25 and absf(p.x-target)<n.width*.5
 	return {"steer":turn,"strafe":strafe,"throttle":1.0,"brake":brake,"left":false,"right":false,
 		"fire":p.weapon != "" and clock-p.weapon_acquired>.9 and not p.fire_held,"boost":boost_ready and p.lap>1 and p.energy>(30. if hard else 40.) and peak<(.0055 if hard else .0025) and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
+
+func bot_boost_delay(p:Dictionary,minimum:float,maximum:float)->float:
+	var rng:=RandomNumberGenerator.new()
+	rng.seed=track.seed_value*9176+p.slot*131+p.lap*7919+p.ai_boost_cycle*104729
+	return rng.randf_range(minimum,maximum)
 
 func air_bot(p:Dictionary)->Dictionary:
 	var hit:Dictionary=track.project(p.air_position,p.distance,p.air_travel*1.35+100.)

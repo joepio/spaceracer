@@ -52,7 +52,9 @@ launch; `--direct-lighting` selects the fallback. See [the lighting experiment](
 for measurements and limitations.
 F5 starts a fresh track. Three laps by default; results last eight seconds.
 After finishing, an autonomous victory lap keeps your ship moving while a replay
-camera cycles through rear-quarter, front, side and overhead shots. Other players
+camera cycles through rear-quarter, front, side and overhead shots. Held equipment
+stays mounted; active sentry/jammer attachments settle to idle and remain on the
+craft. Finishers cannot fire or interfere with the remaining racers. Other players
 keep racing with their own chase cameras. Finish times and places stay locked;
 the camera and victory lap pause with the game and continue behind the results.
 
@@ -429,6 +431,10 @@ Hard difficulty also makes opponents race more aggressively: they carry speed
 through sweepers, brake for the apex, and spend boost on more corner exits while
 keeping a small damage reserve. They use the same acceleration, grip, boost cost
 and lap-two unlock as players. Easy and normal retain their gentler corner pace.
+All difficulties allow full boost speed on clear straights. Pilot-specific seeded
+reaction times and pauses between bursts stagger boost use rather than triggering
+the whole pack at the lap line. Exhaust boost effects stop when braking cancels
+boost thrust.
 `tests/ai_pace.gd` compares three-lap runs across all six track families against
 the same steering/flight controller with ground braking and boost disabled;
 add `-- --race` to test that driver against five armed opponents.

@@ -360,7 +360,7 @@ func update()->void:
 		var frame:=Weapons.pose(race,p)
 		for kind in mounts[i]:
 			var attachment:Node3D=mounts[i][kind]
-			attachment.visible=not p.crashed and (p.weapon==kind or (kind=="warp" and p.warp_fx>.01))
+			attachment.visible=not p.crashed and (p.weapon==kind or kind in p.get("victory_mounts",[]) or (kind=="warp" and p.warp_fx>.01))
 			var socket:Vector3=Weapons.MISSILE_MOUNT if kind=="missile" else (Vector3(-2.45,.65,1.35) if kind=="warp" else Vector3(0.,.55,2.1))
 			attachment.transform=frame*Transform3D(Basis.IDENTITY,socket)
 			if kind!="missile":
@@ -388,12 +388,12 @@ func update()->void:
 		pickup_lights[i].position=frame.origin+frame.basis.y*3.
 		pickup_lights[i].light_energy=flash*3.
 		var dish:=dishes[i]
-		dish.visible=(p.weapon=="jammer" or p.jammer_deploy>.01) and not p.crashed
+		dish.visible=(p.weapon=="jammer" or "jammer" in p.get("victory_mounts",[]) or p.jammer_deploy>.01) and not p.crashed
 		var deployment:=maxf(.3 if p.weapon=="jammer" else .01,p.jammer_deploy)
 		dish.transform=frame*Transform3D(Basis.IDENTITY.scaled(Vector3(.65,deployment*.65,.65)),Vector3(-2.45,.65,-1.4))
 		for j in range(3):
 			var wave:MeshInstance3D=radio_waves[i][j]
-			wave.visible=p.jammer_time>0. and p.emp_time<=0. and not p.crashed
+			wave.visible=p.jammer_time>0. and p.emp_time<=0. and not p.crashed and not p.finished
 			var phase:=fposmod(time*.9+j/3.,1.)
 			var ahead:=5.+phase*Weapons.JAMMER_RANGE
 			var radius:=ahead*tan(deg_to_rad(Weapons.JAMMER_HALF_ANGLE))
@@ -407,7 +407,7 @@ func update()->void:
 		arcs.transform=frame.scaled_local(Vector3(5.3,2.3,5.8))
 		arcs.material_override.set_shader_parameter("age",time+p.slot)
 		arcs.material_override.set_shader_parameter("strength",minf(1.,p.emp_time*4.))
-		var turret:=turrets[i];turret.visible=(p.weapon=="drone" or p.drone_time>0.) and not p.crashed
+		var turret:=turrets[i];turret.visible=(p.weapon=="drone" or p.drone_time>0. or "drone" in p.get("victory_mounts",[])) and not p.crashed
 		turret.transform=frame*Transform3D(Basis.IDENTITY,Weapons.SENTRY_MOUNT)
 		var head:Node3D=turret.get_meta("head")
 		var sentry_active:bool=p.drone_time>0.

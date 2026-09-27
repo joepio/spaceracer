@@ -83,6 +83,7 @@ func begin_step(race:RefCounted,dt:float,inputs:Array)->void:
 		if pickup.cooldown<=0.: pickup.reveal=minf(1.,pickup.reveal+dt*6.)
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
+		if p.finished: continue # Victory owns cosmetic timers; keep the loadout.
 		p.weapon_before=p.distance;p.weapon_x_before=p.x
 		p.weapon_position_before=p.air_position;p.weapon_was_airborne=p.airborne
 		p.weapon_velocity=p.air_velocity if p.airborne else p.ground_velocity
@@ -180,10 +181,10 @@ func jam_inputs(race:RefCounted,inputs:Array)->Array:
 
 func step_emp(race:RefCounted,dt:float)->void:
 	for pulse in pulses.duplicate():
-		pulse.active=pulse.age<=EMP_EXPAND
+		pulse.active=pulse.age<=EMP_EXPAND and available(race.racers[pulse.owner])
 		pulse.age+=dt
 		pulse.radius=EMP_RADIUS*minf(1.,pulse.age/EMP_EXPAND)
-		if pulse.age<=EMP_EXPAND+dt:
+		if pulse.active and pulse.age<=EMP_EXPAND+dt:
 			for i in range(race.racers.size()):
 				var p:Dictionary=race.racers[i]
 				if i==pulse.owner or pulse.hit.has(i) or not available(p): continue
@@ -361,6 +362,7 @@ func drone_target(race:RefCounted,owner:int)->int:
 func end_step(race:RefCounted,dt:float)->void:
 	step_emp(race,dt)
 	for p in race.racers:
+		if p.finished: continue
 		var velocity:Vector3=p.air_velocity if p.airborne else p.ground_velocity
 		var change:Vector3=(velocity-p.weapon_velocity)/maxf(dt,.001)
 		var direction:=velocity.normalized()
@@ -373,6 +375,7 @@ func end_step(race:RefCounted,dt:float)->void:
 		collect(race,p)
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
+		if p.finished: continue
 		if not available(p): p.drone_time=0.;p.warp_time=0.;p.weapon=""
 		p.drone_target=-1
 		if p.drone_time<=0.: continue

@@ -20,6 +20,12 @@ godot --path .
 ```
 
 The portable Windows build runs by opening `IonRush.exe`. Start/Enter starts a race.
+For local development, run `tools/install_start_menu.ps1` to install
+**Ion Rush (Latest Debug)** in the Windows Start menu with the game's icon.
+It opens fullscreen and points directly to `build/warp-balance/IonRush.exe`;
+keep updating that directory's executable/PCK so the shortcut always opens the
+latest packaged debug build. The installer also accepts `-BuildDirectory`.
+
 The title and pause screens share the same menu: up/down selects a row; left/right
 immediately adjusts players, world, level, seed or graphics. The stick, D-pad,
 keyboard arrows and on-screen arrow buttons all work. A/click activates actions.

@@ -217,7 +217,7 @@ func run()->void:
 	check(absf(ship.get_node("RudderL").rotation.y)<.001,"Right stick leaves rudders neutral")
 	grid.step(1.0/120,[{"steer":1.0,"brake":1.0}])
 	ship_type.animate_controls(ship,pilot)
-	check(ship.get_node("RudderL").rotation.y<-.5 and ship.get_node("WingControlL").rotation.x>.5,"Left-stick turn moves rudders and braking deploys flaps")
+	check(ship.get_node("RudderL").rotation.y>.5 and ship.get_node("WingControlL").rotation.x>.5,"Left-stick turn moves rudders and braking deploys flaps")
 	# Exercise the public airborne inputs independently, not just the integrator.
 	for control in ["steer","strafe"]:
 		var test:=Race.new([{"slot":0}],31,1,"easy")

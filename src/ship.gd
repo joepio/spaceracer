@@ -251,7 +251,7 @@ static func animate_controls(root:Node3D,p:Dictionary)->void:
 		root.get_node("Airbrake%d"%side).rotation.x=p.brake_vfx*1.15
 		var rudder:Node3D=root.get_node("RudderL" if side<0 else "RudderR")
 		# More readable small deflections, without changing the steering physics.
-		rudder.rotation.y=-signf(p.input_steer)*pow(absf(p.input_steer),.72)*.7
+		rudder.rotation.y=signf(p.input_steer)*pow(absf(p.input_steer),.72)*.7
 
 static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)->void:
 	var alive:bool=p.recovery<=0 and (not p.finished or p.has("victory_pose")) and not p.crashed

@@ -28,8 +28,15 @@ being read by an ongoing playtest. Keep updating the staged executable/PCK so
 the next launch uses the latest build. The installer accepts `-BuildDirectory`.
 
 The title and pause screens share the same menu: up/down selects a row; left/right
-immediately adjusts players, world, level, seed or graphics. The stick, D-pad,
-keyboard arrows and on-screen arrow buttons all work. A/click activates actions.
+immediately adjusts players, world, level, seed or graphics. Use the analog stick,
+keyboard arrows or on-screen arrows. A/click activates actions.
+**New random race**, directly below Play/Resume, launches a different seed with
+the selected players, world, difficulty and lap count. In either menu, **hold X
+for one second** to do this immediately. **Hold D-pad left/right** for the
+previous/next seed, or **up/down** for harder/easier; Start applies those choices.
+A small progress bar shows the hold. Short taps do nothing, and a continuous
+hold acts only once. These shortcuts are menu-only; racing D-pad steering stays
+available.
 Standalone races have six machines, filling spare positions with AI.
 Start/Escape pauses. Unchanged settings resume the current race; changing a race
 setting changes the primary action to **Restart**. Graphics never resets progress.
@@ -49,8 +56,7 @@ camera cycles through rear-quarter, front, side and overhead shots. Other player
 keep racing with their own chase cameras. Finish times and places stay locked;
 the camera and victory lap pause with the game and continue behind the results.
 
-The start menu has a five-digit **Track seed** (00001–99999). Use left/right for the previous/next code, type a code, or select
-**Random** with the controller to choose another. Race uses that exact code;
+The start menu has a five-digit **Track seed** (00001–99999). Use left/right for the previous/next code or type a code. **New random race** chooses a different code and starts immediately. Race uses the displayed code;
 it remains visible in the HUD and results so you can write it down. Returning
 to the menu keeps the current code for replay. Seeds reproduce the track and
 scenery within the same game version. Write down the difficulty and world with
@@ -163,7 +169,7 @@ stops rendering while the shared start/pause menu is open.
 | Use pickup | X | X | Slash |
 | Strafe / roll | Right stick left / right | — | — |
 | Side bump | LB / RB | Q / E | Comma / Period |
-| Grip / speed trim | Right stick forward / backward | Controller only | Controller only |
+| Grip / speed trim | Either stick forward / backward | Controller only | Controller only |
 | Reset while airborne | Y | 1 | 2 |
 | Pause / resume | Start | Escape | Escape |
 
@@ -350,7 +356,7 @@ holds its heading when released. Track alignment assistance fades in with speed;
 there is no hard heading clamp. Thrust and strafing follow the craft's facing,
 including sideways and backwards movement, without artificial forward progress.
 
-Right stick forward lowers the nose and adds grip/downforce at the expense of
+Either stick forward lowers the nose and adds grip/downforce at the expense of
 speed. Pulling back raises the nose; a partial pull trades grip for speed. Holding
 full back at racing speed progressively unloads the magnetic suspension. The
 craft rises, its wings buffet gently, and a “Lifting” cue appears before release.
@@ -358,7 +364,7 @@ Ease the stick forward during this warning to settle back down. Sustained back
 input releases into independent flight, carrying the actual track velocity and
 attitude through takeoff with no added kick. Crests can also unload adhesion.
 
-In flight, right stick forward/back pitches down/up, left stick left/right controls
+In flight, either stick forward/back pitches down/up, left stick left/right controls
 yaw through the rudders, and right stick left/right rolls via the wing
 ailerons. The same fin mapping is visible while driving. These are
 independent body-axis controls: roll sets bank, with no forced levelling or hidden

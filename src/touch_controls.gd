@@ -75,7 +75,8 @@ func release_finger(index:int)->void:
 
 func controls()->Dictionary:
 	var held:=fingers.values()
-	return {"steer":sticks.steer.x,"strafe":sticks.flight.x,"trim":-sticks.flight.y,
+	var pitch:float=sticks.steer.y if absf(sticks.steer.y)>absf(sticks.flight.y) else sticks.flight.y
+	return {"steer":sticks.steer.x,"strafe":sticks.flight.x,"trim":-pitch,
 		"throttle":float(throttle_on and not held.has("brake")),"brake":float(held.has("brake")),
 		"left":held.has("left"),"right":held.has("right"),
 		"fire":weapon_available and held.has("fire"),"boost":held.has("boost"),"reset":reset_available and held.has("reset")}

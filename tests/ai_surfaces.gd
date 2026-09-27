@@ -30,7 +30,7 @@ func run()->void:
 		var controls:Dictionary=race.bot(p)
 		check(controls.strafe*side>.1 and controls.steer*side>.1,"AI coordinates actual steering and strafe in corner")
 		race.step(1./120.,[controls]);Ship.animate_controls(ship,p)
-		check(ship.get_node("RudderL").rotation.y*side<-.1,"Rudders visibly turn with AI command")
+		check(ship.get_node("RudderL").rotation.y*side>.1,"Rudder trailing edges deflect with the commanded yaw")
 		var difference:float=ship.get_node("WingControlL").rotation.x-ship.get_node("WingControlR").rotation.x
 		check(difference*side>.1,"Wing surfaces differentially respond to AI strafe")
 		check(ship.get_node("Airbrake-1").rotation.x>0.,"AI braking opens airbrakes")

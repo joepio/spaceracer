@@ -42,6 +42,17 @@ func press(button:int)->void:
 	Input.parse_input_event(event)
 	await process_frame
 
+func tap_key(keycode:int)->void:
+	for down in [true,false]:
+		var event:=InputEventKey.new();event.keycode=keycode;event.pressed=down
+		Input.parse_input_event(event);await process_frame
+
+func hold(button:int,seconds:float,release:bool=true)->void:
+	var event:=InputEventJoypadButton.new();event.button_index=button;event.pressed=true
+	game._input(event)
+	game.update_menu_holds(seconds)
+	if release: event.pressed=false;game._input(event)
+
 func row(id:String)->Control:
 	for control in game.menu_rows:
 		if control.get_meta("menu_id")==id: return control
@@ -54,6 +65,8 @@ func run()->void:
 	check(focus_id()=="race","Race focused initially")
 	check(game.seed_input.text.length()==5 and int(game.seed_input.text)==game.race.track.seed_value,"Preview code displayed")
 	check(game.track_character.text==game.race.track.layout,"Seed displays the track character")
+	await stick(0,.9)
+	check(focus_id()=="random_race","New random race is one row below Play")
 	await stick(0,.9)
 	check(focus_id()=="players","Down selects player row")
 	await stick(.9,0)
@@ -97,11 +110,7 @@ func run()->void:
 		Input.parse_input_event(key)
 	check(game.selected_seed==421,"Seed still supports direct typing")
 	await press(JOY_BUTTON_DPAD_DOWN)
-	check(focus_id()=="random","D-pad follows same vertical rows")
-	await press(JOY_BUTTON_A)
-	check(game.selected_seed!=421 and game.seed_input.text.length()==5,"Random changes seed")
-	game.selected_seed=421
-	game.finish_seed_edit()
+	check(focus_id()=="seed" and game.difficulty=="hard","A short D-pad tap cannot change settings")
 	await press(JOY_BUTTON_START)
 	check(game.running and game.views.size()==1,"Start launches solo")
 	check(game.race.track.seed_value==421 and game.race.track.biome=="forest" and game.race.track.difficulty=="hard","All selected settings applied")
@@ -129,28 +138,56 @@ func run()->void:
 	check(game.views.all(func(view):return view.visor.visible and view.visor.surface.render_target_update_mode==SubViewport.UPDATE_ALWAYS),"Resume restores the visor projection")
 	await press(JOY_BUTTON_START)
 	row("seed").grab_focus()
-	await press(JOY_BUTTON_DPAD_RIGHT)
+	await tap_key(KEY_RIGHT)
 	check(game.selected_seed==422 and row("race").text=="Restart","Pending change marks primary Restart")
 	check(game.track_character.text=="Underpass","Changing seed immediately previews its new character while paused")
 	check(game.race==original and game.race.track.seed_value==421 and game.local_paused,"Adjusting settings does not rebuild paused race")
-	await press(JOY_BUTTON_DPAD_LEFT)
+	await tap_key(KEY_LEFT)
 	check(row("race").text=="Resume","Undoing changes restores Resume")
 	row("graphics").grab_focus()
-	await press(JOY_BUTTON_DPAD_RIGHT)
+	await tap_key(KEY_RIGHT)
 	check(game.quality==.6 and row("race").text=="Resume","Graphics adjusts without losing race")
 	check(game.views[0].visor.surface.size.x>game.views[0].viewport.size.x,"Performance keeps instruments sharp at output resolution")
 	if game.world.advanced_renderer:
 		row("lighting").grab_focus()
-		await press(JOY_BUTTON_DPAD_RIGHT)
+		await tap_key(KEY_RIGHT)
 		check(game.bounce_lighting and game.world.scene_environment.sdfgi_enabled and game.quality>=.8,"Lighting row enables SDFGI and a supported graphics tier")
 		check(game.race==original and game.local_paused and row("race").text=="Resume","Lighting comparison preserves the paused race")
-		await press(JOY_BUTTON_DPAD_LEFT)
+		await tap_key(KEY_LEFT)
 		check(not game.bounce_lighting and not game.world.scene_environment.sdfgi_enabled,"Lighting row restores the direct comparison")
 	row("players").grab_focus()
-	await press(JOY_BUTTON_DPAD_RIGHT)
+	await tap_key(KEY_RIGHT)
 	await press(JOY_BUTTON_START)
 	check(game.views.size()==2 and game.race!=original and game.race.track.seed_value==421,"Start applies pending player count with same seed")
 	check(game.views[0].visor.surface!=game.views[1].visor.surface,"Each split-screen pilot owns a separate instrument surface")
+	await press(JOY_BUTTON_START)
+	var previous:RefCounted=game.race
+	var seed_before:int=game.selected_seed
+	await hold(JOY_BUTTON_DPAD_RIGHT,.95)
+	check(game.selected_seed==seed_before,"A partial hold is canceled on release")
+	await hold(JOY_BUTTON_DPAD_RIGHT,.6,false)
+	check(game.selected_seed==seed_before,"Separate holds do not accumulate")
+	game.update_menu_holds(.41)
+	check(game.selected_seed==seed_before+1 and game.race==previous and game.local_paused,"Full hold previews next seed without discarding frozen race")
+	game.update_menu_holds(2.)
+	check(game.selected_seed==seed_before+1,"Holding longer cannot cycle repeatedly")
+	await hold(JOY_BUTTON_DPAD_RIGHT,0.)
+	await hold(JOY_BUTTON_DPAD_LEFT,1.01)
+	check(game.selected_seed==seed_before,"Hold left selects previous seed")
+	await hold(JOY_BUTTON_DPAD_DOWN,1.01)
+	check(game.difficulty=="normal","Hold down lowers difficulty")
+	await hold(JOY_BUTTON_DPAD_UP,1.01)
+	await hold(JOY_BUTTON_DPAD_UP,1.01)
+	check(game.difficulty=="hard","Hold up raises difficulty without wrapping hard to easy")
+	await hold(JOY_BUTTON_X,.99)
+	check(game.race==previous and game.local_paused,"Short random-race hold cannot discard race")
+	await hold(JOY_BUTTON_X,1.01)
+	check(game.running and not game.local_paused and game.race!=previous and game.race.track.seed_value!=seed_before,"Full X hold immediately starts a different random track")
+	check(game.human_count==2 and game.race.track.biome=="forest" and game.race.track.difficulty=="hard" and game.laps==3,"Quick random race preserves all race settings")
+	await press(JOY_BUTTON_START)
+	seed_before=game.selected_seed
+	row("random_race").grab_focus();await press(JOY_BUTTON_A)
+	check(game.running and game.race.track.seed_value!=seed_before and game.views.size()==2,"Random-race menu button works with A and preserves player count")
 	print("MENU_TESTS ",failures," failures")
 	game.queue_free()
 	await process_frame

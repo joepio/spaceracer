@@ -93,6 +93,11 @@ static func axis(value: Dictionary, index: int) -> float:
 	var axes: Array = value.get("axes", [])
 	return clampf(float(axes[index]) / 32767, -1, 1) if axes.size() > index else 0.0
 
+static func pitch_axis(left_y:float,right_y:float)->float:
+	# Either stick has the same authority; two sticks never double the input.
+	var value:=left_y if absf(left_y)>absf(right_y) else right_y
+	return -signf(value)*maxf(0.,(absf(value)-.15)/.85)
+
 func controls(token: String) -> Dictionary:
 	var value := frame(token)
 	var steer := axis(value, 0)
@@ -101,6 +106,6 @@ func controls(token: String) -> Dictionary:
 	if pressed(value, 13): steer = 1
 	return {"steer": steer, "throttle": maxf(axis(value, 5), 1.0 if pressed(value, 0) else 0.0),
 		"strafe": signf(axis(value,2))*maxf(0,(absf(axis(value,2))-.15)/.85),
-		"trim": -signf(axis(value,3))*maxf(0,(absf(axis(value,3))-.15)/.85),
+		"trim": pitch_axis(axis(value,1),axis(value,3)),
 		"fire":pressed(value,2),"brake": clampf((axis(value,4)-.06)/.94,0,1), "boost": pressed(value, 1),
 		"left": pressed(value, 4), "right": pressed(value, 5),"reset":pressed(value,3)}

@@ -52,6 +52,10 @@ var menu_sticks:Dictionary={}
 var menu_direction:=Vector2i.ZERO
 var menu_repeat:=0.0
 var menu_rows:Array[Control]=[]
+var menu_holds:Dictionary={}
+var menu_hold_bar:ProgressBar
+var menu_hold_hint:Label
+const MENU_HOLD_SECONDS:=1.
 var pause_settings:Dictionary={}
 var touch_controls:Control
 var mobile_mode:=false
@@ -63,7 +67,10 @@ func _ready() -> void:
 	quality=.6 if mobile_mode else quality
 	Engine.max_fps = 60 if mobile_mode else 120
 	Input.joy_connection_changed.connect(func(device:int,connected:bool):
-		if not connected: menu_sticks.erase(device)
+		if not connected:
+			menu_sticks.erase(device)
+			for key:Vector2i in menu_holds.keys():
+				if key.x==device: menu_holds.erase(key)
 		assign_local_controllers())
 	bridge = Bridge.new()
 	bridge.prepared.connect(prepare)
@@ -164,8 +171,14 @@ func randomize_menu_seed()->void:
 	finish_seed_edit()
 	refresh_menu_values()
 
+func start_random_race()->void:
+	randomize_menu_seed()
+	next_seed=selected_seed
+	start_local()
+
 func start_local() -> void:
 	preview_refresh=0.
+	menu_sticks.clear();menu_holds.clear();menu_direction=Vector2i.ZERO;menu_repeat=0.
 	if is_instance_valid(touch_controls): touch_controls.clear_input()
 	local_paused=false
 	if is_instance_valid(menu): menu.queue_free()
@@ -286,7 +299,7 @@ func controls(p: Dictionary) -> Dictionary:
 		var right_x:=Input.get_joy_axis(device,JOY_AXIS_RIGHT_X)
 		var right_y:=Input.get_joy_axis(device,JOY_AXIS_RIGHT_Y)
 		c.strafe=signf(right_x)*maxf(0,(absf(right_x)-.15)/.85)
-		c.trim=-signf(right_y)*maxf(0,(absf(right_y)-.15)/.85)
+		c.trim=Bridge.pitch_axis(Input.get_joy_axis(device,JOY_AXIS_LEFT_Y),right_y)
 		c.brake=maxf(c.brake,clampf((Input.get_joy_axis(device,JOY_AXIS_TRIGGER_LEFT)-.06)/.94,0,1))
 		c.fire=c.fire or Input.is_joy_button_pressed(device,JOY_BUTTON_X)
 		c.boost=c.boost or Input.is_joy_button_pressed(device,JOY_BUTTON_B)
@@ -402,6 +415,7 @@ func resume_local()->void:
 		ui.remove_child(menu)
 		menu.queue_free()
 	menu_sticks.clear()
+	menu_holds.clear()
 
 func pause_local()->void:
 	if local_paused or in_menu: return
@@ -410,6 +424,7 @@ func pause_local()->void:
 	in_menu=true
 	for view in views: view.viewport.render_target_update_mode=SubViewport.UPDATE_DISABLED
 	menu_sticks.clear()
+	menu_holds.clear()
 	if is_instance_valid(touch_controls): touch_controls.clear_input()
 	selected_seed=race.track.seed_value
 	pause_settings={"players":human_count,"biome":race.track.biome,"difficulty":race.track.difficulty,"seed":selected_seed}
@@ -436,6 +451,7 @@ func assign_local_controllers()->void:
 
 func _notification(what:int)->void:
 	if what==NOTIFICATION_APPLICATION_PAUSED or what==NOTIFICATION_APPLICATION_FOCUS_OUT:
+		menu_holds.clear();menu_sticks.clear()
 		if mobile_mode and running and not bridge.launched_by_daemon: pause_local()
 	elif what==NOTIFICATION_WM_GO_BACK_REQUEST:
 		if local_paused: start_selected()
@@ -449,11 +465,16 @@ func _input(event:InputEvent)->void:
 		pause_local()
 		return
 	if not in_menu or bridge.launched_by_daemon: return
+	if event is InputEventJoypadButton and event.button_index in [JOY_BUTTON_DPAD_UP,JOY_BUTTON_DPAD_DOWN,JOY_BUTTON_DPAD_LEFT,JOY_BUTTON_DPAD_RIGHT,JOY_BUTTON_X]:
+		var key:=Vector2i(event.device,event.button_index)
+		if event.pressed:
+			if not menu_holds.has(key): menu_holds[key]={"elapsed":0.,"fired":false}
+		else: menu_holds.erase(key)
+		get_viewport().set_input_as_handled()
+		return
 	var direction:=Vector2i.ZERO
 	if event is InputEventKey and event.pressed:
 		direction={KEY_UP:Vector2i.UP,KEY_DOWN:Vector2i.DOWN,KEY_LEFT:Vector2i.LEFT,KEY_RIGHT:Vector2i.RIGHT}.get(event.keycode,Vector2i.ZERO)
-	elif event is InputEventJoypadButton and event.pressed:
-		direction={JOY_BUTTON_DPAD_UP:Vector2i.UP,JOY_BUTTON_DPAD_DOWN:Vector2i.DOWN,JOY_BUTTON_DPAD_LEFT:Vector2i.LEFT,JOY_BUTTON_DPAD_RIGHT:Vector2i.RIGHT}.get(event.button_index,Vector2i.ZERO)
 	if direction!=Vector2i.ZERO:
 		move_menu(direction)
 		get_viewport().set_input_as_handled()
@@ -479,6 +500,8 @@ func _input(event:InputEvent)->void:
 
 func navigate_menu(dt:float)->void:
 	if not in_menu or not is_instance_valid(menu): return
+	update_menu_holds(dt)
+	if not in_menu: return
 	var stick:=Vector2.ZERO
 	for value:Vector2 in menu_sticks.values():
 		if value.length_squared()>stick.length_squared(): stick=value
@@ -494,6 +517,31 @@ func navigate_menu(dt:float)->void:
 	menu_repeat=.32 if direction!=menu_direction else .14
 	menu_direction=direction
 	move_menu(direction)
+
+func update_menu_holds(dt:float)->void:
+	if is_instance_valid(menu_hold_bar): menu_hold_bar.modulate.a=0.
+	if is_instance_valid(menu_hold_hint): menu_hold_hint.text="Hold 1s · X Random race · D-pad ← → Track / ↑ ↓ Level"
+	# Conflicting holds never combine, and each press can act only once.
+	if menu_holds.size()!=1:
+		for state:Dictionary in menu_holds.values(): state.elapsed=0.
+		return
+	var key:Vector2i=menu_holds.keys()[0]
+	var state:Dictionary=menu_holds[key]
+	state.elapsed=minf(MENU_HOLD_SECONDS,state.elapsed+dt)
+	if is_instance_valid(menu_hold_bar):
+		menu_hold_bar.modulate.a=1.;menu_hold_bar.value=state.elapsed/MENU_HOLD_SECONDS
+	if is_instance_valid(menu_hold_hint):
+		menu_hold_hint.text={JOY_BUTTON_X:"New random race",JOY_BUTTON_DPAD_RIGHT:"Next track",JOY_BUTTON_DPAD_LEFT:"Previous track",JOY_BUTTON_DPAD_UP:"Harder",JOY_BUTTON_DPAD_DOWN:"Easier"}[key.y]
+	if state.fired or state.elapsed<MENU_HOLD_SECONDS: return
+	state.fired=true
+	match key.y:
+		JOY_BUTTON_X: start_random_race()
+		JOY_BUTTON_DPAD_RIGHT: adjust_menu("seed",1)
+		JOY_BUTTON_DPAD_LEFT: adjust_menu("seed",-1)
+		JOY_BUTTON_DPAD_UP,JOY_BUTTON_DPAD_DOWN:
+			var index:=Race.Track.DIFFICULTIES.find(difficulty)
+			var step:=1 if key.y==JOY_BUTTON_DPAD_UP else -1
+			if index+step in range(Race.Track.DIFFICULTIES.size()): adjust_menu("difficulty",step)
 
 func move_menu(direction:Vector2i)->void:
 	var focused:=get_viewport().gui_get_focus_owner()
@@ -601,6 +649,7 @@ func make_menu()->void:
 	menu.add_child(content)
 	menu_label(content,"ION RUSH",58,Color("edf7ff"))
 	var start:=menu_button(content,"race","Race",start_selected,true)
+	menu_button(content,"random_race","New random race",start_random_race)
 	var settings:=["players","biome","difficulty","seed","graphics"]
 	if world.advanced_renderer: settings.append("lighting")
 	for id in settings:
@@ -646,7 +695,6 @@ func make_menu()->void:
 			track_character.add_theme_font_size_override("font_size",16)
 			track_character.add_theme_color_override("font_color",Color("7de9d6"))
 			content.add_child(track_character)
-			menu_button(content,"random","Random seed",randomize_menu_seed)
 	menu_button(content,"controls","Controls & credits",func(): show_menu_controls=not show_menu_controls;make_menu())
 	if local_paused:
 		menu_button(content,"restart","Restart race",func(): finish_seed_edit();next_seed=selected_seed;start_local())
@@ -658,7 +706,7 @@ func make_menu()->void:
 		var help:=VBoxContainer.new()
 		reference.add_child(help)
 		menu_label(help,"CONTROLS",24)
-		menu_label(help,"RT / A  Throttle     LT  Brake     B  Boost\nX  Use pickup     LB / RB  Side bump\nLeft stick  Steer / yaw\nRight stick  Strafe / roll · Grip / pitch\nY  Reset     Start  Pause\n\nKeyboard  WASD · Space · Q / E bump · 1 · X pickup",20)
+		menu_label(help,"RT / A  Throttle     LT  Brake     B  Boost\nX  Use pickup     LB / RB  Side bump\nLeft stick  Steer / yaw\nRight stick  Strafe / roll\nEither stick ↑ ↓  Grip / pitch\nY  Reset     Start  Pause\n\nKeyboard  WASD · Space · Q / E bump · 1 · X pickup",20)
 		var credits:=RichTextLabel.new()
 		credits.bbcode_enabled=true
 		credits.fit_content=true
@@ -667,7 +715,16 @@ func make_menu()->void:
 		credits.text="\nFOREST ART · [url=https://creativecommons.org/licenses/by/4.0/]CC BY 4.0[/url]\n[url=https://sketchfab.com/3d-models/pine-tree-d45218a3fab349e5b1de040f29e7b6f9]Pine Tree[/url] — evolveduk\n[url=https://sketchfab.com/3d-models/tree-bake-upload-4e78d13152cf4214a256230765f6d6d3]Tree Bake Upload[/url] — restlessmonkey\n[url=https://github.com/GamesNotDeveloped/godot-forest-demo]Godot forest demo[/url] — GamesNotDeveloped\nAdapted materials, textures and scale for Ion Rush."
 		credits.meta_clicked.connect(func(url:Variant): OS.shell_open(str(url)))
 		help.add_child(credits)
-	menu_label(content,"↑ ↓  Select     ‹ ›  Adjust     Start  Play",14,Color("91a8b7"))
+	menu_label(content,"Stick  Select / adjust     Start  Play / resume",14,Color("91a8b7"))
+	menu_hold_hint=Label.new();menu_hold_hint.add_theme_font_size_override("font_size",14)
+	menu_hold_hint.add_theme_color_override("font_color",Color("91a8b7"));content.add_child(menu_hold_hint)
+	menu_hold_bar=ProgressBar.new();menu_hold_bar.max_value=1.;menu_hold_bar.show_percentage=false
+	menu_hold_bar.custom_minimum_size=Vector2(480,3);menu_hold_bar.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	var hold_background:=StyleBoxFlat.new();hold_background.bg_color=Color(1,1,1,.08)
+	var hold_fill:=StyleBoxFlat.new();hold_fill.bg_color=Color("7de9d6")
+	menu_hold_bar.add_theme_stylebox_override("background",hold_background)
+	menu_hold_bar.add_theme_stylebox_override("fill",hold_fill)
+	content.add_child(menu_hold_bar);update_menu_holds(0.)
 	refresh_menu_values()
 	for i in range(menu_rows.size()):
 		var row:=menu_rows[i]

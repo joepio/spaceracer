@@ -1,6 +1,7 @@
 extends Control
 ## One transparent instrument texture per player; the world camera stays untouched.
-const CURVATURE:=.16
+const CURVATURE:=.035
+const SPLIT_CURVATURE:=.010
 var surface:SubViewport
 var projection:ShaderMaterial
 var hud:Control
@@ -33,6 +34,7 @@ func setup(instruments:Control)->void:
 func set_resolution(pixels:Vector2i)->void:
 	surface.size=Vector2i(maxi(16,pixels.x),maxi(16,pixels.y))
 	hud.size=Vector2(surface.size)
+	projection.set_shader_parameter("curvature",SPLIT_CURVATURE if hud.split_screen else CURVATURE)
 	projection.set_shader_parameter("texel",Vector2.ONE/Vector2(surface.size))
 	projection.set_shader_parameter("pixel_scale",maxf(.75,float(surface.size.y)/450.))
 
@@ -52,8 +54,8 @@ func _process(dt:float)->void:
 	projection.set_shader_parameter("damage",clampf(p.flash,0.,1.))
 	projection.set_shader_parameter("quiet",p.finished or hud.race.over)
 
-static func project_marker(point:Vector2,dimensions:Vector2)->Vector2:
+static func project_marker(point:Vector2,dimensions:Vector2,curvature:float=CURVATURE)->Vector2:
 	# Inverse of the presentation: put a world marker at the texel sampled by
 	# its intended screen position, so visor curvature cannot move it off target.
 	var centered:=point/dimensions-Vector2.ONE*.5
-	return (Vector2.ONE*.5+centered*(1.+CURVATURE*centered.length_squared()*4.))*dimensions
+	return (Vector2.ONE*.5+centered*(1.+curvature*centered.length_squared()*4.))*dimensions

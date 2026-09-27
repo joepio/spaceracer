@@ -85,6 +85,7 @@ static func camera_update(camera:Camera3D,pose:Transform3D,n:Dictionary,age:floa
 	if obstacles!=null:
 		var hit:Dictionary=obstacles.trace(target,position,.6)
 		if not hit.is_empty(): position=hit.position+hit.normal*.7
+	fov=preload("res://src/chase.gd").fitted_fov(camera,fov)
 	var desired:=Transform3D(pose.basis,position).looking_at(target,pose.basis.y)
 	if age<1.3 and not snap:
 		var entry:Transform3D=pose*Transform3D(camera.get_meta("victory_entry"))

@@ -38,6 +38,10 @@ A small progress bar shows the hold. Short taps do nothing, and a continuous
 hold acts only once. These shortcuts are menu-only; racing D-pad steering stays
 available.
 Standalone races have six machines, filling spare positions with AI.
+The camera keeps the same horizontal lens in wide two-player viewports, with a
+smaller acceleration/boost FOV increase. HUD instruments sit near the corners,
+with very light curvature in split-screen and no decorative cockpit brackets.
+Weapons are shown at bottom left; the middle stays open for the road.
 Start/Escape pauses. Unchanged settings resume the current race; changing a race
 setting changes the primary action to **Restart**. Graphics never resets progress.
 The paused track keeps its last rendered frame behind a dark menu gradient until

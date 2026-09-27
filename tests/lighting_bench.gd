@@ -48,6 +48,9 @@ func run()->void:
 	game.human_count=players
 	game.next_seed=seed_value
 	game.start_local()
+	# A playtest in another window must not pause or steer this measurement.
+	game.set_process_input(false);game.set_process_unhandled_input(false)
+	game.back_release=-100000.
 	if landmark=="corner":
 		for i in range(game.race.track.nodes.size()):
 			var node:Dictionary=game.race.track.nodes[i]
@@ -134,15 +137,21 @@ func run()->void:
 	var frame_ms:Array[float]=[]
 	var gpu_ms:Array[float]=[]
 	var cpu_ms:Array[float]=[]
+	var simulation_ms:Array[float]=[]
+	var presentation_ms:Array[float]=[]
 	var rows:=PackedStringArray(["frame,wall_ms,gpu_ms,render_cpu_ms"])
 	var last:=Time.get_ticks_usec()
 	var sample_start:=Time.get_unix_time_from_system()
 	for i in range(samples):
 		if scripted_motion:
+			var script_start:=Time.get_ticks_usec()
 			# Identical route and simulation time across shadow configurations.
 			game._physics_process(1./120.)
 			game._physics_process(1./120.)
+			simulation_ms.append((Time.get_ticks_usec()-script_start)/1000.)
+			script_start=Time.get_ticks_usec()
 			game._process(1./60.)
+			presentation_ms.append((Time.get_ticks_usec()-script_start)/1000.)
 		await RenderingServer.frame_post_draw
 		var now:=Time.get_ticks_usec()
 		var wall:float=(now-last)/1000.
@@ -158,6 +167,8 @@ func run()->void:
 	var raw:=FileAccess.open(output.path_join(label_name+".csv"),FileAccess.WRITE)
 	raw.store_string("\n".join(rows));raw.close()
 	var result:={"moving":moving,"quality":quality,"seed":seed_value,"fraction":fraction,"views":players,"resolution":root.size,"samples":samples,"ablation":ablation,"wall_ms":stats(frame_ms),"gpu_ms":stats(gpu_ms),"render_cpu_ms":stats(cpu_ms),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"video_mem_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.,"device":RenderingServer.get_video_adapter_name(),"camera":str(game.views[0].camera.global_transform)}
+	if scripted_motion:
+		result.simulation_ms=stats(simulation_ms);result.presentation_ms=stats(presentation_ms)
 	result.sample_start_utc=sample_start
 	result.scripted_motion=scripted_motion
 	result.sdfgi=env.sdfgi_enabled

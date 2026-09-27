@@ -1,6 +1,6 @@
 shader_type canvas_item;
 render_mode unshaded, blend_premul_alpha;
-uniform float curvature=.16;
+uniform float curvature=.035;
 uniform vec2 texel=vec2(.00052,.00093);
 uniform float pixel_scale=2.4;
 uniform float damage=0.;

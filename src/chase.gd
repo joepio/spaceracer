@@ -1,5 +1,11 @@
 extends RefCounted
 ## One vehicle-relative chase rig for road, takeoff, flight and landing.
+static func fitted_fov(camera:Camera3D,reference:float)->float:
+	# Preserve the 16:9 horizontal lens on wide split-screen/ultrawide surfaces.
+	var dimensions:=camera.get_viewport().get_visible_rect().size
+	var aspect:=dimensions.x/maxf(1.,dimensions.y)
+	return rad_to_deg(2.*atan(tan(deg_to_rad(reference)*.5)*minf(1.,(16./9.)/aspect)))
+
 static func update(camera:Camera3D,pose:Transform3D,speed:float,boosting:bool,dt:float,snap:bool=false,acceleration:float=0.,effects_enabled:bool=true)->void:
 	var previous:=camera.position
 	camera.set_meta("crash_serial",-1)
@@ -29,7 +35,7 @@ static func update(camera:Camera3D,pose:Transform3D,speed:float,boosting:bool,dt
 	camera.look_at(pose.origin+frame.z*24+frame.y*1.5,frame.y)
 	# Optical pull-back follows acceleration as well as speed, then settles as
 	# thrust stops changing velocity. Boost opens the lens further, without cuts.
-	var fov:=clampf(76+rush*16+surge*4.+boost*8.,76,103)
+	var fov:=fitted_fov(camera,clampf(72+rush*10+surge*2.+boost*5.,72,89))
 	camera.fov=fov if snap else lerpf(camera.fov,fov,1-exp(-dt*5))
 	var clock:float=camera.get_meta("speed_clock",0.)
 	if effects_enabled: clock+=minf(dt,.05)
@@ -72,5 +78,5 @@ static func update_crash(camera:Camera3D,impact:Vector3,focus:Vector3,serial:int
 	if camera.position.distance_squared_to(aim)>.01:
 		var desired:=camera.transform.looking_at(aim,camera.get_meta("crash_up"))
 		camera.quaternion=camera.quaternion.slerp(desired.basis.get_rotation_quaternion(),1.-exp(-dt*7.)).normalized()
-	camera.fov=lerpf(camera.fov,76.,1.-exp(-dt*1.8))
+	camera.fov=lerpf(camera.fov,fitted_fov(camera,72.),1.-exp(-dt*1.8))
 	for key in ["speed_rush","speed_boost","speed_surge","speed_velocity"]: camera.set_meta(key,0.)

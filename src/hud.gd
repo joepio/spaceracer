@@ -8,6 +8,7 @@ var font: Font = ThemeDB.fallback_font
 var avatar_key: String = ""
 var avatar: Texture2D
 var show_map := true
+var split_screen := false
 var draw_scale := 1.0
 
 func _ready() -> void:
@@ -37,20 +38,20 @@ func _draw() -> void:
 		label("%s · %.2fs"%[str(p.get("name","Pilot")).left(18),p.time],Vector2(24,h-18),12)
 		right_label("%05d"%race.track.seed_value,Vector2(w-24,h-18),10)
 		return
-	visor_frame(w,h,tint,p)
+	flight_reference(w,h,tint,p)
 	draw_missile_targets(w,h)
-	portrait(p,Vector2(44,43),9)
-	label(str(p.get("name","Pilot")).left(18),Vector2(63,40),12,Color("adf2fa"))
-	label("LAP %d / %d"%[mini(p.lap,race.laps),race.laps],Vector2(63,56),10,Color("79b7c8"))
-	right_label(str(p.rank),Vector2(w-66,49),29,Color("b8f2fa"))
-	right_label("/ %d"%race.racers.size(),Vector2(w-38,47),12,Color("79b7c8"))
-	right_label("%02d:%05.2f"%[int(race.clock)/60,fmod(race.clock,60)],Vector2(w-38,68),10,Color("79b7c8"))
-	right_label(str(roundi(p.speed*3.6)),Vector2(w-73,h-64),31,Color("b8f2fa"))
-	right_label("km/h",Vector2(w-41,h-65),10,Color("79b7c8"))
+	portrait(p,Vector2(22,25),9)
+	label(str(p.get("name","Pilot")).left(18),Vector2(40,23),12,Color("adf2fa"))
+	label("LAP %d / %d"%[mini(p.lap,race.laps),race.laps],Vector2(40,39),10,Color("79b7c8"))
+	right_label(str(p.rank),Vector2(w-43,38),29,Color("b8f2fa"))
+	right_label("/ %d"%race.racers.size(),Vector2(w-16,36),12,Color("79b7c8"))
+	right_label("%02d:%05.2f"%[int(race.clock)/60,fmod(race.clock,60)],Vector2(w-16,55),10,Color("79b7c8"))
+	right_label(str(roundi(p.speed*3.6)),Vector2(w-53,h-57),31,Color("b8f2fa"))
+	right_label("km/h",Vector2(w-16,h-58),10,Color("79b7c8"))
 	var energy_color:=Color("ff6e84") if p.energy<25 else tint
 	if p.energy_fx>0.: energy_color=energy_color.lerp(Color("ffd369"),minf(1.,p.energy_fx*2.))
-	energy_arc(Vector2(w-113,h-104),81.,p.energy,energy_color)
-	if p.energy_fx>0.: label("+%d"%roundi(p.energy_gained),Vector2(w-209,h-44-(.8-p.energy_fx)*10.),11,Color(1.,.83,.41,minf(1.,p.energy_fx*3.)))
+	energy_arc(Vector2(w-89,h-96),76.,p.energy,energy_color)
+	if p.energy_fx>0.: label("+%d"%roundi(p.energy_gained),Vector2(w-174,h-40-(.8-p.energy_fx)*10.),11,Color(1.,.83,.41,minf(1.,p.energy_fx*3.)))
 	var status:="Boost on lap 2" if p.lap<2 else "Boost ready"
 	if p.boost>0 or p.on_pad: status="Boosting"
 	elif p.slipstream>.15: status="Slipstream"
@@ -64,9 +65,9 @@ func _draw() -> void:
 	if race.can_reset(p):
 		reset_prompt(w,h*.80,p.checkpoint_missed)
 	elif p.checkpoint_flash>0.:
-		centered("CHECKPOINT",w,h*.25,10,Color(.65,1.,.9,p.checkpoint_flash/.7))
-	label(status.to_upper(),Vector2(w-172,h-16),8,energy_color if p.lap>1 else Color("79aabb"))
-	if show_map: minimap(Vector2(76,h-74),38)
+		label("CHECKPOINT",Vector2(16,60),10,Color(.65,1.,.9,p.checkpoint_flash/.7))
+	right_label(status.to_upper(),Vector2(w-16,h-9),8,energy_color if p.lap>1 else Color("79aabb"))
+	if show_map: minimap(Vector2(52,h-62),32)
 	var item:String=race.Weapons.NAMES.get(p.weapon,"")
 	if p.warp_time>0.: item="WARP  %.1f"%p.warp_time
 	elif p.drone_time>0.: item="SENTRY  %.1f"%p.drone_time
@@ -74,15 +75,16 @@ func _draw() -> void:
 	elif not item.is_empty(): item=("" if OS.has_feature("android") else "X · ")+item
 	var item_flash:bool=p.pickup_fx>0. and not p.pickup_energy
 	if not item.is_empty():
-		draw_polyline(PackedVector2Array([Vector2(w*.5-94,h-47),Vector2(w*.5-94,h-30),Vector2(w*.5-85,h-21),Vector2(w*.5+85,h-21),Vector2(w*.5+94,h-30),Vector2(w*.5+94,h-47)]),Color(.3,.85,.88,.35),1.,true)
-		centered(item,w,h-32,14 if item_flash else 12,Color("d8ffac") if item_flash else Color("97ffdf"))
-	if p.evade_notice>0.: centered("EVADED",w,108,12,Color("97ffdf"))
-	if p.emp_time>0.: centered("ENGINE OFF  %.1f"%p.emp_time,w,132,13,Color("a6caff"))
-	elif p.jam_strength>.03: centered("SIGNAL JAMMED",w,132,12,Color("ffc58a"))
-	label("%05d · %s · %s"%[race.track.seed_value,race.track.difficulty.to_upper(),race.track.biome.to_upper()],Vector2(35,h-15),8,Color("79aabb"))
+		var item_y:=h-115. if show_map else h-45.
+		label(item,Vector2(16,item_y),14 if item_flash else 12,Color("d8ffac") if item_flash else Color("97ffdf"))
+		draw_line(Vector2(16,item_y+8.),Vector2(145,item_y+8.),Color(.3,.85,.88,.28),1.,true)
+	if p.evade_notice>0.: right_label("EVADED",Vector2(w-16,94),12,Color("97ffdf"))
+	if p.emp_time>0.: right_label("ENGINE OFF  %.1f"%p.emp_time,Vector2(w-16,112),13,Color("a6caff"))
+	elif p.jam_strength>.03: right_label("SIGNAL JAMMED",Vector2(w-16,112),12,Color("ffc58a"))
+	label("%05d · %s · %s"%[race.track.seed_value,race.track.difficulty.to_upper(),race.track.biome.to_upper()],Vector2(16,h-9),8,Color("79aabb"))
 	var jump:Dictionary=race.track.jump_at(p.distance,170.)
 	if not jump.is_empty() and not p.airborne and p.recovery==0 and race.countdown==0 and fposmod(p.distance,race.track.length)<jump.takeoff:
-		centered("JUMP %dm · KEEP SPEED"%roundi(jump.takeoff-fposmod(p.distance,race.track.length)),w,83,12,Color("ffc46b"))
+		right_label("JUMP %dm · %s"%[roundi(jump.takeoff-fposmod(p.distance,race.track.length)),"NOSE DOWN" if jump.get("turbo",false) else "KEEP SPEED"],Vector2(w-16,76),12,Color("ffc46b"))
 	if race.countdown>0:
 		centered(str(ceili(race.countdown)),w,h*.46,52)
 	elif race.clock<.7:
@@ -94,17 +96,7 @@ func _draw() -> void:
 	elif p.lap==2 and race.clock-p.lap_start<2:
 		centered("Boost unlocked",w,84,13,tint)
 
-func visor_frame(w:float,h:float,tint:Color,p:Dictionary)->void:
-	var ink:=Color(.25,.73,.85,.34)
-	# Open, contoured brackets suggest the inner visor rim without a cockpit mask.
-	for side in [-1.,1.]:
-		var edge:float=w*.5+side*(w*.5-18.)
-		var inward:float=-side
-		draw_polyline(PackedVector2Array([Vector2(edge+inward*177,16),Vector2(edge+inward*20,16),Vector2(edge,37),Vector2(edge,97),Vector2(edge+inward*8,112)]),ink,1.1,true)
-		draw_polyline(PackedVector2Array([Vector2(edge,h-117),Vector2(edge,h-45),Vector2(edge+inward*28,h-18),Vector2(edge+inward*183,h-18)]),Color(ink,.20),1.,true)
-		for tick in range(7):
-			var y:=h*.5-32.+tick*10.
-			draw_line(Vector2(edge+inward*8,y),Vector2(edge+inward*(15. if tick%3==0 else 11.),y),Color(ink,.24),1.,true)
+func flight_reference(w:float,h:float,tint:Color,p:Dictionary)->void:
 	# A small roll reference belongs to the flight mode, not the racing apex.
 	if p.airborne and not p.crashed:
 		var center:=Vector2(w*.5,h*.43)
@@ -149,8 +141,8 @@ func draw_missile_targets(w:float,h:float)->void:
 		for corner in [low,Vector2(high.x,low.y),high,Vector2(low.x,high.y)]:
 			var inward:=Vector2(1. if corner.x==low.x else -1.,1. if corner.y==low.y else -1.)
 			var dimensions:=Vector2(w,h)
-			draw_line(Visor.project_marker(corner,dimensions),Visor.project_marker(corner+Vector2(inward.x*length,0.),dimensions),red,1.8,true)
-			draw_line(Visor.project_marker(corner,dimensions),Visor.project_marker(corner+Vector2(0.,inward.y*length),dimensions),red,1.8,true)
+			draw_line(Visor.project_marker(corner,dimensions,Visor.SPLIT_CURVATURE if split_screen else Visor.CURVATURE),Visor.project_marker(corner+Vector2(inward.x*length,0.),dimensions,Visor.SPLIT_CURVATURE if split_screen else Visor.CURVATURE),red,1.8,true)
+			draw_line(Visor.project_marker(corner,dimensions,Visor.SPLIT_CURVATURE if split_screen else Visor.CURVATURE),Visor.project_marker(corner+Vector2(0.,inward.y*length),dimensions,Visor.SPLIT_CURVATURE if split_screen else Visor.CURVATURE),red,1.8,true)
 
 func right_label(value:String,at:Vector2,size_value:int,color:Color=Color("e1eef6"))->void:
 	label(value,at-Vector2(font.get_string_size(value,HORIZONTAL_ALIGNMENT_LEFT,-1,size_value).x,0),size_value,color)

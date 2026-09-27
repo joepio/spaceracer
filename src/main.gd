@@ -238,6 +238,7 @@ func new_race() -> void:
 		hud.race = race
 		hud.player_index = index
 		hud.show_map = indices.size() == 1
+		hud.split_screen = indices.size() > 1
 		hud.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 		var visor:=Visor.new()
 		visor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

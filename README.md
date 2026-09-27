@@ -248,6 +248,9 @@ active sentry or jammer clear of newly collected equipment.
   the nearest valid rival ahead, within 190 metres in space / 220 along the course.
   Its head aims independently, with barrel recoil and muzzle flashes. Bursts deal
   4 shield damage every 0.4 seconds. Buildings/terrain block its shots.
+  Before activation its barrels rest lowered and its status LED stays dark.
+  Once armed, it scans the forward arc while searching, tracks any acquired
+  rival, and blinks a small mint status LED throughout its active lifetime.
 - **EMP:** an expanding blue-violet electrical sphere reaches 220 metres in
   0.65 seconds, cutting every rival's engines inside it for 2.2 seconds. Your own
   engines are unaffected. Rivals coast and can steer/brake, but lose throttle,

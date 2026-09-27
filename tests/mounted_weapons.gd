@@ -41,6 +41,16 @@ func run()->void:
 	check(head.global_position.distance_to(Race.Weapons.drone_position(race,p))<.001,"Sentry aim pivot remains attached to hull")
 	var direction:Vector3=(Race.Weapons.pose(race,race.racers[0]).origin-head.global_position).normalized()
 	check(head.global_basis.z.dot(direction)>.999,"Mounted turret aims at its target")
+	p.drone_target=-1;race.vfx_clock=1.2-p.slot*.11+.08;vfx.update()
+	var scanning_basis:=head.basis
+	var led:MeshInstance3D=vfx.turrets[1].get_meta("status_led")
+	check(led.material_override.emission_energy_multiplier>0.,"Activated sentry blinks its status LED")
+	race.vfx_clock+=.6;vfx.update()
+	check(not head.basis.is_equal_approx(scanning_basis),"Activated sentry scans when no rival is in range")
+	check(led.material_override.emission_energy_multiplier==0.,"Status LED has a distinct off phase")
+	p.drone_time=0.;p.weapon="drone";vfx.update();var stowed_basis:=head.basis
+	race.vfx_clock+=1.;vfx.update()
+	check(head.basis.is_equal_approx(stowed_basis) and led.material_override.emission_energy_multiplier==0.,"Held pickup stays stowed with LED off")
 	p.crashed=true;vfx.update()
 	check(not vfx.turrets[1].visible and not vfx.dishes[1].visible and vfx.mounts[1].values().all(func(n):return not n.visible),"Crash hides mounted weapons")
 	vfx.queue_free();await process_frame
@@ -59,6 +69,10 @@ func render_scene()->void:
 		p.weapon=kind;game.world.update_ships()
 		game.views[0].hud.queue_redraw()
 		await capture("mounted-"+kind)
+	p.weapon="drone";game.race.weapons.activate(game.race,0);p.drone_target=-1
+	game.race.vfx_clock=12.08;game.world.update_ships();game.views[0].hud.queue_redraw()
+	await capture("sentry-scanning")
+	p.drone_time=0.
 	p.weapon="missile";game.race.racers[1].distance=2000.;game.race.weapons.activate(game.race,0)
 	game.views[0].hud.queue_redraw()
 	var m:Dictionary=game.race.weapons.missiles[0]

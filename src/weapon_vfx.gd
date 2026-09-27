@@ -204,6 +204,9 @@ func make_turret()->Node3D:
 	var housing:=Ship.loft(head,"ArmoredHead",[Vector3(-.8,.48,.6),Vector3(-.5,.8,.85),Vector3(.45,.7,.65),Vector3(.75,.5,.45)],armor,Vector3.ZERO,true)
 	housing.layers=2;housing.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mesh(head,sphere(.18),mint,Vector3(0,.18,.7))
+	mesh(head,cylinder(.2,.12),steel,Vector3(0,.53,-.35))
+	var status_led:=mesh(head,sphere(.14),material(Color("b5fff0"),3.),Vector3(0,.63,-.35))
+	root.set_meta("status_led",status_led)
 	var barrels:=Node3D.new();head.add_child(barrels);root.set_meta("barrels",barrels)
 	for side in [-1.,1.]:
 		var barrel:=mesh(barrels,cylinder(.17,2.2),steel,Vector3(side*.48,-.06,1.5));barrel.rotation.x=PI*.5
@@ -394,7 +397,20 @@ func update()->void:
 		var turret:=turrets[i];turret.visible=(p.weapon=="drone" or p.drone_time>0.) and not p.crashed
 		turret.transform=frame*Transform3D(Basis.IDENTITY,Weapons.SENTRY_MOUNT)
 		var head:Node3D=turret.get_meta("head")
-		head.basis=frame.basis.inverse()*Weapons.sentry_basis(race,p)
+		var sentry_active:bool=p.drone_time>0.
+		if sentry_active and p.drone_target>=0:
+			head.basis=frame.basis.inverse()*Weapons.sentry_basis(race,p)
+		elif sentry_active:
+			# Search across the forward arc; tracking takes over once a rival is found.
+			head.basis=Basis(Vector3.UP,sin(time*1.8+p.slot*.7)*.72)*Basis(Vector3.RIGHT,sin(time*1.1)*.06)
+		else:
+			head.basis=Basis(Vector3.RIGHT,.14) # Carried, barrels lowered and unarmed.
+		var status_led:MeshInstance3D=turret.get_meta("status_led")
+		var led_on:bool=sentry_active and fposmod(time+p.slot*.11,1.2)<.18
+		var led_color:=Color("b5fff0") if led_on else Color("122522")
+		status_led.material_override.albedo_color=led_color
+		status_led.material_override.emission=led_color
+		status_led.material_override.emission_energy_multiplier=3. if led_on else 0.
 		var recoil:=clampf((p.drone_cooldown-.30)/.10,0.,1.) if p.drone_target>=0 and p.drone_time>0. else 0.
 		var barrels:Node3D=turret.get_meta("barrels");barrels.position.z=-recoil*.22
 		for barrel in barrels.get_children():

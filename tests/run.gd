@@ -7,6 +7,9 @@ class TestRoad extends RefCounted:
 	var length:=100000.0
 	var bend:=0.0
 	var crest:=0.0
+	var hazards:=Track.HazardCollision.new()
+	var obstacles:RefCounted
+	var biome:="city"
 	func sample(_distance:float)->Dictionary:
 		return {"p":Vector3(0,0,_distance),"frame":Basis.IDENTITY,"width":500.0,"curve":bend,"crest":crest,"slope":0.0,"zone":""}
 	func project(position:Vector3,_reference:float,_reach:float)->Dictionary:
@@ -99,8 +102,8 @@ func run() -> void:
 	for i in range(70): race.step(1.0/120,[{"boost":true,"throttle":1.0}])
 	check(p.boost<1,"Held boost does not retrigger")
 	check(p.speed>300,"Boost exceeds normal maximum")
-	p.distance=race.track.length*.02
-	p.x=-20.0
+	p.distance=race.track.recharge_strips[0].center
+	p.x=race.track.sample(p.distance).width*Track.Recharge.CENTER
 	p.energy=40.0
 	p.slip=0.0
 	p.heading=0.0

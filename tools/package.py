@@ -9,8 +9,8 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
-import subprocess
 import zipfile
+from check import run_godot
 
 
 def main():
@@ -26,8 +26,8 @@ def main():
         parser.error("Pass the GUI executable, not the console wrapper")
     output.mkdir(parents=True)
     (output / ".gdignore").write_text("", encoding="utf-8")
-    subprocess.run([str(args.godot.resolve()), "--headless", "--path", str(source), "--editor", "--import", "--quit"], check=True)
-    subprocess.run([str(args.godot.resolve()), "--headless", "--path", str(source), "--export-pack", "Windows Desktop", str(output / "IonRush.pck")], check=True)
+    run_godot(args.godot.resolve(), "--editor", "--import", "--quit")
+    run_godot(args.godot.resolve(), "--export-pack", "Windows Desktop", str(output / "IonRush.pck"))
     shutil.copy2(args.godot, output / "IonRush.exe")
     shutil.copy2(source / "README.md", output / "README.md")
     shutil.copy2(source / "LICENSE", output / "LICENSE")
@@ -36,6 +36,7 @@ def main():
     generated_art.mkdir()
     for name in ("README.md", "generation-prompts.json"):
         shutil.copy2(source / "assets" / name, generated_art / name)
+    shutil.copy2(source / "docs/city-advertising/generation-prompts.json", generated_art / "corporate-posters-prompts.json")
     (output / "shelf.json").write_text(json.dumps([{
         "id": "ion-rush", "title": "Ion Rush", "min_players": 1, "max_players": 4, "players": "1–4",
         "launch": {"command": str(output / "IonRush.exe"), "args": ["--position", "-20000,-20000"], "cwd": str(output)},

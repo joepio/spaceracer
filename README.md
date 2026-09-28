@@ -14,6 +14,25 @@ GameNight transport, tests and packaging tools are included. It does not need a
 GameNight checkout to build or run. Development requires Godot 4.5.2; Python 3.12+
 with only its standard library runs the packaging and integration tools.
 
+## Downloads and releases
+
+Download the portable Windows ZIP from [GitHub Releases](https://github.com/joepio/spaceracer/releases).
+Extract it and run `IonRush.exe`; Godot does not need to be installed.
+
+[Build and release](https://github.com/joepio/spaceracer/actions/workflows/ci.yml)
+runs the simulation, menu, flight, effects, city, EMP, recharge and source/packaged
+GameNight protocol checks on GitHub's Windows runners. Push a version tag such as
+`v0.4.1` to build and publish a new release, or choose **Run workflow** on `main`
+and enter a new `release_tag`. Leave that field empty for a test build only.
+Pull requests and ordinary pushes to `main` produce downloadable build artifacts.
+Release publication requires all checks to pass, and existing release assets are
+never overwritten. Android is not built by this workflow.
+
+Each release includes `release-sha256.txt` and `ion-rush.catalog.json`. Copy the
+latter to GameNight's `catalog/games/ion-rush.json` to update its pinned download
+URL and checksum together. The repository is named `spaceracer`; the game title
+and protocol ID remain **Ion Rush** and `ion-rush`.
+
 ## Play
 
 Open `project.godot` in Godot 4.5.2 and press F6/F5, or run:

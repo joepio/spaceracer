@@ -63,6 +63,7 @@ func run()->void:
 	check(warm.vfx_clock>warm.clock,"Effects animate throughout the frozen countdown")
 	p.engine_power=1.0
 	p.thrust=1.0
+	p.braking=0.0 # Finish the preceding brake test before testing ground boost.
 	p.boost=0.0
 	p.on_pad=false
 	Ship.animate_effects(ship,p,warm.vfx_clock,0)
@@ -123,7 +124,8 @@ func run()->void:
 	p.air_velocity=Vector3(0,0,470)
 	p.boost=1.
 	Ship.animate_effects(ship,p,10.002,0)
-	check((float(ship.get_meta("wake_travel"))-after)/.001>470.+500.,"Boosted flight exhaust also outruns the vehicle")
+	check((float(ship.get_meta("wake_travel"))-after)/.001>470.+200.,"Flight exhaust also outruns the vehicle")
+	check(not ship.get_node("BoostArcs-1").visible and ship.get_node("EngineFlare-1").material_override.get_shader_parameter("boost_amount")==0.,"Flight does not display track-only turbo effects")
 	ship.free()
 	print("EFFECT_TESTS %d checks, %d failures"%[checks,failures])
 	quit(1 if failures else 0)

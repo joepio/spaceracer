@@ -19,13 +19,13 @@ construction, their size-dependent timing, and the flash-to-warm-light sequence.
 The heat shell adapts the upstream growing refractive shell with bounded screen
 displacement and depth rejection for this game's cameras.
 
-Ion Rush uses reusable bounded layers, deterministic cosmetic seeds, and explicit
+SpaceRacer uses reusable bounded layers, deterministic cosmetic seeds, and explicit
 race-clock animation in place of upstream tweens, autoloads and spawn queues.
 Existing ship wreck physics, combat damage, missile trails and sound settings are
 preserved. No Growing Guns game content or audio samples are included.
 
 `src/missile_laser.gdshader` adapts the laser's exponential radial falloff and
-longitudinal taper. Ion Rush uses a camera-facing ribbon per view, UV-space
+longitudinal taper. SpaceRacer uses a camera-facing ribbon per view, UV-space
 cross-section and faint red scattering. A separate white contact glow and local
 light concentrate brightness on the target hull. Brightness follows the existing
 two-second warning timer. HDR radiance is supplied through ALBEDO for Godot's

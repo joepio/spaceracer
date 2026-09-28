@@ -103,10 +103,10 @@ def main():
     host = Host()
     child = None
     stop = threading.Event()
-    with tempfile.TemporaryDirectory(prefix="ion-integration-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="spaceracer-integration-") as temporary:
         probe = Path(temporary) / "probe.json"
-        env = dict(os.environ, GAMENIGHT="1", GAMENIGHT_GAME_ID="ion-rush",
-                   GAMENIGHT_TOKEN="ion-test-token", GAMENIGHT_ADDR=f"127.0.0.1:{host.port}", ION_PROBE_PATH=str(probe))
+        env = dict(os.environ, GAMENIGHT="1", GAMENIGHT_GAME_ID="spaceracer",
+                   GAMENIGHT_TOKEN="spaceracer-test-token", GAMENIGHT_ADDR=f"127.0.0.1:{host.port}", SPACERACER_PROBE_PATH=str(probe))
         log = open(Path(temporary) / "godot.log", "w+")
         try:
             # This suite tests protocol/controller behavior with sound disabled;
@@ -117,7 +117,7 @@ def main():
             child = subprocess.Popen(command, env=env, stdout=log, stderr=log)
             host.connect()
             hello = wait(lambda: host.messages, lambda messages: any(m["type"] == "hello" for m in messages))
-            assert next(m for m in hello if m["type"] == "hello")["token"] == "ion-test-token"
+            assert next(m for m in hello if m["type"] == "hello")["token"] == "spaceracer-test-token"
             host.send("welcome", protocol_version=1, party={})
             host.send("setting_changed", key="laps", value=1)
             host.send("setting_changed", key="difficulty", value="easy")
@@ -126,8 +126,8 @@ def main():
                      for i, token in [(0, "ordinal:7"), (2, "ordinal:2")]]
             players = [dict(id="p0", name="Azure", color="#00aaff", skin_color="#8a6644"),
                        dict(id="p2", name="Rose", color="#ff4488", skin_color="#efbd89")]
-            session = "ion-session-one"
-            host.send("prepare", game="ion-rush", session=session, seats=seats, players=players)
+            session = "spaceracer-session-one"
+            host.send("prepare", game="spaceracer", session=session, seats=seats, players=players)
             wait(lambda: host.messages, lambda messages: any(m["type"] == "ready" for m in messages))
             def read():
                 # The optional probe is rewritten by the game; retry a partial read.
@@ -208,21 +208,21 @@ def main():
             assert sum(m["type"] == "request_overlay" for m in host.messages) == 1
             host.send("dispose", session=session)
             wait(read, lambda s: s["phase"] == "idle" and s["racers"] == [])
-            host.send("prepare", game="ion-rush", session="ion-session-two", seats=seats, players=players)
-            wait(read, lambda s: s["phase"] == "ready" and s["session"] == "ion-session-two")
+            host.send("prepare", game="spaceracer", session="spaceracer-session-two", seats=seats, players=players)
+            wait(read, lambda s: s["phase"] == "ready" and s["session"] == "spaceracer-session-two")
             assert read()["difficulty"] == "hard"
             assert read()["biome"] == "city"
             host.send("setting_changed", key="biome", value="cell")
             wait(read, lambda s: s["next_biome"] == "cell")
             assert read()["biome"] == "city", "Cell applies to the next race"
-            host.send("dispose", session="ion-session-two")
+            host.send("dispose", session="spaceracer-session-two")
             wait(read, lambda s: s["phase"] == "idle")
-            host.send("prepare", game="ion-rush", session="ion-session-cell", seats=seats, players=players)
-            cell_state = wait(read, lambda s: s["phase"] == "ready" and s["session"] == "ion-session-cell")
+            host.send("prepare", game="spaceracer", session="spaceracer-session-cell", seats=seats, players=players)
+            cell_state = wait(read, lambda s: s["phase"] == "ready" and s["session"] == "spaceracer-session-cell")
             assert cell_state["biome"] == "cell" and cell_state["views"] == 2
-            host.send("start", session="ion-session-cell")
+            host.send("start", session="spaceracer-session-cell")
             active_cell = wait(read, lambda s: s["clock"] > .3)
-            host.send("pause", session="ion-session-cell")
+            host.send("pause", session="spaceracer-session-cell")
             paused_cell = wait(read, lambda s: s["phase"] == "paused")
             time.sleep(.2)
             assert read()["city_time"] == paused_cell["city_time"], "Cell organisms freeze during pause"

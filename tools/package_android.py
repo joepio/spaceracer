@@ -16,7 +16,7 @@ def main():
     parser.add_argument("--godot", type=Path, required=True)
     parser.add_argument("--sdk", type=Path, default=Path(os.environ.get("ANDROID_HOME", Path.home() / "AppData/Local/Android/Sdk")))
     parser.add_argument("--java", type=Path, default=Path(os.environ.get("JAVA_HOME", "C:/Program Files/Android/Android Studio/jbr")))
-    parser.add_argument("--output", type=Path, default=Path("build/android/IonRush.apk"))
+    parser.add_argument("--output", type=Path, default=Path("build/android/SpaceRacer.apk"))
     args = parser.parse_args()
     source = Path(__file__).resolve().parents[1]
     output = args.output.resolve()

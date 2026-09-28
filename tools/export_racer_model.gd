@@ -12,7 +12,7 @@ func convert_materials(node:Node3D)->void:
 		if child is Node3D: convert_materials(child)
 func _initialize()->void: call_deferred("run")
 func run()->void:
-	var ship:=Ship.build(Color("bf3334"));ship.name="IonRush_RedRacer";root.add_child(ship)
+	var ship:=Ship.build(Color("bf3334"));ship.name="SpaceRacer_RedRacer";root.add_child(ship)
 	for child in ship.get_children():
 		if child.name in ["DamageSmoke","RebuildLight"] or child.name.begins_with("Engine") or child.name.begins_with("Exhaust") or child.name.begins_with("Boost") or child.name.begins_with("Reverse"):
 			ship.remove_child(child);child.free()

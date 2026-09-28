@@ -277,5 +277,5 @@ func run() -> void:
 	bridge._handle({"type":"resume","session":"one"})
 	check(bridge.phase=="running","Resume explicit session")
 	bridge.free()
-	print("ION_TESTS %d checks, %d failures"%[checks,failures])
+	print("SPACERACER_TESTS %d checks, %d failures"%[checks,failures])
 	quit(1 if failures else 0)

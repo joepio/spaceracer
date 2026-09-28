@@ -2,19 +2,19 @@ param(
     [string]$BuildDirectory = (Join-Path $PSScriptRoot '../build/warp-balance')
 )
 $ErrorActionPreference = 'Stop'
-$ionRepo = Split-Path -Parent $PSScriptRoot
-$ionExecutable = (Resolve-Path -LiteralPath (Join-Path $BuildDirectory 'IonRush.exe')).Path
-$ionIcon = (Resolve-Path -LiteralPath (Join-Path $ionRepo 'assets/icon.ico')).Path
-$ionPrograms = [Environment]::GetFolderPath('Programs')
-$ionShortcutPath = Join-Path $ionPrograms 'Ion Rush (Latest Debug).lnk'
-$ionShell = New-Object -ComObject WScript.Shell
-$ionShortcut = $ionShell.CreateShortcut($ionShortcutPath)
-$ionShortcut.TargetPath = Join-Path $env:WINDIR 'System32/WindowsPowerShell/v1.0/powershell.exe'
-$ionShortcut.WorkingDirectory = Split-Path -Parent $ionExecutable
-$ionLauncher = Join-Path $PSScriptRoot 'launch_debug.ps1'
-$ionShortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}" -BuildDirectory "{1}"' -f $ionLauncher,(Split-Path -Parent $ionExecutable)
-$ionShortcut.IconLocation = "$ionIcon,0"
-$ionShortcut.Description = 'Launch the latest local Windows debug build of Ion Rush.'
-$ionShortcut.Save()
-Write-Output "Installed: $ionShortcutPath"
-Write-Output "Build: $ionExecutable"
+$spaceRacerRepo = Split-Path -Parent $PSScriptRoot
+$spaceRacerExecutable = (Resolve-Path -LiteralPath (Join-Path $BuildDirectory 'SpaceRacer.exe')).Path
+$spaceRacerIcon = (Resolve-Path -LiteralPath (Join-Path $spaceRacerRepo 'assets/icon.ico')).Path
+$spaceRacerPrograms = [Environment]::GetFolderPath('Programs')
+$spaceRacerShortcutPath = Join-Path $spaceRacerPrograms 'SpaceRacer (Latest Debug).lnk'
+$spaceRacerShell = New-Object -ComObject WScript.Shell
+$spaceRacerShortcut = $spaceRacerShell.CreateShortcut($spaceRacerShortcutPath)
+$spaceRacerShortcut.TargetPath = Join-Path $env:WINDIR 'System32/WindowsPowerShell/v1.0/powershell.exe'
+$spaceRacerShortcut.WorkingDirectory = Split-Path -Parent $spaceRacerExecutable
+$spaceRacerLauncher = Join-Path $PSScriptRoot 'launch_debug.ps1'
+$spaceRacerShortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}" -BuildDirectory "{1}"' -f $spaceRacerLauncher,(Split-Path -Parent $spaceRacerExecutable)
+$spaceRacerShortcut.IconLocation = "$spaceRacerIcon,0"
+$spaceRacerShortcut.Description = 'Launch the latest local Windows debug build of SpaceRacer.'
+$spaceRacerShortcut.Save()
+Write-Output "Installed: $spaceRacerShortcutPath"
+Write-Output "Build: $spaceRacerExecutable"

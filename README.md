@@ -1,4 +1,4 @@
-# Ion Rush
+# SpaceRacer
 
 A small, original, F-Zero GX-inspired hover racer for GameNight. Godot 4.5.2;
 native 3D with 1–4 local split-screen players. Bundled AI-generated city textures; no online services required.
@@ -7,7 +7,6 @@ This is a playable prototype, not an exact recreation of GX physics.
 ## Repository
 
 GitHub: [joepio/spaceracer](https://github.com/joepio/spaceracer).
-The game and its local launchers currently use the name **Ion Rush**.
 
 This is a self-contained Godot project: source, procedural geometry and bundled artwork, the vendored
 GameNight transport, tests and packaging tools are included. It does not need a
@@ -17,21 +16,20 @@ with only its standard library runs the packaging and integration tools.
 ## Downloads and releases
 
 Download the portable Windows ZIP from [GitHub Releases](https://github.com/joepio/spaceracer/releases).
-Extract it and run `IonRush.exe`; Godot does not need to be installed.
+Extract it and run `SpaceRacer.exe`; Godot does not need to be installed.
 
 [Build and release](https://github.com/joepio/spaceracer/actions/workflows/ci.yml)
 runs the simulation, menu, flight, effects, city, EMP, recharge and source/packaged
 GameNight protocol checks on GitHub's Windows runners. Push a version tag such as
-`v0.4.1` to build and publish a new release, or choose **Run workflow** on `main`
+`v0.4.2` to build and publish a new release, or choose **Run workflow** on `main`
 and enter a new `release_tag`. Leave that field empty for a test build only.
 Pull requests and ordinary pushes to `main` produce downloadable build artifacts.
 Release publication requires all checks to pass, and existing release assets are
 never overwritten. Android is not built by this workflow.
 
-Each release includes `release-sha256.txt` and `ion-rush.catalog.json`. Copy the
-latter to GameNight's `catalog/games/ion-rush.json` to update its pinned download
-URL and checksum together. The repository is named `spaceracer`; the game title
-and protocol ID remain **Ion Rush** and `ion-rush`.
+Each release includes `release-sha256.txt` and `spaceracer.catalog.json`. Copy the
+latter to GameNight's `catalog/games/spaceracer.json` to update its pinned download
+URL and checksum together. The GameNight protocol ID is `spaceracer`.
 
 ## Play
 
@@ -41,11 +39,11 @@ Open `project.godot` in Godot 4.5.2 and press F6/F5, or run:
 godot --path .
 ```
 
-The portable Windows build runs by opening `IonRush.exe`. Start/Enter starts a race.
+The portable Windows build runs by opening `SpaceRacer.exe`. Start/Enter starts a race.
 For local development, run `tools/install_start_menu.ps1` to install
-**Ion Rush (Latest Debug)** in the Windows Start menu with the game's icon.
-It opens fullscreen from `build/warp-balance/IonRush.exe` with an immutable copy
-of its current PCK in `build/debug-sessions`. New builds cannot corrupt assets
+**SpaceRacer (Latest Debug)** in the Windows Start menu with the game's icon.
+It opens fullscreen from `build/warp-balance/SpaceRacer.exe` with an immutable copy
+of its current PCK in the build directory's `debug-sessions` folder. New builds cannot corrupt assets
 being read by an ongoing playtest. Keep updating the staged executable/PCK so
 the next launch uses the latest build. The installer accepts `-BuildDirectory`.
 
@@ -432,7 +430,7 @@ wreck and automatic recovery after two seconds. Respawning grants two seconds of
 
 ## Android tablet
 
-`build/android/IonRush.apk` is a debug-signed APK for direct installation. Copy it
+`build/android/SpaceRacer.apk` is a debug-signed APK for direct installation. Copy it
 to the tablet, open it in Files and allow that app to install it when Android asks.
 This is an offline standalone build; GameNight's desktop host remains on Windows.
 The APK includes ARM64 (Galaxy Tab S9+) and x86-64. It locks to landscape.
@@ -653,7 +651,7 @@ All city traffic, tunnel lighting and effects freeze with GameNight pause.
 
 Forward+ is the default renderer, with screen-space reflections, restrained HDR
 bloom and ambient occlusion. A Vulkan-capable GPU is recommended. For the lighter
-OpenGL fallback, launch `IonRush.exe --rendering-method gl_compatibility`.
+OpenGL fallback, launch `SpaceRacer.exe --rendering-method gl_compatibility`.
 
 The opening district attempts to place six large advertising towers beside the seeded
 track, with mechanical floors, metal mullions and visible streetlights. Three
@@ -719,7 +717,7 @@ or managed races. Short captures show layout; use longer runs for frame timings.
 
 ## GameNight
 
-Game id: `ion-rush`. `src/bridge.gd` subclasses the vendored GameNight Godot SDK
+Game id: `spaceracer`. `src/bridge.gd` subclasses the vendored GameNight Godot SDK
 transport (`addons/gamenight/gamenight.gd`) and adapts it to the current contract.
 The old SDK's automatic screen helper and local controller enumeration are not
 used. Managed games consume opaque controller tokens from `controller_frame`;
@@ -758,7 +756,7 @@ $env:GAMENIGHT_LIBRARY = (Resolve-Path ./build/windows/shelf.json).Path
 & /path/to/gamenight-daemon.exe
 ```
 
-If you already have a library, merge the Ion Rush object into its JSON array
+If you already have a library, merge the SpaceRacer object into its JSON array
 instead of replacing the other entries. The daemon supplies the authenticated
 launch environment; players and controllers are assigned in GameNight. Rebuild
 to regenerate absolute paths after moving the package. For development with a
@@ -796,7 +794,7 @@ and checks authenticated WebSocket lifecycle, hidden preparation, sparse/reverse
 controller ownership, frozen pause, profiles, stale input, Start gating, repeated
 Prepare/Dispose, and disconnect cleanup. These checks do not replace physical
 controller or cross-platform focus testing. Test probes are opt-in via
-`ION_PROBE_PATH` and are inactive in normal play.
+`SPACERACER_PROBE_PATH` and are inactive in normal play.
 
 ## City rendering
 
@@ -826,7 +824,7 @@ for simulated bot driving (which includes gameplay CPU work and motion blur).
 The fixed-scene numbers are render costs, not advertised gameplay FPS.
 
 ```powershell
-godot --path . --resolution 1920x1080 --script res://tests/lighting_bench.gd -- --out=C:/captures/ion-rush --label=solo --samples=1800
+godot --path . --resolution 1920x1080 --script res://tests/lighting_bench.gd -- --out=C:/captures/spaceracer --label=solo --samples=1800
 ```
 
 Other flags: `--quality=.8`, `--fraction=.055`, and
@@ -848,7 +846,7 @@ controllers continue normally. Cheats stay off by default, including GameNight.
 
 ## Local GameNight registration
 
-`tools/register_gamenight.ps1` adds **Ion Rush (Local)** to
+`tools/register_gamenight.ps1` adds **SpaceRacer (Local)** to
 `%LOCALAPPDATA%/GameNight/local-games.json`, preserving other local entries.
 The desktop launcher merges that file into its regenerated shelf on every start;
 local IDs take priority over catalogue builds. The managed launch script takes

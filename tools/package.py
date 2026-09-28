@@ -27,8 +27,8 @@ def main():
     output.mkdir(parents=True)
     (output / ".gdignore").write_text("", encoding="utf-8")
     run_godot(args.godot.resolve(), "--editor", "--import", "--quit")
-    run_godot(args.godot.resolve(), "--export-pack", "Windows Desktop", str(output / "IonRush.pck"))
-    shutil.copy2(args.godot, output / "IonRush.exe")
+    run_godot(args.godot.resolve(), "--export-pack", "Windows Desktop", str(output / "SpaceRacer.pck"))
+    shutil.copy2(args.godot, output / "SpaceRacer.exe")
     shutil.copy2(source / "README.md", output / "README.md")
     shutil.copy2(source / "LICENSE", output / "LICENSE")
     shutil.copytree(source / "third_party", output / "licenses")
@@ -38,19 +38,19 @@ def main():
         shutil.copy2(source / "assets" / name, generated_art / name)
     shutil.copy2(source / "docs/city-advertising/generation-prompts.json", generated_art / "corporate-posters-prompts.json")
     (output / "shelf.json").write_text(json.dumps([{
-        "id": "ion-rush", "title": "Ion Rush", "min_players": 1, "max_players": 4, "players": "1–4",
-        "launch": {"command": str(output / "IonRush.exe"), "args": ["--position", "-20000,-20000"], "cwd": str(output)},
+        "id": "spaceracer", "title": "SpaceRacer", "min_players": 1, "max_players": 4, "players": "1–4",
+        "launch": {"command": str(output / "SpaceRacer.exe"), "args": ["--position", "-20000,-20000"], "cwd": str(output)},
     }], indent=2) + "\n", encoding="utf-8")
     sums = []
-    for name in ("IonRush.exe", "IonRush.pck"):
+    for name in ("SpaceRacer.exe", "SpaceRacer.pck"):
         sums.append(hashlib.sha256((output / name).read_bytes()).hexdigest() + "  " + name)
     (output / "SHA256SUMS.txt").write_text("\n".join(sums)+"\n", encoding="utf-8")
-    archive = output / "ion-rush-windows.zip"
+    archive = output / "spaceracer-windows.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as packed:
         for path in sorted(output.rglob("*")):
             if path.is_file() and path != archive and path.name not in ("shelf.json", ".gdignore"):
                 packed.write(path, path.relative_to(output))
-    print(f"Playable: {output / 'IonRush.exe'}\nGameNight shelf: {output / 'shelf.json'}\nPortable ZIP: {archive}")
+    print(f"Playable: {output / 'SpaceRacer.exe'}\nGameNight shelf: {output / 'shelf.json'}\nPortable ZIP: {archive}")
 
 
 if __name__ == "__main__":

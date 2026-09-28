@@ -414,7 +414,7 @@ func capture() -> void:
 	frame_times.sort()
 	var sum:=0.0
 	for value in frame_times: sum+=value
-	print("ION_RENDER ",JSON.stringify({"views":views.size(),"frames":frame_times.size(),"mean_ms":sum/maxi(1,frame_times.size()),
+	print("SPACERACER_RENDER ",JSON.stringify({"views":views.size(),"frames":frame_times.size(),"mean_ms":sum/maxi(1,frame_times.size()),
 		"p95_ms":frame_times[int(frame_times.size()*.95)] if not frame_times.is_empty() else 0,
 		"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"capture":capture_path}))
 	get_tree().quit()
@@ -682,7 +682,7 @@ func make_menu()->void:
 	content.size.x=480
 	content.add_theme_constant_override("separation",10)
 	menu.add_child(content)
-	menu_label(content,"ION RUSH",58,Color("edf7ff"))
+	menu_label(content,"SPACERACER",58,Color("edf7ff"))
 	var start:=menu_button(content,"race","Race",start_selected,true)
 	menu_button(content,"random_race","New random race",start_random_race)
 	var settings:=["players","biome","difficulty","seed","graphics"]
@@ -747,7 +747,7 @@ func make_menu()->void:
 		credits.fit_content=true
 		credits.custom_minimum_size.x=470
 		credits.add_theme_font_size_override("normal_font_size",14)
-		credits.text="\nFOREST ART · [url=https://creativecommons.org/licenses/by/4.0/]CC BY 4.0[/url]\n[url=https://sketchfab.com/3d-models/pine-tree-d45218a3fab349e5b1de040f29e7b6f9]Pine Tree[/url] — evolveduk\n[url=https://sketchfab.com/3d-models/tree-bake-upload-4e78d13152cf4214a256230765f6d6d3]Tree Bake Upload[/url] — restlessmonkey\n[url=https://github.com/GamesNotDeveloped/godot-forest-demo]Godot forest demo[/url] — GamesNotDeveloped\nAdapted materials, textures and scale for Ion Rush."
+		credits.text="\nFOREST ART · [url=https://creativecommons.org/licenses/by/4.0/]CC BY 4.0[/url]\n[url=https://sketchfab.com/3d-models/pine-tree-d45218a3fab349e5b1de040f29e7b6f9]Pine Tree[/url] — evolveduk\n[url=https://sketchfab.com/3d-models/tree-bake-upload-4e78d13152cf4214a256230765f6d6d3]Tree Bake Upload[/url] — restlessmonkey\n[url=https://github.com/GamesNotDeveloped/godot-forest-demo]Godot forest demo[/url] — GamesNotDeveloped\nAdapted materials, textures and scale for SpaceRacer."
 		credits.meta_clicked.connect(func(url:Variant): OS.shell_open(str(url)))
 		help.add_child(credits)
 	menu_label(content,"Stick  Select / adjust     Start  Play / resume",14,Color("91a8b7"))
@@ -925,7 +925,7 @@ func update_audio()->void:
 	engine_sound.volume_db=-28+speed/80
 
 func write_probe()->void:
-	var path:=OS.get_environment("ION_PROBE_PATH")
+	var path:=OS.get_environment("SPACERACER_PROBE_PATH")
 	if path.is_empty(): return
 	var snapshot:Array=[]
 	if race:

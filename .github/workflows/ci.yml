@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Publish a new Windows release (for example v0.4.0); leave empty for a test build'
+        description: 'Publish a new Windows release (for example v0.4.2); leave empty for a test build'
         required: false
         default: ''
         type: string
@@ -45,7 +45,7 @@ jobs:
         run: |
           python tools/package.py --godot "$env:RUNNER_TEMP/godot/Godot_v4.5.2-stable_win64.exe" --output build/windows
           if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
-          python tests/integration.py --godot "$PWD/build/windows/IonRush.exe" --packed --headless
+          python tests/integration.py --godot "$PWD/build/windows/SpaceRacer.exe" --packed --headless
           if ($LASTEXITCODE -ne 0) { throw 'Packaged integration failed' }
       - name: Generate release checksums and GameNight metadata
         if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
@@ -57,11 +57,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Release metadata failed' }
       - uses: actions/upload-artifact@v4
         with:
-          name: ion-rush-windows
+          name: spaceracer-windows
           path: |
-            build/windows/ion-rush-windows.zip
+            build/windows/spaceracer-windows.zip
             build/windows/release-sha256.txt
-            build/windows/ion-rush.catalog.json
+            build/windows/spaceracer.catalog.json
           if-no-files-found: error
   publish:
     needs: simulation-and-integration
@@ -73,7 +73,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: ion-rush-windows
+          name: spaceracer-windows
           path: release
       - name: Publish verified Windows package
         env:
@@ -93,6 +93,6 @@ jobs:
           fi
           cd release
           sha256sum --check release-sha256.txt
-          gh release create "$RELEASE_TAG" ion-rush-windows.zip release-sha256.txt ion-rush.catalog.json \
-            --target "$RELEASE_COMMIT" --title "Ion Rush $RELEASE_TAG" \
+          gh release create "$RELEASE_TAG" spaceracer-windows.zip release-sha256.txt spaceracer.catalog.json \
+            --target "$RELEASE_COMMIT" --title "SpaceRacer $RELEASE_TAG" \
             --notes-file ../docs/release-notes.md

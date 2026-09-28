@@ -9,7 +9,7 @@ var frame_at := -10000
 var connected_at := 0
 
 func _ready() -> void:
-	game_id = "ion-rush"
+	game_id = "spaceracer"
 	launched_by_daemon = OS.get_environment("GAMENIGHT") == "1"
 	auto_reconnect = false
 	connected_at = Time.get_ticks_msec()

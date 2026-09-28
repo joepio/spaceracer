@@ -1,7 +1,7 @@
 """Bake one deterministic, tileable RGB mask; no noise generation during play.
 
 R: multiscale chip threshold, G: directional scratches, B: dirt/smoke variation.
-Original procedural asset for Ion Rush; requires Pillow and NumPy.
+Original procedural asset for SpaceRacer; requires Pillow and NumPy.
 """
 from pathlib import Path
 import numpy as np

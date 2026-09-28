@@ -73,10 +73,10 @@ def main():
     shelf=Path(os.environ["LOCALAPPDATA"])/"GameNight/local-games.json"
     with socket.socket() as reserve:
         reserve.bind(("127.0.0.1",0));port=reserve.getsockname()[1]
-    with tempfile.TemporaryDirectory(prefix="ion-real-host-",ignore_cleanup_errors=True) as tmp:
+    with tempfile.TemporaryDirectory(prefix="spaceracer-real-host-",ignore_cleanup_errors=True) as tmp:
         probe=Path(tmp)/"probe.json"
         env=dict(os.environ,GAMENIGHT_ADDR=f"127.0.0.1:{port}",GAMENIGHT_LIBRARY=str(shelf),
-                 GAMENIGHT_NO_PREWARM="1",GAMENIGHT_NO_LOBBY_WATCH="1",GAMENIGHT_PLAYER_MEMORY=str(Path(tmp)/"players.json"),ION_PROBE_PATH=str(probe),RUST_LOG="info")
+                 GAMENIGHT_NO_PREWARM="1",GAMENIGHT_NO_LOBBY_WATCH="1",GAMENIGHT_PLAYER_MEMORY=str(Path(tmp)/"players.json"),SPACERACER_PROBE_PATH=str(probe),RUST_LOG="info")
         for name in ["GAMENIGHT_WEB","GAMENIGHT_EXIT_WITH_LOBBY","GAMENIGHT_STARTUP_GATE"]: env.pop(name,None)
         log=open(Path(tmp)/"daemon.log","w+",encoding="utf-8")
         daemon=subprocess.Popen([str(install/"bin/gamenight-daemon.exe")],cwd=install,env=env,stdout=log,stderr=log,creationflags=subprocess.CREATE_NO_WINDOW)
@@ -85,13 +85,13 @@ def main():
             client=wait(lambda:Client(port),10)
             client.send("hello",role="overlay")
             party=wait(client.party)
-            local=next(g for g in party["library"] if g["id"]=="ion-rush")
-            assert local["title"]=="Ion Rush (Local)"
+            local=next(g for g in party["library"] if g["id"]=="spaceracer")
+            assert local["title"]=="SpaceRacer (Local)"
             client.send("open_overlay")
             wait(lambda: client.party().get("overlay_open"))
-            client.send("join_party",name="Local integration pilot",color="#50efcc",library=["ion-rush"])
+            client.send("join_party",name="Local integration pilot",color="#50efcc",library=["spaceracer"])
             wait(lambda: len(client.party().get("players",[]))==1)
-            client.send("queue_next",game="ion-rush")
+            client.send("queue_next",game="spaceracer")
             def ready():
                 if not probe.exists(): return False
                 state=json.loads(probe.read_text(encoding="utf-8"))

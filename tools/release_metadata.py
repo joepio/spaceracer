@@ -19,18 +19,18 @@ def main():
     args = parser.parse_args()
     if not re.fullmatch(r"v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?", args.tag):
         parser.error("Use a version tag such as v0.4.0 or v0.4.1-preview.1")
-    archive = args.directory / "ion-rush-windows.zip"
+    archive = args.directory / "spaceracer-windows.zip"
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     (args.directory / "release-sha256.txt").write_text(f"{digest}  {archive.name}\n", encoding="utf-8")
     with zipfile.ZipFile(archive) as packed:
-        for required in ["IonRush.exe", "IonRush.pck", "LICENSE", "README.md"]:
+        for required in ["SpaceRacer.exe", "SpaceRacer.pck", "LICENSE", "README.md"]:
             if required not in packed.namelist():
                 raise ValueError(f"Missing release file: {required}")
         installed_bytes = sum(item.file_size for item in packed.infolist())
     def art(name):
         return "data:image/png;base64," + base64.b64encode((ROOT / "assets/gamenight" / name).read_bytes()).decode("ascii")
     entry = {
-        "$schema": "../schema.json", "id": "ion-rush", "title": "Ion Rush",
+        "$schema": "../schema.json", "id": "spaceracer", "title": "SpaceRacer",
         "tagline": "High-speed hover racing, airborne shortcuts and weapons across three procedural worlds.",
         "developer": "Joep Meindertsma", "players": {"min": 1, "max": 4, "best": 4},
         "match_minutes": 5, "price": "free", "tags": ["racing", "versus", "splitscreen", "godot"],
@@ -43,9 +43,9 @@ def main():
                   "releases": f"{REPOSITORY}/releases"},
         "downloads": {"windows": {"url": f"{REPOSITORY}/releases/download/{args.tag}/{archive.name}",
                                   "sha256": digest, "size_mb": math.ceil(archive.stat().st_size / 1_000_000),
-                                  "entrypoint": "IonRush.exe"}},
+                                  "entrypoint": "SpaceRacer.exe"}},
     }
-    (args.directory / "ion-rush.catalog.json").write_text(json.dumps(entry, indent=2) + "\n", encoding="utf-8")
+    (args.directory / "spaceracer.catalog.json").write_text(json.dumps(entry, indent=2) + "\n", encoding="utf-8")
     print(f"Release {args.tag}: {archive.stat().st_size} bytes; SHA256 {digest}")
 
 

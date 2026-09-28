@@ -12,7 +12,7 @@ shell and a white-to-orange light supply the initial impact. Soft depth
 intersections avoid hard cuts through the road. Higher billow subdivisions and
 continuous smoke gradients adapt the look to close racing cameras.
 
-Ion Rush's race clock replaces upstream tweens. Cosmetic seeds never consume
+SpaceRacer's race clock replaces upstream tweens. Cosmetic seeds never consume
 the gameplay RNG. Existing damage, ship breakup, fragment physics and sound
 settings are preserved. Crash smoke lasts 2.84 s at the original impact point,
 so its tail can finish after the two-second respawn. Missile smoke lasts 2.32 s.

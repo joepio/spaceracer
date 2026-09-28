@@ -1,6 +1,6 @@
 # City textures
 
-Generated with the built-in OpenAI image generation tool on 2026-09-24 for Ion Rush.
+Generated with the built-in OpenAI image generation tool on 2026-09-24 for SpaceRacer.
 Exact final prompts are in [generation-prompts.json](generation-prompts.json).
 
 - `office-facade.png`: dark glass and varied warm/neutral office interiors. World-space tiled, mipmapped facade material; procedural per-building scale, offset and lighting variation.

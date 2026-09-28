@@ -8,21 +8,23 @@ var fragments:Array[Node3D]=[]
 var templates:Array[Dictionary]=[]
 var serial:=-1
 var started:=0.
-var debris:MultiMesh
+var fire:MultiMesh
+var fire_mesh:MultiMeshInstance3D
+var material_sources:Array[Dictionary]=[]
 var flash:OmniLight3D
 var blast:Node3D
 
-static func prepare_fragment(node:Node3D,frame:Transform3D,bounds:Array[AABB])->void:
+func prepare_fragment(node:Node3D,frame:Transform3D,bounds:Array[AABB])->void:
 	frame=frame*node.transform
 	if node is MeshInstance3D:
 		bounds.append(frame*node.mesh.get_aabb())
 		node.layers=2
-		var material:Material=node.material_override.duplicate()
-		if material is ShaderMaterial: material.set_shader_parameter("wrecked",.7)
-		elif material is StandardMaterial3D:
-			material.emission_enabled=false
-			material.albedo_color=material.albedo_color.lerp(Color("28252a"),.3)
+		var original:Material=node.material_override
+		var material:=ShaderMaterial.new();material.shader=load("res://src/wreck_surface.gdshader")
+		material.set_shader_parameter("seed",float(node.name.hash()%997)*.073)
+		material_sources.append({"original":original,"burnt":material})
 		node.material_override=material
+
 	for child in node.get_children():
 		if child is Node3D: prepare_fragment(child,frame,bounds)
 
@@ -46,11 +48,13 @@ func configure(ship:Node3D)->void:
 	var parts:Array=[]
 	var hull:=Node3D.new()
 	var paint:Material=source_ship.get_node("Body").material_override
-	# Split the existing loft at its section boundaries, with sealed broken ends.
-	for entry in [["HullRear",[Vector3(-3.4,.1,.1),Vector3(-2.7,1.5,.8),Vector3(.2,1.65,1.2)]],
-		["HullMiddle",[Vector3(.2,1.65,1.2),Vector3(2.8,.8,.4)]],
-		["HullNose",[Vector3(2.8,.8,.4),Vector3(5,.025,.03)]]]:
-		fragment(Ship.loft(hull,entry[0],entry[1],paint,Vector3.ZERO,true),parts)
+	# Split the new hull on its actual authored section boundaries.
+	var sections:Array=Ship.Design.HULL
+	for entry in [["HullRear",sections.slice(0,3)],["HullMiddle",sections.slice(2,5)],["HullNose",sections.slice(4,6)]]:
+		var section:MeshInstance3D=Ship.loft(hull,entry[0],entry[1],paint,Vector3.ZERO,true)
+		if entry[0]=="HullRear":
+			for child in source_ship.get_node("Body").get_children(): section.add_child(child.duplicate())
+		fragment(section,parts)
 	hull.free()
 	for name_value in ["Canopy","Nacelle-1","Nacelle1","Wing-1","Wing1","WingControlL","WingControlR","RudderL","RudderR","Nozzle-1","Nozzle1","Airbrake-1","Airbrake1"]:
 		fragment(source_ship.get_node(name_value),parts)
@@ -64,26 +68,31 @@ func break_ship(p:Dictionary)->void:
 			template.copy.transform=template.source.transform
 			template.copy.position-=template.frame.origin
 		parts.append({"frame":source_ship.global_transform*template.frame,"half":template.half})
+	# Source paint may have changed since the pooled wreck was created (GameNight
+	# colors, team colors, etc.). Copy the current color at the actual impact.
+	for entry in material_sources:
+		var tint:=Color(.18,.22,.27);var metalness:=.4
+		if entry.original is ShaderMaterial:
+			var value:Variant=entry.original.get_shader_parameter("tint")
+			if value is Color: tint=value
+			elif value is Vector3: tint=Color(value.x,value.y,value.z)
+		elif entry.original is StandardMaterial3D:
+			var color:Color=entry.original.albedo_color
+			tint=color;metalness=entry.original.metallic
+		entry.burnt.set_shader_parameter("tint",tint)
+		entry.burnt.set_shader_parameter("metalness",metalness)
 	p.wreck=Wreck.new(parts,p)
 
-func batch(count:int,mesh:Mesh)->MultiMesh:
-	var data:=MultiMesh.new()
-	data.transform_format=MultiMesh.TRANSFORM_3D;data.use_colors=true
-	data.mesh=mesh;data.instance_count=count
-	var renderer:=MultiMeshInstance3D.new()
-	renderer.multimesh=data;renderer.layers=2
-	renderer.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var material:=StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo=true
-	material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.shading_mode=BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	material.roughness=.95
-	renderer.material_override=material
-	add_child(renderer)
-	return data
-
 func _ready()->void:
-	debris=batch(22,BoxMesh.new())
+	# Small 3D flames on recognizable fragments; no rectangular confetti.
+	fire=MultiMesh.new();fire.transform_format=MultiMesh.TRANSFORM_3D;fire.use_custom_data=true
+	var shape:=SphereMesh.new();shape.radius=.5;shape.height=1.;shape.radial_segments=12;shape.rings=7
+	fire.mesh=shape;fire.instance_count=12
+	for i in range(12): fire.set_instance_custom_data(i,Color(fposmod(i*.618,1.),0,0,0))
+	fire_mesh=MultiMeshInstance3D.new();fire_mesh.multimesh=fire;fire_mesh.layers=2
+	fire_mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var material:=ShaderMaterial.new();material.shader=load("res://src/wreck_fire.gdshader")
+	fire_mesh.material_override=material;add_child(fire_mesh)
 	blast=Blast.new();add_child(blast);flash=blast.flash
 	visible=false
 
@@ -98,14 +107,19 @@ func update(p:Dictionary,time:float)->void:
 	blast.render_at(age)
 	visible=(p.crashed and serial>0) or blast.visible
 	for fragment_node in fragments: fragment_node.visible=p.crashed
-	debris.visible_instance_count=22 if p.crashed else 0
+	fire_mesh.visible=p.crashed and p.wreck!=null and age<1.95
+	fire_mesh.material_override.set_shader_parameter("age",age)
 	if not visible: return
 	if not p.crashed: return # Smoke completes its fade at the impact, after the craft respawns.
 	if p.wreck!=null:
 		for i in range(fragments.size()): fragments[i].global_transform=p.wreck.pieces[i].frame
-	for i in range(22):
-		var velocity:=Vector3(sin(i*4.1)*25.,9.+i%8*2.,cos(i*2.4)*25.)
-		var at:=velocity*age+Vector3.DOWN*age*age*10.
-		var basis:=Basis(Vector3(1.,.7,.3).normalized(),age*(i%5+2)).scaled(Vector3(.3,.25,1.+i%3*.5))
-		debris.set_instance_transform(i,Transform3D(basis,at))
-		debris.set_instance_color(i,Color(.14,.12,.1,maxf(0.,1.-age/2.5)))
+	if p.wreck!=null:
+		var burning_parts:=[0,1,4,5] # Rear/mid hull and the two engine housings.
+		for i in range(12):
+			var piece:Dictionary=p.wreck.pieces[burning_parts[i/3]]
+			var tongue:=i%3;var phase:=age*13.+i*2.4
+			var height:=1.1+(sin(phase)*.5+.5)*.8+tongue*.25
+			var attachment:Vector3=piece.frame*Vector3((tongue-1)*.28,piece.half.y*.6,0.)
+			var at:=to_local(attachment)+Vector3.UP*height*.32
+			var stretch:=Basis.IDENTITY.scaled(Vector3(.6,height,.6))
+			fire.set_instance_transform(i,Transform3D(stretch,at))

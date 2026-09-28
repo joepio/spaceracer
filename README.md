@@ -6,6 +6,9 @@ This is a playable prototype, not an exact recreation of GX physics.
 
 ## Repository
 
+GitHub: [joepio/spaceracer](https://github.com/joepio/spaceracer).
+The game and its local launchers currently use the name **Ion Rush**.
+
 This is a self-contained Godot project: source, procedural geometry and bundled artwork, the vendored
 GameNight transport, tests and packaging tools are included. It does not need a
 GameNight checkout to build or run. Development requires Godot 4.5.2; Python 3.12+
@@ -30,18 +33,18 @@ the next launch uses the latest build. The installer accepts `-BuildDirectory`.
 The title and pause screens share the same menu: up/down selects a row; left/right
 immediately adjusts players, world, level, seed or graphics. Use the analog stick,
 keyboard arrows or on-screen arrows. A/click activates actions.
-**New random race**, directly below Play/Resume, launches a different seed with
-the selected players, world, difficulty and lap count. In either menu, **hold X
+**New random race**, directly below Play/Resume, launches a different seed and
+randomly chooses City, Forest or The Cell, preserving players, difficulty and lap count. In either menu, **hold X
 for one second** to do this immediately. **Hold D-pad left/right** for the
-previous/next seed, or **up/down** for harder/easier; Start applies those choices.
+previous/next seed with random scenery, or **up/down** for harder/easier; Start applies those choices.
 A small progress bar shows the hold. Short taps do nothing, and a continuous
 hold acts only once. These shortcuts are menu-only; racing D-pad steering stays
 available.
 Standalone races have six machines, filling spare positions with AI.
 The camera keeps the same horizontal lens in wide two-player viewports, with a
-smaller acceleration/boost FOV increase. HUD instruments sit near the corners,
+stronger, smooth acceleration/boost FOV increase. HUD instruments sit near the corners,
 with very light curvature in split-screen and no decorative cockpit brackets.
-Weapons are shown at bottom left; the middle stays open for the road.
+Weapon prompts sit at the lower center, with a circular X button.
 Start/Escape pauses. Unchanged settings resume the current race; changing a race
 setting changes the primary action to **Restart**. Graphics never resets progress.
 The paused track keeps its last rendered frame behind a dark menu gradient until
@@ -54,11 +57,14 @@ graphics to Balanced. Selecting Performance disables it again. Mobile keeps dire
 lighting and does not show the unsupported option. `--sdfgi` enables the trial at
 launch; `--direct-lighting` selects the fallback. See [the lighting experiment](docs/gi-experiment.md)
 for measurements and limitations.
-F5 starts a fresh track. Three laps by default; results last eight seconds.
+F5 starts the next track with random scenery. Automatic advancement after the
+eight-second results screen also rolls the scenery; repeats are possible.
+Direct World/seed selection and Restart race keep the displayed choices.
+Three laps by default.
 After finishing, an autonomous victory lap keeps your ship moving while a replay
-camera cycles through rear-quarter, front, side and overhead shots. Held equipment
-stays mounted; active sentry/jammer attachments settle to idle and remain on the
-craft. Finishers cannot fire or interfere with the remaining racers. Other players
+camera cycles through rear-quarter, front, side and overhead shots. Equipped hardware
+stays on the single mount; active sentries settle to idle, with queued inventory
+retained in the HUD. Finishers cannot fire or interfere with the remaining racers. Other players
 keep racing with their own chase cameras. Finish times and places stay locked;
 the camera and victory lap pause with the game and continue behind the results.
 
@@ -77,7 +83,7 @@ Try these examples in any world:
 | 00032 | Underpass | Four long illuminated tunnels with daylight/open-air breaks |
 | 00033 | Switchback | Repeated tight left/right chicanes and a narrow sector |
 | 00034 | Sky Circus | Three loops, repeated jumps and an exposed skyway |
-| 00035 | Velocity | Long true straights, broad end turns, narrows and a split |
+| 00035 | Velocity | Nine long boost lanes, true straights, broad end turns, narrows and a split |
 | 00036 | Pipeline | Repeated half-pipes and enclosed magnetic tubes |
 
 Other seeds vary the dimensions, hills, corner shapes and component sizes within
@@ -88,7 +94,7 @@ sharing a seed requires the same game version. See [track generation notes](docs
 **World** switches between the neon **City**, **Forest — Verdant Reach**, and **The Cell**.
 Hard mode adds distinct hazard components to the layout families:
 - Grand Circuit has a rising 360-degree spiral (a wider version also appears on Normal).
-- Switchback has a narrow, unguarded double hairpin: brake before the apex and use yaw/strafe to hold the slide.
+- Hard Switchback has a 44-metre-wide double hairpin with 72-metre-radius turns: brake before the apex and use yaw/strafe to hold the slide. Entry and exit rails protect the transitions; the middle remains exposed.
 - Grand Circuit, Sky Circus and Velocity have a turbo launch ramp and a lower, offset landing. Push the nose down after takeoff and aim for the landing lights.
 - Split routes on Hard include a warning-marked dead branch. Red Xs lead to a crash barrier or an open drop; the other branch remains passable. Signs precede the fork, and the seed selects the blocked side and ending.
 
@@ -153,11 +159,22 @@ return toward the bottom as the tube opens out. Running past an unguarded edge
 enters free flight, with the existing landing/respawn rules. Pick a side before
 the fork; both routes use the same lap progress and merge back into one road.
 
-Guarded sections have 2.5-metre sidewalls with luminous top edges. Mounted amber
-chevrons on the outside of tighter corners indicate the first significant turn
-up to 320 metres ahead. Intentional open edges and flight gaps remain open.
+Guarded sections have 2.5-metre sidewalls with luminous top edges. Mounted neon
+chevrons appear once before demanding corners, with up to 160–280 metres of
+warning. Gentle bends are unsigned; yellow marks moderate turns, orange sharp
+turns, and red is reserved for the tightest hairpins. One, two or three
+bars reinforce severity; the chevrons sweep progressively faster (0.65/1.35/2.4
+cycles per second) without blinking off. A cool-white broken-rail/drop pictogram
+means the upcoming bend has an exposed edge. Subtle road-edge bars match the
+warning color. Signs use three batched meshes and no extra lights; animation
+freezes with the race. Intentional open edges and flight gaps remain open.
 
-Amber runway bars mark launch ramps; cyan bars and beacons mark the landing deck.
+Item prompts sit at the lower center of each player's view, with a circular X
+button matching the Y reset prompt. Active equipment and a stored pickup remain
+visible on separate rows; reset notices have their own space below them.
+
+A continuous amber line spans each takeoff edge; a cyan line spans the landing
+edge. Approach beacons remain beside the road, without repeated ground bars.
 Keep speed through the run-up. Crossing the lip releases into the same fighter
 flight controls as manual takeoff, carrying velocity and attitude without a kick
 or camera switch. Pitch, roll and yaw to line up with the landing. The gap has no
@@ -195,7 +212,7 @@ Keyboard P3: IJKL, U boost, Y/O bump. P4: TFGH, R boost, V/B bump.
 Keyboard recovery uses 3 for P3 and 4 for P4. Pickup use is P for P3 and C for P4.
 Standalone assigns connected controllers at race start and fills disconnected seats when a controller is paired later. Other connected players keep their seats. Keyboard controls also work.
 
-## Energy batteries
+## Energy recharge
 
 **Slipstream:** follow a moving rival closely to reduce drag and build extra speed
 without spending energy. Stay directly behind them, ideally 20–45 metres back;
@@ -207,32 +224,36 @@ The visor shows `SLIPSTREAM` while active. Flying, warp, crashed/recovering and
 EMP-disabled craft cannot draft or provide a wake. The same rules apply to bots,
 local controllers, touch and GameNight players.
 
-Up to four optional airborne batteries sit above and off to the side of the
-racing line, giving the same **25 energy** for a risky flying detour. Easy tracks
-keep them roughly 15–20 metres above the road; normal uses 22–27 metres, hard
-30–35 metres and farther sideways. Technical tracks can offer a higher, off-axis
-pickup over an existing jump. These batteries are slightly larger for visibility,
-require actual airborne contact, and share the two-second respawn and collection
-flash. Each racer can collect each battery once per lap. Blocked approach/return
-paths are omitted after scenery construction; no auto-landing is added.
+Shared mint-green recharge strips replace floating batteries, including airborne ones.
+Two or three strips per lap are chosen on broad, gentle stretches, with guardrails
+through the charging area. Drive over the textured strip to gain **34 energy per
+second**, up to the normal 100-energy bar. Every player can charge simultaneously:
+no shared cooldown, disappearing supply, rank requirement or per-pass limit. Staying
+longer restores more energy. The visor's energy gauge glows mint and shows `CHARGING`.
+Weapon inventory is unaffected, and AI racers can use the same strips.
 
-The shared shield/boost bar automatically refills at **1.5 energy per second**,
-after two seconds without boosting or taking damage. Refill also waits during
-warp, EMP shutdown and recovery. A spent boost takes about 15 seconds of refill;
-batteries and repair lanes remain much faster ways to recharge.
-
-Small amber batteries with white plus signs float above the road between weapon
-stations. Drive through one to restore **25 shield/boost energy**, up to 100.
-They work while carrying a weapon and do not occupy the item slot. A golden
-flash and a brief +25 beside the energy bar confirm collection (less near full).
-Each battery disappears for everyone for two seconds, then returns. Full-energy
-racers leave it available for others; each racer can collect once per station
-per lap. Battery rows are seeded and avoid jumps, gaps and tight corners.
+The shared shield/boost bar also keeps its slow **1.5 energy per second** refill
+after two seconds without boosting or taking damage. Passive refill waits during
+warp, EMP shutdown and recovery. Recharge strips provide the faster alternative.
 
 ## Pickup weapons
 
+**Railgun:** its aiming circle is always visible while ready. A green bracket
+marks the current hittable rival; press **X** to fire immediately. Rivals inside the
+circle are eligible for a straight shot up to 650 m. The first vehicle hit loses
+50 energy (half a full bar); road and scenery still block the shot. The circle
+matches the player's camera, including split screen. Twin glowing rails mount
+on the hull while carried. Firing produces a
+short white-hot core, cyan afterglow, expanding ion rings and local muzzle/impact
+lighting. AI pilots wait for a clear shot inside their forward aim cone.
+
+The HUD shows active equipment and the stored item separately. An unused item
+fills storage; activating a sentry frees that slot for another pickup.
+Stored equipment becomes usable when the current effect ends. First place gets
+a large **YOU WIN** banner in their own viewport, including split screen.
+
 Fly through the cyan pickup rows and press **X** to activate the carried item.
-Pickup stations are spaced at one third of their original density, with three
+Pickup stations are spaced at one sixth of their original density, with three
 lanes at each station. A collected pickup vanishes for everyone for two seconds,
 then fades back in. The other lanes remain available. A short mint light pulse
 and expanding rings mark the pickup and collector, visible to all players; the
@@ -240,23 +261,29 @@ inventory label briefly brightens. One inventory slot, one pickup per row per la
 per player. Bots also collect and use items.
 Use buttons, timers and effects pause with the race; crashes discard items.
 Damage produces a compact flash, sparks, a short smoke puff and a few tumbling
-metal fragments at the contact point. These fade within half a second; no shield
+soft embers at the contact point. These fade within half a second; no shield
 bubble covers the craft. Sentry fire, side bumps and damaging landings use this
 feedback, while missile detonations and full crashes keep their larger blasts.
-Every held item is visibly mounted before activation: a missile on a side rail,
-a rear sentry turret, a pulsing violet warp coil, a blue EMP capacitor, or a
-compact jammer dish that extends when used. Separate mounting points keep an
-active sentry or jammer clear of newly collected equipment.
+Equipment uses one universal dorsal mount behind the cockpit: a missile rail,
+sentry turret, warp coil, EMP capacitor, glide bomb or raised railgun adapter.
+Only one module is visible at a time. An active sentry or warp drive owns the
+mount while the queued item remains in the HUD; it mounts when the active item ends.
 
 - **Cruise missile:** a large finned rocket lifts off its mounting rail, inherits
   the craft's motion, then ignites with a growing exhaust plume, white-hot core,
   warm lens streak and stronger dynamic light. The flare is depth-occluded and
   faces each split-screen camera independently; EMP cuts all motor effects.
   It accelerates into track-following cruise over roughly one second at **1,500 km/h**,
-  including banks, loops and jump routes. It locks onto the leader at launch,
+  including banks, loops and jump routes. It follows the highest-ranked active opponent, updating when the lead changes,
   marking the plane with four blinking red corners. The targeting laser appears
-  only in the estimated final two seconds and grows brighter toward impact.
-  The airborne beam is thin and translucent; a bright white contact spot lights
+  only in the estimated final 0.75 seconds, fading in and brightening rapidly
+  toward impact. Once the
+  laser is visible, the target stays locked even if another racer overtakes.
+  Finished/crashed/recovering racers are skipped before lock; a carried missile
+  remains usable after its owner takes the lead, targeting the next opponent.
+  With no eligible opponent it still launches, climbs away without guidance,
+  and self-destructs after roughly 3–4 seconds, without a target marker or laser.
+  The airborne beam stays thin and translucent; a stronger white contact spot lights
   the targeted hull, visible from every player's camera.
   A direct hit deals 38 shield damage and a speed hit. Its **32-metre blast radius**
   also damages nearby opponents (up to 26, falling off with distance), throws them
@@ -270,6 +297,11 @@ active sentry or jammer clear of newly collected equipment.
   approach retains the same speed; there is no hidden catch-up acceleration.
   An exhaust trail leads into a bright impact flash and expanding smoke. A cached
   procedural bang/rumble is ready when sound is enabled; playtests remain muted.
+  Its pale faceted fuselage, broad grey radome and swept wings take visual
+  cues from the [Green Wolf reference](https://www.navalnews.com/wp-content/uploads/2025/10/L3Harris-Green-Wolf-missile.jpg).
+  A continuous camera-facing smoke ribbon follows distance-spaced flight history,
+  expands into turbulent wisps and fades after impact. It uses one bounded mesh
+  per trail, without a chain of separate cloud sprites.
 - **Warp drive:** phases through traffic and follows the course for about 2.8
   seconds, with refracted/rainbow screen distortion and soft cyan-white filaments
   streaming off the hull. The mounted coil brightens; the craft stays exposed
@@ -282,27 +314,84 @@ active sentry or jammer clear of newly collected equipment.
   activates only on the track, so it cannot teleport a failed flight to safety.
 - **Sentry gun:** a hull-mounted turret operates for eight seconds and fires at
   the nearest valid rival ahead, within 190 metres in space / 220 along the course.
-  Its head aims independently, with barrel recoil and muzzle flashes. Bursts deal
-  4 shield damage every 0.4 seconds. Buildings/terrain block its shots.
+  Its head aims independently, with rotating barrels, recoil and muzzle flashes. Rounds deal
+  0.5 shield damage every 0.05 seconds (10 DPS). Buildings/terrain block its shots.
   Before activation its barrels rest lowered and its status LED stays dark.
   Once armed, it scans the forward arc while searching, tracks any acquired
   rival, and blinks a small mint status LED throughout its active lifetime.
-- **EMP:** an expanding blue-violet electrical sphere reaches 220 metres in
-  0.65 seconds, cutting every rival's engines inside it for 2.2 seconds. Your own
+  Its rear silhouette includes a finned barrel-drive motor with a spinning hub
+  on one side and a black ammunition cassette and ribbed feeder on the other.
+- **Glide bomb:** a rare, heavy payload with wings that unfold after launch,
+  carried on the dorsal weapon cradle. Its glide path appears automatically
+  while flying; **press X** to launch immediately. A 55-degree forward seeker
+  acquires visible rivals up to 1100 metres away, including over open air.
+  Green brackets identify the target, with a live interception dot and guided
+  steering guide. With no lock, an amber impact area shows the unguided drop.
+  Every player's preview refreshes each physics tick (120 Hz), with no stagger
+  or delayed marker smoothing. Aim, speed
+  and release timing matter: a short 1.25-second rocket burn pulls the payload
+  ahead at up to 1296 km/h, then it glides. The guide includes this acceleration;
+  locked indicators use a lightweight live intercept instead of simulating a
+  full future collision path. AI racers do not compute hidden HUD trajectories.
+  Contact with the launching hull only arms after physical separation; launch
+  self-blast protection ends once it first clears the pilot's blast radius. It steers at
+  about 66 degrees per second, cannot switch targets, and loses lock if a rival
+  escapes its forward seeker. Landing or EMP cancels aiming without spending
+  the item. An 18-metre proximity fuse catches close passes of its locked rival;
+  roads, scenery and aircraft can also trigger its
+  **120-metre blast**; a full-energy craft within roughly 52 metres is destroyed,
+  and a rival 60 metres away takes about 92 damage, with damage
+  and a strong sideways/airborne shove fading toward the edge. The launching
+  pilot can be caught too. Missed bombs fall through track gaps and expire
+  harmlessly. A large fireball, billowing smoke, heat distortion and dynamic
+  flash mark impact. AI pilots use the same target acquisition when airborne.
+- **EMP:** an instantaneous map-wide shutdown cuts every rival's engines for
+  2.2 seconds, regardless of distance or altitude. A blue-violet shell expands
+  around the firing vehicle as a visual effect. Your own
   engines are unaffected. Rivals coast and can steer/brake, but lose throttle,
   boost and ground strafe. Warp is interrupted too, including a smooth
   transition into flight above gaps. Engines restart automatically; brief reboot
   and respawn protection prevent repeated shutdowns. No direct shield damage.
-  The affected helmet HUD goes dark too, then fades back in as systems recover.
-  Cruise missiles caught in the expanding pulse lose guidance and propulsion,
+  A 500 ms burst of signal tearing and chromatic glitches fades into helmet HUD
+  blackout; instruments return as systems recover. Controls are never randomized.
+  Affected hulls spit a few short, blue-white electrical arcs along their engine
+  housings and wing roots throughout shutdown, fading before reboot. These are
+  sparse surface sparks, not a shield bubble; one shared ribbon mesh per car
+  animates in the shader and freezes with pause, without extra light passes.
+  Cruise missiles anywhere on the map lose guidance and propulsion,
   coast harmlessly, and disappear. Missile launches are blocked during shutdown.
-- **Jammer:** deploys an exterior satellite dish for six seconds. A 56-degree
-  forward cone reaches 260 metres; rivals inside get signal tearing, static and
-  bounded random steering/strafe/pitch input. Interference is strongest nearby
-  and on-axis, fading with distance and at the cone edge. Escaping the cone clears
-  it. Buttons, throttle and brake remain under player control. EMP silences the
-  transmitter; warp and fresh respawn protection resist it. Subtle broken copper
-  and cyan traces show transmission, fading with travel and at the end of use.
+
+
+Weapon and side-bump kills show `DESTROYED {pilot}` on the attacker's visor for
+500 ms, fading out briefly. Multiple simultaneous victims get separate lines;
+ordinary hits and self-destruction do not produce a confirmation.
+
+Vehicle condition follows the energy meter: light permanent scuffs at full
+energy, then longer scratches, paint chips, exposed metal and scorched engine
+panels as energy falls. Recharging restores the finish toward its lightly worn
+baseline. Below 22 energy, the engine panels emit soft dark smoke; it stops on
+repair, crash or recovery and freezes during pause. Hull and white trim use the
+same shared 512px packed mask in their existing opaque material pass. Smoke is
+one draw with at most twelve quads per critical craft. Geometry and collisions
+are unchanged. The generator is `tools/generate_paint_wear.py`; visual QA and
+effect-on/off split-screen measurements are in `tests/vehicle_wear_render.gd`
+and `tests/vehicle_wear_performance.gd`.
+
+The white nose, engine, wing and rudder markings are painted inside the hull
+shader, not separate raised meshes. Engine stripes follow the loft UVs through
+the taper; other markings follow each component's local surface, including
+moving rudders. They share the underlying paint's lighting, wear and rebuild
+scan, with anti-aliased edges and no extra material pass.
+
+After a crash, the camera carries a little momentum into a smooth trip toward
+the exact safe respawn point during the existing two-second recovery delay.
+It arrives before the craft and hands back to the normal chase camera without
+a cut. Checkpoint returns and jump-safe recovery share that same destination.
+Respawning uses a 0.7-second cyan construction scan: the painted panels fill
+from bottom to top, a holographic grid fades away, and a short local light
+illuminates the road. It adds no gameplay delay; steering resumes immediately.
+The camera and scan both freeze on pause. Extra material passes and the light
+are disabled completely when reconstruction ends.
 
 Touchdowns mildly damage shields according to descent speed, attitude
 against the deck and sideways slip. Small imperfections are free; a typical rough
@@ -316,7 +405,7 @@ Catch-up bias affects only random item odds. First place never receives warp.
 Warp odds increase with position and actual distance behind the leader: last
 place has a 14% chance nearby, rising smoothly to 42% at 1,500 metres behind.
 The distance bonus starts at 150 metres and also works in two-player races.
-EMP stays at 16% and Jammer at 14%; other rolls use the missile/warp/sentry pool.
+EMP stays at 16% and Jammer at 14%; a rare dive-bomb roll replaces part of the sentry pool (about 4–7% overall).
 A leader's missile roll becomes a sentry. There is no hidden handling or
 engine-speed penalty for leading. Items earned before taking the lead stay usable.
 Damage uses the existing shield/boost-energy bar; depletion produces the normal
@@ -381,6 +470,9 @@ craft rises, its wings buffet gently, and a “Lifting” cue appears before rel
 Ease the stick forward during this warning to settle back down. Sustained back
 input releases into independent flight, carrying the actual track velocity and
 attitude through takeoff with no added kick. Crests can also unload adhesion.
+At cruise speed, a full pull releases in about half a second. The first 0.3 s
+of this deliberate lift-off blends measured road acceleration and angular rate into aerodynamic
+forces and fighter controls, avoiding an abrupt pitch/lift surge at release.
 
 In flight, either stick forward/back pitches down/up, left stick left/right controls
 yaw through the rudders, and right stick left/right rolls via the wing
@@ -507,6 +599,12 @@ a conservative swept volume around every road segment. This includes banking,
 vertical loops, crossings and camera clearance. Mounted screens stay inside their building envelopes. Full traffic routes also
 clear the road and buildings. The opening skyline preserves views of the loop.
 
+The racer now follows the selected red twin-engine concept: a narrow chisel nose,
+large painted engine housings, recessed grilled intakes, swept ivory-marked wings,
+independent elevons and tail rudders, opening cooling brakes, and machined nozzle petals.
+The physical model is 2,812 triangles across 41 material surfaces, retaining the
+existing collision width and all player paint/face customization. The editable
+[GLB and design notes](docs/vehicle-concepts/model-v1.md) include named control pivots.
 Ships have beveled hulls, swept wings, cockpit glass and animated tapered plasma
 jets, bright engine cores, and soft exhaust wisps. The engine socket glow
 responds to throttle; plume length grows with actual acceleration and boost.
@@ -562,8 +660,12 @@ blended cascades reaching 1,400 m solo / 1,100 m split-screen at Balanced/High,
 with a broad fade across the outer 45%. Solo uses four cascades; multiplayer,
 Performance and Mobile use two to reduce CPU draw overhead.
 See `docs/shadows.md` for ranges and measured costs. Exhaust and tunnel
-lights remain shadow-free. High adds a short, subtle volumetric haze; Balanced
-omits it. Screen-space indirect lighting was measured and disabled because its
+lights remain shadow-free. City uses thin distance haze and a dim blue-grey skyglow
+to separate distant blocks while keeping the nearby track clear. This reuses the
+existing fog pass on every quality tier. High adds short-range, light-responsive
+volumetric mist; Balanced omits it. Forest and Cell retain their own atmosphere.
+`tests/city_haze_render.gd` captures a fixed before/after scene and GPU timings in
+one- and two-player views. Screen-space indirect lighting was measured and disabled because its
 contribution to this scene was negligible. These are local lighting effects,
 not full-scene global illumination.
 
@@ -605,7 +707,7 @@ used. Managed games consume opaque controller tokens from `controller_frame`;
 missing or 250 ms stale input becomes neutral. Empty seats create no craft;
 AI seats use bots. No online network race synchronization is implemented.
 
-Prepare builds the world and renders two warm frames off-screen before Ready.
+Prepare builds the world and renders 60 warm frames off-screen before Ready.
 Start/Resume explicitly show the borderless window. Pause freezes the race,
 countdown, results, cameras, and audio; focus changes never start or resume it.
 Start requires a full second of release between requests. Dispose frees the
@@ -712,3 +814,84 @@ Other flags: `--quality=.8`, `--fraction=.055`, and
 `--ablation=no-box-reflections|no-ssr|no-ssil|no-shadows|no-volumetrics|no-probes`.
 Run one GPU test at a time; background CI/browser workloads affect CPU and wall
 timing. See [the measured lighting review](docs/lighting-review.md).
+
+
+## Developer item shortcuts
+
+Press **F8** to toggle dev cheat mode (or launch with `-- --dev`). A small amber
+legend confirms it is active. During a race, **D** gives glide bombs, **M** cruise
+missiles, **W** warp drives, **S** sentry guns, **E** EMPs and **G** railguns to every
+active human and AI racer. It only equips the item: players still press **X** to
+use it, and glide bombs still require flight. Existing active effects keep running;
+finished/crashed racers are skipped. Each press replaces the carried item only.
+These letters stop controlling keyboard driving until F8 is turned off;
+controllers continue normally. Cheats stay off by default, including GameNight.
+
+## Local GameNight registration
+
+`tools/register_gamenight.ps1` adds **Ion Rush (Local)** to
+`%LOCALAPPDATA%/GameNight/local-games.json`, preserving other local entries.
+The desktop launcher merges that file into its regenerated shelf on every start;
+local IDs take priority over catalogue builds. The managed launch script takes
+an immutable snapshot of the latest staged Windows PCK and waits for the game,
+so the host owns the entire process lifetime. Rebuild the staged PCK and the next
+GameNight launch uses it automatically.
+
+Player artwork is composited with their skin/accent colours and painted on both
+outer engine housings. It uses the hull lighting, preserves transparent artwork
+and hats, and updates by player identity. Cached textures rebuild only when the
+profile changes, with no separate decal draw calls. Hidden ready/paused sessions
+suspend their 3D and visor viewports; warm-up completes before Ready. The host
+also exposes a five-digit seed setting (zero selects a random seed).
+
+The local Windows launcher, daemon and lobby must use the current host-controller
+protocol. The installed preview was updated locally for this integration; backups
+sit alongside its binaries. A future upstream app update can replace those local
+binaries; the registration file remains in user data. The GameNight checkout
+contains the persistent local-shelf support for future builds.
+
+`tests/local_gamenight.py` checks the installed host, local registration, managed
+launcher and native hidden preparation with isolated party/profile state. The
+synthetic suite additionally covers controller routing and session transitions.
+Physical multi-controller couch testing remains a hardware check.
+
+Paid boost stacks with turbo strips: the combined target is 475 m/s versus 390 m/s
+for either alone. Acceleration opens the lens more strongly, capped at a 100-degree
+reference FOV with split-screen correction. Above 365 m/s, adhesion progressively
+weakens and steering becomes more sensitive; nose-down trim restores stability.
+Weapon pickup rows are halved again; energy battery placement is unchanged.
+
+The mounted sentry uses six rotating barrels at 20 rounds per second (0.5 shield damage each, still 10 DPS). Tracers and the compact muzzle light are presented for one render frame per shot. Boosting leaves two short world-space light trails that bend with the driven path, with a soft colored halo and subtle analog red/cyan bleed. They fade within 0.38 seconds and clear on crashes or respawns.
+
+City air traffic runs in opposing streams at three heights. Four shared compact,
+sedan, coupe and cargo meshes have white front lamps and red rear lamps, with
+varied paint. Opaque emissive lenses use scene bloom without adding individual
+lights or shadows. Corridor MultiMeshes move in the shader using the race clock,
+so pause freezes them; nearby collision queries use the same analytical poses.
+Air lanes keep safe headways and full road/building exclusion. The sentry mesh is reduced to 1,782
+triangles and 14 surfaces, retaining its animated rotor, barrels and status LED.
+
+The city also carries up to 640 large building-mounted corporate posters:
+SABLE cybernetics, SOMA designer neurochemistry, TALLY credit, VEIL privacy,
+MONOLITH megacorp propaganda and APERTURE optical implants. Full-color portrait
+advertisements replace the earlier retro neon storefronts. Panels and backings
+are instanced by district; all six campaigns share one mipmapped color atlas.
+The existing 64-light city budget and four-nearby-sign road reflection budget
+stay fixed. Sign placement preserves the existing artwork billboards and road
+clearance. Poster sources and generation prompts are in `docs/city-advertising`.
+
+The city follows a strict 120-metre Manhattan street grid. Whole-block towers,
+paired buildings and four-building blocks share aligned frontages and low
+podiums; seed 31 has about 3,500 buildings, compared with roughly 1,050 before.
+Ground streets have dashed lane markings, crossings and about 17,000 background
+cars across the entire city. Cars circulate around blocks with rounded turns;
+neighbouring blocks form opposing lanes, while congested blocks creep slowly.
+Four low-poly meshes are shared in spatial batches. Movement and heading run in
+one shader, with no individual vehicle nodes, lights or shadows. Ground collision
+queries return immediately above street level and inspect nearby blocks below it.
+
+The glide bomb shows its acquired rival automatically while airborne, even if the predicted landing point is off-screen. Its longer 1.25-second launch motor, stronger limited steering, curved-road lead prediction and 18-metre proximity fuse help well-aimed releases connect. The blast radius and damage are unchanged.
+
+Flight engines deliver stronger thrust below normal flying speed, tapering smoothly from 140 to 44 m/s² as forward airspeed rises from 90 to 210 m/s. Full throttle can recover slow flight; a modest nose-up attitude helps arrest descent. Gravity, unpowered stalls, EMP shutdown, and the 235 m/s airspeed cap remain in effect.
+
+Crashes shed the actual hull, wings and engine housings, with current vehicle colors under irregular black scorch patches. Small volumetric flames follow four tumbling components and fade before recovery. Generic box confetti and flat metal chips have been removed from crash and hit effects.

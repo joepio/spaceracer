@@ -1,5 +1,9 @@
 extends RefCounted
 ## Beveled hull, swept aerofoils, recessed cockpit and additive engine plumes.
+const Design=preload("res://src/racer_design.gd")
+const PilotFace=preload("res://src/pilot_face.gd")
+const Wear=preload("res://src/vehicle_wear.gd")
+const Rebuild=preload("res://src/respawn_vfx.gd")
 static var discharge_mesh:ArrayMesh
 const WAKE_SPAN:=20.
 
@@ -35,7 +39,8 @@ static func loft(parent:Node3D,name_value:String,sections:Array,material:Materia
 	var cross_section:=[Vector2(-1,-.05),Vector2(-.96,.10),Vector2(-.71,.67),Vector2(-.60,.72),Vector2(.60,.72),Vector2(.71,.67),Vector2(.96,.10),Vector2(1,-.05),Vector2(.65,-.5),Vector2(-.65,-.5)]
 	for i in range(sections.size()-1):
 		for j in range(cross_section.size()):
-			for cell in [[i,j],[i+1,j],[i,(j+1)%cross_section.size()],[i,(j+1)%cross_section.size()],[i+1,j],[i+1,(j+1)%cross_section.size()]]:
+			# Clockwise from outside, matching Godot's front-face convention.
+			for cell in [[i,j],[i,(j+1)%cross_section.size()],[i+1,j],[i,(j+1)%cross_section.size()],[i+1,(j+1)%cross_section.size()],[i+1,j]]:
 				var section:Vector3=sections[cell[0]] # z, half width, height
 				var corner:Vector2=cross_section[cell[1]]
 				surface.set_uv(Vector2(float(cell[1])/cross_section.size(),section.x*.2))
@@ -46,6 +51,9 @@ static func loft(parent:Node3D,name_value:String,sections:Array,material:Materia
 			for j in range(cross_section.size()):
 				var a:Vector2=cross_section[j]
 				var b:Vector2=cross_section[(j+1)%cross_section.size()]
+				# The two end caps must face opposite directions.
+				if index==0:
+					var swap:=a;a=b;b=swap
 				for point in [Vector3(0,0,section.x),Vector3(a.x*section.y,a.y*section.z,section.x),Vector3(b.x*section.y,b.y*section.z,section.x)]:
 					surface.add_vertex(point)
 	surface.generate_normals()
@@ -63,49 +71,26 @@ static func build(tint:Color)->Node3D:
 	root.set_meta("jet_tint",jet_tint)
 	var paint:=ShaderMaterial.new()
 	paint.shader=load("res://src/ship.gdshader")
-	paint.set_shader_parameter("tint",Vector3(tint.r,tint.g,tint.b))
-	loft(root,"Body",[Vector3(-3.4,.1,.1),Vector3(-2.7,1.5,.8),Vector3(.2,1.65,1.2),Vector3(2.8,.8,.4),Vector3(5,.025,.03)],paint)
-	var alloy:=metal(Color("233045"),.24)
-	var control_edge:=metal(Color("93acb8"),.28)
-	var glass:=metal(Color("101e35"),.12)
-	glass.metallic=.85
-	loft(root,"Canopy",[Vector3(-1.7,.1,.1),Vector3(-.6,.78,.9),Vector3(.8,.52,.8),Vector3(1.9,.01,.01)],glass,Vector3(0,.75,0))
+	paint.set_shader_parameter("tint",tint)
+	paint.set_shader_parameter("wear_mask",load("res://assets/paint-wear.png"))
+	Design.build(root,paint,loft)
+	Rebuild.build(root)
+	root.set_meta("pilot_face",PilotFace.new())
 	for side in [-1,1]:
-		loft(root,"Nacelle%d"%side,[Vector3(-3.7,.7,.6),Vector3(-2,.9,.7),Vector3(1.4,.63,.55),Vector3(3.2,.05,.08)],alloy,Vector3(side*2.45,-.15,0))
-		# The fixed wing ends at the hinge; it must not cover the moving elevon.
-		loft(root,"Wing%d"%side,[Vector3(-1.24,1.15,.18),Vector3(.4,.08,.1)],paint,Vector3(side*3.4,0,0))
-		# Hinged elevons on the rear of each wing; inside the existing hull envelope.
-		var wing:=Node3D.new()
-		wing.name="WingControlL" if side<0 else "WingControlR"
-		wing.position=Vector3(side*3.4,.12,-1.45)
-		root.add_child(wing)
-		loft(wing,"Elevon",[Vector3(-1.0,.45,.13),Vector3(-.6,1.0,.16),Vector3(.1,.95,.14),Vector3(.2,.03,.03)],paint)
-		loft(wing,"FlapEdge",[Vector3(-1.01,.43,.045),Vector3(-.94,.49,.045)],control_edge)
-		var fin:=Node3D.new()
-		fin.name="RudderL" if side<0 else "RudderR"
-		fin.position=Vector3(side*1.05,.5,-2.35)
-		root.add_child(fin)
-		loft(fin,"TailFin",[Vector3(-1,.02,.15),Vector3(-.65,.09,1.55),Vector3(.4,.08,.3),Vector3(.55,.02,.05)],paint)
-		loft(fin,"RudderEdge",[Vector3(-1.015,.025,.18),Vector3(-.66,.105,1.58),Vector3(-.55,.095,1.43)],control_edge)
-		var strip:=StandardMaterial3D.new()
-		strip.albedo_color=tint
-		strip.emission_enabled=true
-		strip.emission=tint
-		strip.emission_energy_multiplier=.7
-		loft(root,"Light%d"%side,[Vector3(-2.8,.10,.10),Vector3(1.5,.10,.10),Vector3(2.2,.025,.02)],strip,Vector3(side*2.45,.4,0))
 		# Machined nozzle rims make the bright exhaust socket part of the hull.
 		var collar:=MeshInstance3D.new()
 		collar.name="Nozzle%d"%side
 		var ring:=TorusMesh.new()
-		ring.inner_radius=.38
-		ring.outer_radius=.62
+		ring.inner_radius=.51
+		ring.outer_radius=.75
 		ring.rings=16
 		ring.ring_segments=8
 		collar.mesh=ring
-		collar.material_override=metal(Color("8193a6"),.2)
+		collar.material_override=metal(Color("46515a"),.32)
 		collar.position=Vector3(side*2.45,-.12,-3.68)
 		collar.rotation.x=PI*.5
 		root.add_child(collar)
+		Design.nozzle_detail(collar)
 		var plume:=MeshInstance3D.new()
 		plume.name="ExhaustL" if side<0 else "ExhaustR"
 		var jet:=SurfaceTool.new()
@@ -144,15 +129,6 @@ static func build(tint:Color)->Node3D:
 		reverse.rotation.y=PI
 		reverse.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(reverse)
-		var airbrake:=Node3D.new()
-		airbrake.name="Airbrake%d"%side
-		airbrake.position=Vector3(side*2.45,.42,-.4)
-		root.add_child(airbrake)
-		loft(airbrake,"Door",[Vector3(-1.8,.5,.12),Vector3(-1.5,.64,.12),Vector3(0,.55,.12)],alloy)
-		var warning:=metal(Color("ff6b32"))
-		warning.emission_enabled=true
-		warning.emission=Color("ff4218")
-		loft(airbrake,"BrakeLight",[Vector3(-1.72,.48,.04),Vector3(-1.58,.52,.04)],warning,Vector3(0,.1,0))
 		var halo:=MeshInstance3D.new()
 		halo.name="EngineHalo%d"%side
 		var quad:=QuadMesh.new()
@@ -229,6 +205,7 @@ static func build(tint:Color)->Node3D:
 	wake.material_override=trail
 	wake.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(wake)
+	Wear.build(root)
 	return root
 
 static func set_jet_tint(root:Node3D,tint:Color)->void:
@@ -330,3 +307,11 @@ static func animate_effects(root:Node3D,p:Dictionary,time:float,countdown:float)
 		var size:=Vector3(diameter,diameter,clampf(exhaust_speed*.006,3.,5.4))*(power if countdown<=0 else 0.0)
 		wake.set_instance_transform(particle,Transform3D(Basis.IDENTITY.scaled(size),position))
 		wake.set_instance_color(particle,Color(jet_tint.r,jet_tint.g,jet_tint.b,pow(1.-age,3.)*power*(.36 if burning else .25)))
+
+static func update_face(ship:Node3D,profile:Dictionary)->void:
+	var face:RefCounted=ship.get_meta("pilot_face")
+	if not face.update(profile): return
+	for side in [-1,1]:
+		var paint:ShaderMaterial=ship.get_node("Nacelle%d"%side).material_override
+		paint.set_shader_parameter("pilot_face",face.decal)
+		paint.set_shader_parameter("has_face",true)

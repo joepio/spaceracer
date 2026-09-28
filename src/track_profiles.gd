@@ -7,6 +7,7 @@ static func title(seed_value:int)->String: return NAMES[index(seed_value)]
 
 static func recipe(seed_value:int)->Dictionary:
 	var result:={"name":title(seed_value),"shape":"radial","corner_scale":1.,"width_scale":1.,
+		"boosts":[[.115,.142],[.63,.65]],
 		"loops":[.16],"tunnels":[[.33,.38]],"corners":[],
 		"sections":[["open",.275,.315],["halfpipe",.405,.49],["split",.535,.615],["tube",.805,.92]],
 		"jumps":[[.070,.152]],"hard_flight":true}
@@ -27,6 +28,10 @@ static func recipe(seed_value:int)->Dictionary:
 			result.sections=[["open",.285,.31],["halfpipe",.845,.912]]
 		4:
 			result.shape="stadium";result.loops=[];result.hard_flight=false
+			# Repeated acceleration lanes define Velocity: long straights and broad
+			# turns stay fast, with gaps around the landing, narrows and split.
+			result.boosts=[[.165,.195],[.235,.27],[.365,.40],[.515,.55],[.58,.615],
+				[.635,.67],[.745,.775],[.85,.885],[.925,.97]]
 			result.tunnels=[[.62,.71]]
 			result.sections=[["open",.18,.26],["narrows",.30,.35],["split",.435,.50],["narrows",.78,.83]]
 		5:

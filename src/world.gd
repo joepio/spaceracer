@@ -20,6 +20,8 @@ var shadows:=Shadows.new()
 const Showpiece=preload("res://src/showpiece.gd")
 var showpiece:RefCounted
 const Ship = preload("res://src/ship.gd")
+const BoostTrails=preload("res://src/boost_trails.gd")
+var boost_trails:Array[Node3D]=[]
 var scenery: RefCounted
 var ships: Array[Node3D] = []
 var crashes:Array[Node3D]=[]
@@ -65,7 +67,7 @@ func build(state: RefCounted) -> void:
 	var sky_material := ShaderMaterial.new()
 	sky_material.shader = load("res://src/cell_sky.gdshader" if cell else ("res://src/forest_sky.gdshader" if forest else "res://src/sky.gdshader"))
 	var top:=Color("060a12")
-	var horizon:=Color("0c121c")
+	var horizon:=Color("202735")
 	if forest: top=Color("2586d1");horizon=Color("b6e4f7")
 	if cell: top=Color("173c46");horizon=Color("426b60")
 	if RenderingServer.get_current_rendering_method()!="gl_compatibility":
@@ -80,9 +82,11 @@ func build(state: RefCounted) -> void:
 	env.ambient_light_energy = .12
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
-	env.fog_light_color = Color("182437")
-	env.fog_light_energy = .65
-	env.fog_density = .00032
+	# Thin urban haze separates distant blocks; the near racing surface stays crisp.
+	# Match its dim blue-grey scatter with the sky's broad city-light dome.
+	env.fog_light_color = Color("2a3240")
+	env.fog_light_energy = .7
+	env.fog_density = .00075
 	env.fog_sky_affect = 0.0
 	if forest:
 		env.ambient_light_color=Color("d6e9f4")
@@ -115,7 +119,9 @@ func build(state: RefCounted) -> void:
 		env.glow_intensity=.7
 		env.glow_hdr_threshold=1.2
 		env.volumetric_fog_enabled=true
-		env.volumetric_fog_density=.0012
+		# Local lights catch a little mist without veiling nearby cars and posters.
+		# Keep the existing volume extent/resolution for split-screen performance.
+		env.volumetric_fog_density=.0006
 		env.volumetric_fog_albedo=Color("7c94b1")
 		env.volumetric_fog_length=180.
 		env.volumetric_fog_ambient_inject=.12
@@ -180,10 +186,10 @@ func build(state: RefCounted) -> void:
 		set_dynamic_layer(ship)
 		add_child(ship)
 		ships.append(ship)
+		var light_trail:=BoostTrails.new();add_child(light_trail);boost_trails.append(light_trail)
 		var crash:=CrashVfx.new();add_child(crash);crash.configure(ship);crashes.append(crash)
 		GlobalLighting.receive_only(crash)
 		ship_colors.append(color_for(p))
-	race.weapons.AirBatteries.validate(race.track,race.weapons.batteries)
 	weapon_vfx=WeaponVfx.new();add_child(weapon_vfx);weapon_vfx.configure(race)
 	GlobalLighting.receive_only(weapon_vfx)
 	race.checkpoints.build(self)
@@ -191,8 +197,9 @@ func build(state: RefCounted) -> void:
 
 func vertex(surface: SurfaceTool, n: Dictionary, x: float, h: float, uv: Vector2, normal:Vector3=Vector3.ZERO) -> void:
 	surface.set_uv(uv)
+	surface.set_uv2(Vector2(1. if n.zone=="repair" else 0.,0.))
 	var zone := 1.0 if n.zone == "repair" else (2.0 if n.zone == "boost" else 0.0)
-	surface.set_color(Color(zone / 2, 1.0 if n.loop else 0.0, 1.0 if n.get("brake_hint",false) else 0.0,1.-float(n.get("shape_angle",0.))/PI))
+	surface.set_color(Color(zone / 2, 1.0 if n.loop else 0.0, float(n.get("brake_level",0))/3.,1.-float(n.get("shape_angle",0.))/PI))
 	surface.set_normal(normal if normal!=Vector3.ZERO else Track.surface_frame(n,x).y*(-1. if h<0 else 1.))
 	surface.add_vertex(Track.point(n, x, h))
 
@@ -309,7 +316,7 @@ func build_jump_markers()->void:
 	var cyan:=material(Color("78e6ed"),2.)
 	var metal:=material(Color("273747"))
 	for jump in race.track.jumps:
-		# Surface-mounted runway bars and edge beacons, no floating text signs.
+		# Approach beacons remain beside the road; the deck gets one clear lip line.
 		for marker in [[jump.takeoff-90.,amber],[jump.takeoff-55.,amber],[jump.takeoff-20.,amber],[jump.landing,cyan],[jump.landing+35.,cyan],[jump.landing+70.,cyan]]:
 			var n:Dictionary=race.track.sample(marker[0])
 			var frame:=Node3D.new()
@@ -318,10 +325,21 @@ func build_jump_markers()->void:
 			for side in [-1.,1.]:
 				box(frame,Vector3(side*(n.width-1.),3.,0.),Vector3(.7,6.,.7),metal)
 				box(frame,Vector3(side*(n.width-1.),5.5,0.),Vector3(.9,1.2,.9),marker[1])
-				var stripe:=box(frame,Vector3(side*n.width*.65,.09,0.),Vector3(n.width*.55,.16,1.),marker[1])
-				stripe.set_meta("track_surface",true)
 		for distance in [jump.takeoff,jump.landing]:
 			var n:Dictionary=race.track.sample(distance)
+			var takeoff:bool=distance==jump.takeoff
+			# Follow the actual deck segment, rather than a tangent box that can sink
+			# into the ramp near a crest. The outer side ends exactly at the lip.
+			var start:float=distance-1.4 if takeoff else distance
+			var end:float=distance if takeoff else distance+1.4
+			var line:=SurfaceTool.new();line.begin(Mesh.PRIMITIVE_TRIANGLES)
+			strip(line,race.track.sample(start),race.track.sample(end),-1.,1.,.12,start)
+			var stripe:=MeshInstance3D.new();stripe.mesh=line.commit()
+			stripe.material_override=amber if takeoff else cyan
+			stripe.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(stripe)
+			stripe.name="TakeoffEdgeLight" if takeoff else "LandingEdgeLight"
+			stripe.set_meta("track_surface",true)
 			var cap:=box(self,n.p-n.frame.y*.7,Vector3(n.width*2.,1.4,.35),metal)
 			cap.basis=n.frame
 			# Deck/lip impacts are resolved by Flight against the track ribbon.
@@ -407,28 +425,34 @@ func build_ship(tint: Color) -> Node3D:
 func update_ships() -> void:
 	if weapon_vfx: weapon_vfx.update()
 	road_material.set_shader_parameter("race_time",race.clock)
+	if has_meta("turn_marker_material"): get_meta("turn_marker_material").set_shader_parameter("race_time",race.vfx_clock)
 	for section in road_sections: section.set_shader_parameter("race_time",race.clock)
 	tunnel_material.set_shader_parameter("race_time",race.clock)
 	for i in range(tunnel_lights.size()): tunnel_lights[i].light_energy=1.4+1.2*(.5+.5*sin(race.clock*4-i*.8))
 	if scenery: scenery.animate(race.clock)
 	for i in range(race.racers.size()):
 		var p: Dictionary = race.racers[i]
+		Ship.update_face(ships[i],p)
 		Ship.animate_controls(ships[i],p)
 		var n: Dictionary = race.track.sample(p.distance)
 		ships[i].transform=Flight.pose(p,n,race.clock)
 		ships[i].visible = not p.crashed
+		Ship.Wear.update(ships[i],p,race.vfx_clock)
+		Ship.Rebuild.update(ships[i],p)
 		ships[i].get_node("Body").material_override.set_shader_parameter("wrecked",1. if p.crashed else 0.)
-		crashes[i].update(p,race.vfx_clock)
 		var tint := color_for(p)
 		if ship_colors[i] != tint:
 			Ship.set_jet_tint(ships[i],tint)
-			ships[i].get_node("Body").material_override.set_shader_parameter("tint",Vector3(tint.r,tint.g,tint.b))
+			for paint in ships[i].get_meta("paint_materials"):
+				paint.set_shader_parameter("tint",tint)
 			for side in [-1,1]:
 				var light:StandardMaterial3D=ships[i].get_node("Light%d"%side).material_override
 				light.albedo_color=tint
 				light.emission=tint
 			ship_colors[i] = tint
+		crashes[i].update(p,race.vfx_clock)
 		Ship.animate_effects(ships[i],p,race.vfx_clock,race.countdown)
+		boost_trails[i].update_trail(ships[i].transform,p,race.vfx_clock,tint)
 	update_lighting()
 
 func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false, effects_enabled:bool=true) -> void:
@@ -441,8 +465,9 @@ func update_camera(camera: Camera3D, index: int, dt: float, snap: bool = false, 
 		Victory.camera_update(camera,p.victory_pose,n,p.victory_age,race.track.obstacles,snap)
 		return
 	if p.crashed:
-		var focus:Vector3=p.wreck.focus if p.wreck!=null else p.air_position
-		Chase.update_crash(camera,p.air_position,focus,p.crash_id,dt,race.track.obstacles,snap)
+		var destination:Dictionary=race.respawn_target(p)
+		var elapsed:float=p.wreck_time if p.wreck_wait else race.CRASH_RESPAWN_DELAY-p.recovery
+		Chase.update_respawn(camera,destination.pose,p.crash_id,elapsed,race.CRASH_RESPAWN_DELAY,dt,snap)
 		return
 	Chase.update(camera,Flight.pose(p,n,race.clock),p.speed,p.boost>0 or p.on_pad,dt,snap,p.acceleration,effects_enabled and race.countdown<=0 and p.recovery<=0 and not p.finished)
 
@@ -505,6 +530,7 @@ func configure_reflections(material:ShaderMaterial,position:Vector3,detailed:boo
 	material.set_shader_parameter("box_high",high)
 	material.set_shader_parameter("box_tint",tint)
 	material.set_shader_parameter("city_art",load("res://assets/office-facade.png"))
+	material.set_shader_parameter("corporate_atlas",load("res://assets/corporate-posters.png"))
 	var signs:Array=scenery.layout.billboards.duplicate()
 	if scenery.neon: signs.append_array(scenery.neon.signs)
 	signs.sort_custom(func(a:Dictionary,b:Dictionary): return a.transform.origin.distance_squared_to(position)<b.transform.origin.distance_squared_to(position))

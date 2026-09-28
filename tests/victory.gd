@@ -18,7 +18,7 @@ func run()->void:
 	race.countdown=0.
 	var p:Dictionary=race.racers[0]
 	p.distance=race.track.length-1.;p.speed=225.;p.startup=1.
-	p.weapon="missile";p.drone_time=2.;p.jammer_time=2.;p.jammer_deploy=1.
+	p.weapon="missile";p.drone_time=2.
 	p.checkpoint_index=race.checkpoints.gates.size()
 	race.step(.02,[{"throttle":1.},{}])
 	check(p.finished and not race.over,"First finisher starts a victory lap while opponents race")
@@ -34,10 +34,10 @@ func run()->void:
 	check(p.distance>initial_distance+800. and p.speed>130.,"Autopilot continues down the course despite human braking")
 	check(p.time==finish_time and p.lap==lap and p.rank==1,"Victory movement cannot change finish time, lap or winner")
 	check(p.weapon=="missile" and p.boost==0. and p.engine_power>.5 and race.weapons.missiles.is_empty(),"Finishers retain equipment without firing or boosting")
-	check("drone" in p.victory_mounts and "jammer" in p.victory_mounts and p.drone_time==0. and p.jammer_time==0.,"Active mounts settle to idle without vanishing")
+	check("drone" in p.victory_mounts and p.drone_time==0.,"Active mounts settle to idle without vanishing")
 	var vfx:Node3D=load("res://src/weapon_vfx.gd").new();root.add_child(vfx);vfx.configure(race);vfx.update()
-	check(vfx.mounts[0].missile.visible and vfx.turrets[0].visible and vfx.dishes[0].visible,"Replay renders held missile, spent sentry and jammer together")
-	check(race.weapons.shots.is_empty() and race.racers[1].jam_strength==0.,"Finished active weapons cannot disrupt opponents still racing")
+	check(not vfx.mounts[0].missile.visible and vfx.turrets[0].visible,"Replay retains the sentry on the single mount; queued missile stays in inventory")
+	check(race.weapons.shots.is_empty(),"Finished active weapons cannot disrupt opponents still racing")
 	race.weapons.pulses.append({"id":99,"owner":0,"frame":Race.Weapons.pose(race,race.racers[1]),"age":0.,"radius":0.,"hit":{}})
 	race.weapons.step_emp(race,.1)
 	check(race.racers[1].emp_time==0. and not race.weapons.pulses[0].active,"A finisher's lingering EMP is cosmetic only")
@@ -87,7 +87,7 @@ func render_scene()->void:
 	var p:Dictionary=game.race.racers[0]
 	p.distance=game.race.track.length*game.race.laps-1.;p.speed=225.;p.startup=1.
 	p.lap=game.race.laps;p.checkpoint_index=game.race.checkpoints.gates.size()
-	p.weapon="missile";p.drone_time=2.;p.jammer_time=2.;p.jammer_deploy=1.
+	p.weapon="missile";p.drone_time=2.
 	game.world.update_camera(game.views[0].camera,0,0.,true)
 	game.race.step(.02,[{"throttle":1.},{},{},{},{},{}])
 	var output:="C:/dev/ion-rush-captures/victory"

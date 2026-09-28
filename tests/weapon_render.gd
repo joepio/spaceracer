@@ -5,6 +5,7 @@ func _initialize()->void:
 	call_deferred("run")
 func run()->void:
 	var game=load("res://main.tscn").instantiate();root.add_child(game)
+	game.set_process_input(false);game.set_process_unhandled_input(false)
 	if "--players=3" in OS.get_cmdline_user_args():
 		game.human_count=3;game.start_local()
 	elif "--warp-showcase" in OS.get_cmdline_user_args():
@@ -46,15 +47,6 @@ func run()->void:
 			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.impact_age=1.;p.speed=240.
 		race.racers[0].weapon="emp";race.weapons.activate(race,0)
 		race.weapons.step_emp(race,.3)
-	if "--jammer-showcase" in OS.get_cmdline_user_args():
-		race.weapons.missiles.clear();race.weapons.shots.clear()
-		for i in range(race.racers.size()):
-			var p:Dictionary=race.racers[i]
-			p.distance=start+[0.,50.,155.,400.,500.,600.][i]
-			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.impact_age=1.;p.speed=240.
-		race.racers[0].weapon="jammer";race.weapons.activate(race,0)
-		race.racers[0].jammer_deploy=1.
-		race.weapons.step_jammers(race)
 	if "--pickup-showcase" in OS.get_cmdline_user_args():
 		race.weapons.missiles.clear();race.weapons.shots.clear()
 		var pickup:Dictionary=race.weapons.pickups[1]
@@ -77,19 +69,6 @@ func run()->void:
 		race.racers[0].bump_time=.12
 		race.resolve_contacts()
 		assert(race.racers[1].energy==86.)
-	if "--battery-showcase" in OS.get_cmdline_user_args():
-		race.weapons.missiles.clear();race.weapons.shots.clear()
-		var battery:Dictionary=race.weapons.batteries[1]
-		for i in range(race.racers.size()):
-			var p:Dictionary=race.racers[i]
-			p.distance=battery.distance+[3.,-18.,-45.,400.,500.,600.][i];p.x=0.
-			p.warp_time=0.;p.warp_fx=0.;p.drone_time=0.;p.missile_warning=0.;p.shield_hit=0.;p.impact_age=1.;p.speed=180.
-		var collector:Dictionary=race.racers[0]
-		collector.energy=35.;collector.weapon="missile"
-		collector.weapon_before=battery.distance-4.;collector.weapon_x_before=battery.x;collector.x=battery.x
-		race.weapons.collect_energy(race,collector)
-		assert(collector.energy==60. and collector.weapon=="missile")
-		if "--pickup-respawn" in OS.get_cmdline_user_args(): race.weapons.begin_step(race,2.2,[{},{},{},{},{},{}])
 	if "--missile-showcase" in OS.get_cmdline_user_args():
 		race.racers[1].warp_time=0.;race.racers[1].warp_fx=0.;race.racers[2].drone_time=0.;race.weapons.shots.clear()
 		var blast_frame:Transform3D=race.Weapons.pose(race,race.racers[2])
@@ -140,7 +119,7 @@ func run()->void:
 		assert(game.world.weapon_vfx.pickup_lights[0].visible!=respawn)
 		print("BATTERY_RENDER respawn=",respawn," energy=",race.racers[0].energy)
 	if "--missile-showcase" in OS.get_cmdline_user_args():
-		assert(game.world.weapon_vfx.smoke.visible_instance_count==16)
+		assert(game.world.weapon_vfx.missile_nodes[missile.id].get_meta("trail").visible)
 		assert(game.world.weapon_vfx.explosions[0].layers.size()==4)
 		assert(game.world.weapon_vfx.blast_lights[0].visible==not ("--smoke-tail" in OS.get_cmdline_user_args()))
 		print("MISSILE_RENDER bounded smoke and flash verified")

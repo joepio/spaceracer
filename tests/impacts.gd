@@ -28,7 +28,7 @@ func run()->void:
 		if visual.visible:
 			check(not visual.blast.heat.visible,"Hit does not create a refractive shield shell")
 			check(visual.blast.flash.visible==(age<.09),"Impact light is brief")
-			for i in range(visual.debris.instance_count): check(visual.debris.get_instance_transform(i).origin.is_finite(),"Debris motion stays finite")
+			check(visual.get_child_count()==1,"Impact uses fire/smoke only, with no flat debris chips")
 	visual.queue_free();await process_frame
 	if "--render" in OS.get_cmdline_user_args(): await render_scene()
 	print("IMPACT_TESTS %d checks, %d failures"%[checks,failures]);quit(1 if failures else 0)

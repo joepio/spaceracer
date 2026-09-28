@@ -19,9 +19,11 @@ func review()->void:
 	game=load("res://main.tscn").instantiate()
 	root.add_child(game)
 	await process_frame
+	game.set_process_input(false);game.set_process_unhandled_input(false)
 	game.human_count=1
 	game.next_seed=31
 	game.start_local()
+	game.set_process(false);game.set_physics_process(false)
 	game.running=false
 	game.race.countdown=0
 	game.race.clock=20
@@ -38,7 +40,8 @@ func review()->void:
 		game.race.clock+=.6
 		await capture(example[1])
 	print("DISTRICT fixtures=",game.world.showpiece.fixtures.size()," probes=",game.world.showpiece.probes.size())
-	print("CITY_RENDER buildings=",game.world.scenery.layout.buildings.size()," billboards=",game.world.scenery.layout.billboards.size()," cars=",game.world.scenery.traffic.instance_count," tunnel_lights=",game.world.tunnel_lights.size())
+	print("NEON signs=",game.world.scenery.neon.signs.size()," panel_batches=",game.world.scenery.neon.sign_renderers.size()," local_lights=",game.world.scenery.local_lights.size())
+	print("CITY_RENDER buildings=",game.world.scenery.layout.buildings.size()," billboards=",game.world.scenery.layout.billboards.size()," cars=",game.world.scenery.air_traffic.cars.size()," tunnel_lights=",game.world.tunnel_lights.size())
 	game.queue_free()
 	await process_frame
 	quit()

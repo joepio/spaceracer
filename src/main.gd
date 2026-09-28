@@ -11,6 +11,8 @@ const KEYS = [
 	[KEY_J,KEY_L,KEY_I,KEY_K,KEY_U,KEY_Y,KEY_O],
 	[KEY_F,KEY_H,KEY_T,KEY_G,KEY_R,KEY_V,KEY_B],
 ]
+var cheats:=preload("res://src/dev_cheats.gd").new()
+var dev_label:Label
 var bridge: Node
 var race: RefCounted
 var world: Node3D
@@ -86,12 +88,22 @@ func _ready() -> void:
 		{"key":"laps","label":"Laps (next race)","kind":"number","default":3,"min":1,"max":5},
 		{"key":"difficulty","label":"Track difficulty (next race)","kind":"choice","default":"normal","options":["easy","normal","hard"]},
 		{"key":"biome","label":"World (next race)","kind":"choice","default":"city","options":Race.Track.BIOMES},
+		{"key":"seed","label":"Track seed (0 = random, next race)","kind":"number","default":0,"min":0,"max":99999},
 		{"key":"quality","label":"Graphics","kind":"choice","default":"high","options":["performance","balanced","high"]}])
 	ui = Control.new()
 	ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var canvas := CanvasLayer.new()
 	add_child(canvas)
 	canvas.add_child(ui)
+	dev_label=Label.new()
+	dev_label.text=cheats.LEGEND
+	dev_label.position=Vector2(18,48)
+	dev_label.add_theme_font_size_override("font_size",14)
+	dev_label.add_theme_color_override("font_color",Color("ffd16b"))
+	dev_label.add_theme_constant_override("outline_size",5)
+	dev_label.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	dev_label.visible=false
+	canvas.add_child(dev_label)
 	if mobile_mode:
 		touch_controls=load("res://src/touch_controls.gd").new()
 		touch_controls.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -103,6 +115,7 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	for arg in args:
 		if arg == "--demo": demo = true
+		elif arg=="--dev": cheats.enabled=true;dev_label.visible=true
 		elif arg=="--sdfgi": bounce_lighting=true
 		elif arg=="--direct-lighting": bounce_lighting=false
 		elif arg.begins_with("--players="): human_count = clampi(int(arg.get_slice("=",1)),1,4)
@@ -172,6 +185,7 @@ func randomize_menu_seed()->void:
 	refresh_menu_values()
 
 func start_random_race()->void:
+	randomize_scenery()
 	randomize_menu_seed()
 	next_seed=selected_seed
 	start_local()
@@ -187,7 +201,12 @@ func start_local() -> void:
 	running = true
 	new_race()
 
-func new_race() -> void:
+func randomize_scenery()->void:
+	# Independent rolls allow repeats, while giving all three settings equal odds.
+	biome=Race.Track.BIOMES.pick_random()
+
+func new_race(random_scenery:bool=false) -> void:
+	if random_scenery: randomize_scenery()
 	if is_instance_valid(world):
 		remove_child(world)
 		world.queue_free()
@@ -268,6 +287,7 @@ func layout_views() -> void:
 		configure_viewport_aa(views[i].viewport,quality)
 		views[i].viewport.positional_shadow_atlas_size=(2048 if count==1 and quality>=1. else 1024) if quality>=.8 else 0
 		views[i].viewport.render_target_update_mode=SubViewport.UPDATE_ONCE if local_paused else SubViewport.UPDATE_ALWAYS
+	if bridge.launched_by_daemon and bridge.phase in ["ready","paused"]: managed_rendering(false)
 
 func _physics_process(dt: float) -> void:
 	if local_paused: return
@@ -276,20 +296,26 @@ func _physics_process(dt: float) -> void:
 	if race.over:
 		race.step(dt,[])
 		results_clock += dt
-		if results_clock>=8: new_race()
+		if results_clock>=8: new_race(true)
 		return
 	var inputs: Array = []
 	for p in race.racers:
 		inputs.append(race.bot(p) if p.bot or in_menu or p.get("sleeping",false) else controls(p))
+	for view in views:
+		if race.racers[view.index].weapon=="railgun" and not race.racers[view.index].bot:
+			inputs[view.index]["rail_view"]=race.Weapons.Railgun.view_context(race,view.index,view.camera)
 	race.step(dt,inputs)
 	if race.over and bridge.launched_by_daemon: bridge.notify_finished(bridge.session)
+
+func driving_key(key:int)->bool:
+	return Input.is_physical_key_pressed(key) and not (cheats.enabled and cheats.KEYS.has(key))
 
 func controls(p: Dictionary) -> Dictionary:
 	if bridge.launched_by_daemon: return bridge.controls(p.get("controller",""))
 	var k: Array = KEYS[int(p.slot)%4]
-	var c := {"steer":float(Input.is_physical_key_pressed(k[1]))-float(Input.is_physical_key_pressed(k[0])),
-		"throttle":float(Input.is_physical_key_pressed(k[2])),"brake":float(Input.is_physical_key_pressed(k[3])),
-		"fire":Input.is_physical_key_pressed([KEY_X,KEY_SLASH,KEY_P,KEY_C][int(p.slot)%4]),"trim":0.0,"strafe":0.0,"boost":Input.is_physical_key_pressed(k[4]),"left":Input.is_physical_key_pressed(k[5]),"right":Input.is_physical_key_pressed(k[6]),"reset":Input.is_physical_key_pressed(KEY_1+int(p.slot)%4)}
+	var c := {"steer":float(driving_key(k[1]))-float(driving_key(k[0])),
+		"throttle":float(driving_key(k[2])),"brake":float(driving_key(k[3])),
+		"fire":driving_key([KEY_X,KEY_SLASH,KEY_P,KEY_C][int(p.slot)%4]),"trim":0.0,"strafe":0.0,"boost":driving_key(k[4]),"left":driving_key(k[5]),"right":driving_key(k[6]),"reset":Input.is_physical_key_pressed(KEY_1+int(p.slot)%4)}
 	var device: int = p.get("device",-1)
 	if device>=0 and Input.get_connected_joypads().has(device):
 		var axis := Input.get_joy_axis(device,JOY_AXIS_LEFT_X)
@@ -378,7 +404,7 @@ func update_speed_effects(view:Dictionary,dt:float)->void:
 	view.blur.set_shader_parameter("amount",amount if quality>=.8 and active else 0.)
 	view.blur.set_shader_parameter("warp",p.warp_fx if active else 0.)
 	view.blur.set_shader_parameter("emp",minf(1.,p.emp_time*4.) if active else 0.)
-	view.blur.set_shader_parameter("jam",p.jam_strength if active else 0.)
+	view.blur.set_shader_parameter("jam",Race.Weapons.emp_glitch(p) if active else 0.)
 	view.blur.set_shader_parameter("race_time",race.vfx_clock)
 	view.speed_effects.update_effects(view.camera,dt,active,quality<.8)
 
@@ -461,6 +487,13 @@ func _notification(what:int)->void:
 		get_tree().quit()
 
 func _input(event:InputEvent)->void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode==KEY_F8:
+			cheats.enabled=not cheats.enabled;dev_label.visible=cheats.enabled
+			get_viewport().set_input_as_handled();return
+		if cheats.enabled and running and not in_menu and cheats.KEYS.has(event.keycode):
+			cheats.grant(race,event.keycode)
+			get_viewport().set_input_as_handled();return
 	if not bridge.launched_by_daemon and not in_menu and event is InputEventJoypadButton and event.button_index==JOY_BUTTON_START and event.pressed:
 		get_viewport().set_input_as_handled()
 		pause_local()
@@ -537,8 +570,9 @@ func update_menu_holds(dt:float)->void:
 	state.fired=true
 	match key.y:
 		JOY_BUTTON_X: start_random_race()
-		JOY_BUTTON_DPAD_RIGHT: adjust_menu("seed",1)
-		JOY_BUTTON_DPAD_LEFT: adjust_menu("seed",-1)
+		JOY_BUTTON_DPAD_RIGHT,JOY_BUTTON_DPAD_LEFT:
+			randomize_scenery()
+			adjust_menu("seed",1 if key.y==JOY_BUTTON_DPAD_RIGHT else -1)
 		JOY_BUTTON_DPAD_UP,JOY_BUTTON_DPAD_DOWN:
 			var index:=Race.Track.DIFFICULTIES.find(difficulty)
 			var step:=1 if key.y==JOY_BUTTON_DPAD_UP else -1
@@ -595,7 +629,7 @@ func _unhandled_input(event:InputEvent)->void:
 		elif event.keycode==KEY_F2 and in_menu:
 			human_count=human_count%4+1
 			make_menu()
-		elif event.keycode==KEY_F5 and not in_menu: new_race()
+		elif event.keycode==KEY_F5 and not in_menu: new_race(true)
 
 func menu_style(fill:Color,border:Color=Color.TRANSPARENT)->StyleBoxFlat:
 	var style:=StyleBoxFlat.new()
@@ -773,17 +807,30 @@ func prepare(session:String,seats:Array,players:Array)->void:
 	running=false
 	quiet_window()
 	roster=managed_roster(seats,players)
+	bridge.notify_progress(session,5,"Building track")
 	new_race()
+	bridge.notify_progress(session,65,"Warming renderer")
 	# Draw at real display dimensions before Ready. Park off-screen while warming.
 	if not headless:
 		get_window().mode=Window.MODE_WINDOWED
-		for warmup in range(60): await RenderingServer.frame_post_draw
+		for warmup in range(60):
+			await RenderingServer.frame_post_draw
+			if bridge.session!=session: return
 	if bridge.session!=session: return
+	bridge.notify_progress(session,100,"Ready")
 	quiet_window()
+	managed_rendering(false)
 	bridge.ready_for_session(session)
 	Engine.max_fps=30
 
+func managed_rendering(enabled:bool)->void:
+	for view in views:
+		view.viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS if enabled else SubViewport.UPDATE_DISABLED
+		view.visor.suspended=not enabled
+		view.visor.sync_visibility()
+
 func start_managed(_session:String)->void:
+	managed_rendering(true)
 	back_release=0
 	running=true
 	Engine.max_fps=120
@@ -805,6 +852,7 @@ func quiet_window()->void:
 		window.mode=Window.MODE_MINIMIZED
 
 func pause_managed(_session:String)->void:
+	managed_rendering(false)
 	running=false
 	back_release=0
 	quiet_window()
@@ -840,6 +888,7 @@ func setting_changed(key:String,value:Variant)->void:
 	if key=="laps": laps=clampi(int(value),1,5)
 	elif key=="difficulty" and str(value) in Race.Track.DIFFICULTIES: difficulty=str(value)
 	elif key=="biome" and str(value) in Race.Track.BIOMES: biome=str(value)
+	elif key=="seed": next_seed=clampi(int(value),0,MAX_SEED)
 	elif key=="quality":
 		quality={"performance":.6,"balanced":.8,"high":1.0}.get(str(value),1.0)
 		layout_views()
@@ -884,6 +933,10 @@ func write_probe()->void:
 			var copy:Dictionary=p.duplicate()
 			for key in ["time","best_lap"]:
 				if not is_finite(copy[key]): copy[key]=null
+			if is_instance_valid(world) and world.ships.size()>snapshot.size():
+				var face:RefCounted=world.ships[snapshot.size()].get_meta("pilot_face")
+				copy.face_revision=face.revision
+				copy.face_signature=face.signature
 			snapshot.append(copy)
 	var state:Dictionary={"phase":bridge.phase,"running":running,
 		"speed_travel":views.map(func(view):return view.speed_effects.travel),
@@ -894,7 +947,7 @@ func write_probe()->void:
 		"sound_enabled":sound_enabled,"muted":AudioServer.is_bus_mute(0),"clock":race.clock if race else -1,"countdown":race.countdown if race else -1,"vfx_clock":race.vfx_clock if race else -1,
 		"racers":snapshot,"views":views.size(),"session":bridge.session,
 		"city_time":world.scenery.animation_time if race and is_instance_valid(world) else 0.0,
-		"traffic_position":str(world.scenery.traffic.get_instance_transform(0).origin) if race and is_instance_valid(world) and world.scenery.traffic.instance_count>0 else "",
+		"traffic_position":str(world.scenery.air_traffic.car_frame(world.scenery.air_traffic.cars[0]).origin) if race and is_instance_valid(world) and world.scenery.traffic.instance_count>0 else "",
 		"tunnel_time":world.tunnel_material.get_shader_parameter("race_time") if race and is_instance_valid(world) else 0.0}
 	var file:=FileAccess.open(path,FileAccess.WRITE)
 	if file: file.store_string(JSON.stringify(state))

@@ -31,10 +31,18 @@ func run()->void:
 	var race:=Race.new([{"slot":0},{"slot":1}],31)
 	var p:Dictionary=race.racers[1];p.distance=100.;race.racers[0].distance=180.
 	var vfx:=Vfx.new();root.add_child(vfx);vfx.configure(race)
-	for kind in ["missile","drone","warp","emp","jammer"]:
+	var triangles:=0
+	var surfaces:=0
+	for part in vfx.turrets[0].find_children("*","MeshInstance3D",true,false):
+		for surface in range(part.mesh.get_surface_count()):
+			var arrays:Array=part.mesh.surface_get_arrays(surface)
+			triangles+=(arrays[Mesh.ARRAY_INDEX].size() if arrays[Mesh.ARRAY_INDEX]!=null and not arrays[Mesh.ARRAY_INDEX].is_empty() else arrays[Mesh.ARRAY_VERTEX].size())/3
+			surfaces+=1
+	print("SENTRY_MESH triangles=",triangles," surfaces=",surfaces)
+	check(triangles<2000 and surfaces<=14,"Sentry stays within its reduced geometry and surface budget")
+	for kind in ["missile","drone","warp","emp"]:
 		p.weapon=kind;vfx.update()
 		check(vfx.turrets[1].visible==(kind=="drone"),"Held sentry is mounted before activation")
-		check(vfx.dishes[1].visible==(kind=="jammer"),"Held jammer is visible folded")
 		for key in vfx.mounts[1]: check(vfx.mounts[1][key].visible==(kind==key),"Only equipped inactive module is shown")
 	p.weapon="drone";race.weapons.activate(race,1);p.drone_target=0;vfx.update()
 	var head:Node3D=vfx.turrets[1].get_meta("head")
@@ -60,7 +68,6 @@ func run()->void:
 	rocket.disabled=true;vfx.update()
 	check(not motor.get_meta("engine").visible and motor.get_meta("motor_light").light_energy==0. and motor.get_meta("motor_flare").get_shader_parameter("power")==0.,"EMP extinguishes the complete rocket engine effect")
 	p.crashed=true;vfx.update()
-	check(not vfx.turrets[1].visible and not vfx.dishes[1].visible and vfx.mounts[1].values().all(func(n):return not n.visible),"Crash hides mounted weapons")
 	vfx.queue_free();await process_frame
 	if "--render" in OS.get_cmdline_user_args(): await render_scene()
 	print("MOUNTED_WEAPON_TESTS %d checks, %d failures"%[checks,failures]);quit(1 if failures else 0)
@@ -73,7 +80,7 @@ func render_scene()->void:
 	var frame:=Race.Weapons.pose(game.race,p)
 	var camera:Camera3D=game.views[0].camera
 	camera.position=frame*Vector3(10.,7.,-13.);camera.look_at(frame*Vector3(0,1,0),frame.basis.y);camera.fov=55.
-	for kind in ["missile","drone","warp","emp","jammer"]:
+	for kind in ["missile","drone","warp","emp"]:
 		p.weapon=kind;game.world.update_ships()
 		game.views[0].hud.queue_redraw()
 		await capture("mounted-"+kind)

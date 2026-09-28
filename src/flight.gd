@@ -2,6 +2,9 @@ extends RefCounted
 ## World-space arcade flight. No road force or track-frame following after launch.
 const HOVER:=1.3
 const AIR_SPEED:=235.
+const AIR_RECOVERY_THRUST:=140.
+const AIR_CRUISE_THRUST:=44.
+const TAKEOFF_HANDOFF:=.65
 const Track=preload("res://src/track.gd")
 const Impact=preload("res://src/impact_vfx.gd")
 
@@ -40,13 +43,13 @@ static func unload(p:Dictionary,dt:float,crest_force:float,hold_force:float)->bo
 	if loose>.35 and p.speed>260:
 		demand=maxf(demand,clampf((crest_force-hold_force)/180,0,1))
 	if not available: demand=0.0
-	p.unload=lerpf(p.unload,demand,1-exp(-dt*4))
-	var target:float=4.5*p.unload*p.unload
+	p.unload=lerpf(p.unload,demand,1-exp(-dt*6.5))
+	var target:float=3.6*p.unload*p.unload
 	# A damped hover spring provides visible rising motion before release.
-	p.lift_speed+=((target-p.lift)*32-p.lift_speed*9)*dt
+	p.lift_speed+=((target-p.lift)*64-p.lift_speed*16)*dt
 	p.lift=maxf(0,p.lift+p.lift_speed*dt)
 	if p.lift==0: p.lift_speed=maxf(0,p.lift_speed)
-	return available and p.unload>.82 and p.lift>2.6 and p.lift_speed>0
+	return available and p.unload>.68 and p.lift>1.35 and p.lift_speed>0
 
 static func launch(p:Dictionary,n:Dictionary,clock:float=0.0)->void:
 	var transform:=ground_pose(p,n,clock)
@@ -60,6 +63,12 @@ static func launch(p:Dictionary,n:Dictionary,clock:float=0.0)->void:
 	# No position step, launch impulse or instantaneous turn of the flight path.
 	p.air_velocity=p.ground_velocity
 	p.air_entry_speed=p.air_velocity.length()
+	# Raised magnetic suspension needs a force handoff. A ramp already supplied
+	# its launch trajectory; blending its curvature into free flight pulls down.
+	p.air_handoff=TAKEOFF_HANDOFF if p.unload>.35 else 0.
+	p.air_soft_takeoff=p.unload>.35
+	p.air_entry_rates=p.air_rates
+	p.air_entry_acceleration=Vector3(p.get("ground_acceleration",Vector3.ZERO)).limit_length(180.)
 	p.on_pad=false
 	p.slide=0.0
 	p.drifting=false
@@ -71,16 +80,20 @@ static func integrate_air(p:Dictionary,dt:float,roll_input:float,yaw_input:float
 	var velocity:Vector3=p.air_velocity
 	var speed:=velocity.length()
 	var authority:=lerpf(.25,1.0,smoothstep(65,200,speed))
+	var remaining:float=p.get("air_handoff",0.)
+	var handoff:=smoothstep(0.,TAKEOFF_HANDOFF,TAKEOFF_HANDOFF-remaining+dt*.5)
+	p.air_handoff=maxf(0.,remaining-dt)
 	# Body-axis rate controls: releasing the stick arrests rotation, not bank.
 	# +Z is the nose, -X is pilot-right; back stick gives negative X pitch.
 	var desired:=Vector3(p.trim*1.8,-yaw_input*1.65,roll_input*3.8)*authority
+	if remaining>0.: desired=Vector3(p.air_entry_rates).lerp(desired,handoff)
 	p.air_rates=p.air_rates.lerp(desired,1-exp(-dt*24))
 	# Arcade jet turning: at flying speed, pitch/yaw bend the flight path with
 	# the nose instead of letting it rotate away from nearly unchanged momentum.
 	# Roll alone still banks the wings. Slow or stalled craft must regain airspeed.
 	var forward_speed:=maxf(0.,velocity.dot(frame.z))
 	var alignment:=frame.z.dot(velocity.normalized()) if speed>1. else 0.
-	var turn_grip:=smoothstep(80.,180.,forward_speed)*smoothstep(.25,.8,alignment)*.95
+	var turn_grip:=smoothstep(80.,180.,forward_speed)*smoothstep(.25,.8,alignment)*.95*handoff
 	var path_rotation:Vector3=frame*Vector3(p.air_rates.x,p.air_rates.y,0.)*dt*turn_grip
 	if path_rotation.length_squared()>.000000001:
 		velocity=velocity.rotated(path_rotation.normalized(),path_rotation.length())
@@ -102,11 +115,22 @@ static func integrate_air(p:Dictionary,dt:float,roll_input:float,yaw_input:float
 	var camber:=lerpf(.22,.8,smoothstep(100.,210.,forward_air))
 	var coefficient:=clampf(camber+attack*7,-2.0,4.0)*stall
 	var lift_force:=clampf(forward_air*forward_air*.0011*coefficient*attached,-260,350)
-	var force:=frame.z*throttle*44+wing_lift*lift_force+Vector3.DOWN*48
+	# Strong low-speed jet thrust recovers a stall. Fade the extra thrust by
+	# flying speed so ordinary flight, jump range and the lower air cap remain.
+	# Use nose-aligned airspeed: falling rapidly is not forward acceleration.
+	var engine_thrust:=lerpf(AIR_RECOVERY_THRUST,AIR_CRUISE_THRUST,smoothstep(90.,210.,forward_air))
+	var force:=frame.z*throttle*engine_thrust+wing_lift*lift_force+Vector3.DOWN*48
 	force-=velocity*(.035+speed*.00075+brake*.65+absf(attack)*.12+(1.-attached)*.12)
 	force-=frame.x*velocity.dot(frame.x)*3.2
+	# Ease from measured road acceleration into lift/drag and fighter controls.
+	# Keep the existing position, velocity and attitude; there is no launch kick.
+	if remaining>0.: force=Vector3(p.air_entry_acceleration).lerp(force,handoff)
 	# Preserve launch momentum, then smoothly settle below road cruise speed.
-	var limit:=maxf(AIR_SPEED,float(p.get("air_entry_speed",AIR_SPEED))-70.*p.air_time)
+	var slowing_time:float=p.air_time
+	if p.get("air_soft_takeoff",false):
+		# Ease into airborne drag rather than imposing 70 m/s² at detachment.
+		slowing_time-=.35*(1.-exp(-p.air_time/.35))
+	var limit:=maxf(AIR_SPEED,float(p.get("air_entry_speed",AIR_SPEED))-70.*slowing_time)
 	velocity=(velocity+force*dt).limit_length(limit)
 	p.air_velocity=velocity
 	p.air_position+=velocity*dt

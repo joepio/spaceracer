@@ -19,9 +19,17 @@ func run()->void:
 	p.air_position=n.p+n.frame.y*5.;p.air_frame=n.frame
 	p.air_velocity=n.frame.z*180.-n.frame.y*45.;p.speed=p.air_velocity.length()
 	world.update_ships()
+	p.color="#ff315e" # Change after mesh creation to reproduce stale pooled paint.
 	Race.Flight.crash(p,n.frame.y)
 	world.update_ships()
 	check(not world.ships[0].visible and world.crashes[0].fragments.size()==16,"Destroyed hull is replaced by 16 recognizable ship components")
+	var wreck:Node3D=world.crashes[0]
+	var hull:MeshInstance3D=wreck.templates[0].copy
+	var red:Color=Color("ff315e")
+	check(hull.material_override.get_shader_parameter("tint").is_equal_approx(red),"Wreck takes the current car color even when changed after creation")
+	check(hull.material_override.shader.resource_path=="res://src/wreck_surface.gdshader","Fragments use patchy scorch shading")
+	check(wreck.fire_mesh.visible and wreck.fire.instance_count==12,"Small bounded 3D flames attach to four wreck components")
+	check(wreck.get_child_count()==wreck.fragments.size()+2,"Crash has real components, flames and blast, without extra box debris")
 	check(p.crash_velocity.length()>180.,"Impact retains pre-crash momentum before HUD speed drops to zero")
 	var parts:Array=[]
 	for piece in p.wreck.pieces: parts.append({"frame":piece.frame,"half":piece.half})
@@ -38,7 +46,9 @@ func run()->void:
 	check(p.input_steer==0. and p.input_pitch==0. and p.input_strafe==0. and p.input_throttle==0. and p.engine_power==0.,"Wreck ignores steering, pitch, roll, throttle and boost")
 	check(world.ships[0].get_node("WingControlL").transform==fin,"Wreck fin pose cannot be controlled")
 	var paused:Transform3D=p.wreck.pieces[0].frame
+	var frozen_fire:Transform3D=wreck.fire.get_instance_transform(0)
 	world.update_ships();world.update_ships()
+	check(wreck.fire.get_instance_transform(0)==frozen_fire,"Pause also freezes attached flames")
 	check(p.wreck.pieces[0].frame==paused,"Rendering cannot move wrecks while simulation is paused")
 	check(p.wreck_wait and p.recovery==0. and p.energy==75.,"Breakup stays visible during recovery delay without repeated damage")
 	for tick in range(600): reference.step(1./120.,race.track,p.distance)

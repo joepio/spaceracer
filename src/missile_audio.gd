@@ -43,6 +43,7 @@ func update(race:RefCounted,views:Array,running:bool,enabled:bool)->void:
 		for view in views: distance=minf(distance,view.camera.global_position.distance_to(burst.position))
 		if distance>600.: continue
 		var voice:=voices[id%voices.size()]
+		voice.pitch_scale=.7 if burst.get("size",14.)>30. else 1.
 		voice.stream=stream;voice.volume_db=-8.-20.*log(maxf(1.,distance/40.))/log(10.)
 		voice.play()
 

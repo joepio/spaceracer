@@ -26,7 +26,7 @@ func run()->void:
 				check(absf(m.launch_speed-1500./3.6)<.001,"Cruise reaches 1500 km/h independent of lead gap")
 				check(m.position.distance_to(Race.Track.point(n,m.x,10.))<.001,"Cruise follows banked road, loops and gaps without corner cutting")
 		check(m.terminal<0. and race.weapons.missiles.size()==1,"Far-away leader does not force an early terminal dive or timeout")
-		check(m.trail.size()<=16 and features.size()>1,"Trail stays bounded through varied track features")
+		check(m.trail.size()<=race.Weapons.MISSILE_TRAIL_POINTS and features.size()>1,"Trail stays bounded through varied track features")
 	# Terminal travel also respects the speed cap and produces exactly one hit.
 	var race:=Race.new([{"slot":2},{"slot":7}],31)
 	race.countdown=0.;race.clock=5.

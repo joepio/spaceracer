@@ -9,6 +9,7 @@ func _initialize()->void:
 	call_deferred("run")
 func run()->void:
 	var game:Node=load("res://main.tscn").instantiate();root.add_child(game)
+	game.set_process_input(false);game.set_process_unhandled_input(false)
 	game.human_count=2;game.next_seed=31;game.start_local()
 	game.set_process(false);game.set_physics_process(false)
 	var race:RefCounted=game.race
@@ -23,7 +24,7 @@ func run()->void:
 	var output:="C:/dev/ion-rush-captures/missile-warning"
 	DirAccess.make_dir_recursive_absolute(output)
 	var brightness:=0.
-	for eta in [4.,1.5,.2]:
+	for eta in [5.,3.,.75,.6,.3,.1]:
 		missile.distance=start-eta*(race.Weapons.MISSILE_SPEED-220.)
 		missile.position=race.Track.point(race.track.sample(missile.distance),0.,10.)
 		# Offset the close approach so the beam profile is visible beside the hull.
@@ -32,10 +33,10 @@ func run()->void:
 		check(is_equal_approx(race.Weapons.missile_eta(race,missile),eta),"Cruise warning accounts for target speed and route distance")
 		game.world.update_ships()
 		var beam:MeshInstance3D=game.world.weapon_vfx.missile_nodes[missile.id].get_meta("laser")
-		check(beam.visible==(eta<2.),"Laser appears only inside the two-second impact window")
+		check(beam.visible==(eta<race.Weapons.MISSILE_LASER_TIME),"Laser appears only inside the final 0.75-second impact window")
 		var effects:Node3D=game.world.weapon_vfx.missile_nodes[missile.id]
 		check(effects.get_meta("contact").visible==beam.visible and effects.get_meta("contact_light").visible==beam.visible,"Contact glow and hull light share warning timing")
-		if eta<2.:
+		if eta<race.Weapons.MISSILE_LASER_TIME:
 			var energy:float=beam.material_override.get_shader_parameter("strength")
 			check(energy>brightness,"Laser brightness increases as impact approaches")
 			brightness=energy
@@ -45,12 +46,29 @@ func run()->void:
 		for frame in range(12): await process_frame
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png(output.path_join("eta-%.1f.png"%eta))
+	# Lock does not leave a persistent beam if the target opens the gap again.
+	missile.locked=true;missile.distance=start-2.*(race.Weapons.MISSILE_SPEED-220.)
+	game.world.update_ships()
+	check(not game.world.weapon_vfx.missile_nodes[missile.id].get_meta("laser").visible,"Locked missile outside the last-moment window has no beam")
+	missile.distance=start-.1*(race.Weapons.MISSILE_SPEED-220.)
 	missile.disabled=true;missile.evaded=true;game.world.update_ships()
 	check(not game.world.weapon_vfx.missile_nodes[missile.id].get_meta("engine").visible,"EMP extinguishes missile exhaust")
 	check(not game.world.weapon_vfx.missile_nodes[missile.id].get_meta("laser").visible,"EMP removes targeting laser")
 	check(not game.world.weapon_vfx.missile_nodes[missile.id].get_meta("contact").visible and not game.world.weapon_vfx.missile_nodes[missile.id].get_meta("contact_light").visible,"EMP removes contact glow and hull light")
 	missile.disabled=false;missile.evaded=true;game.world.update_ships()
 	check(not game.world.weapon_vfx.missile_nodes[missile.id].get_meta("laser").visible,"Successful evasion immediately removes the laser")
+	race.weapons.missiles.clear()
+	for i in range(1,race.racers.size()): race.racers[i].finished=true
+	race.racers[0].weapon="missile"
+	check(race.weapons.activate(race,0),"Free launch works when all rivals have finished")
+	missile=race.weapons.missiles[0]
+	for i in range(60): race.weapons.step_missile(race,missile,1./60.)
+	game.world.update_ships()
+	for view in game.views: view.hud.queue_redraw()
+	for frame in range(12): await process_frame
+	await RenderingServer.frame_post_draw
+	check(not game.world.weapon_vfx.missile_nodes[missile.id].get_meta("laser").visible,"Untargeted flight renders without a laser or invalid target access")
+	root.get_texture().get_image().save_png(output.path_join("untargeted-launch.png"))
 	game.queue_free();await process_frame
 	print("MISSILE_WARNING_TESTS %d checks, %d failures"%[checks,failures])
 	quit(1 if failures else 0)

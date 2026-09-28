@@ -38,7 +38,7 @@ func run()->void:
 		race.weapons.rng.seed=1234
 		for i in range(6000):
 			if race.weapons.choose(count,count,1800.)=="warp": distant_warps+=1
-		check(close_warps>600 and close_warps<1100 and distant_warps>2300 and distant_warps<2750,"Warp is substantially more likely far behind, racers=%d"%count)
+		check(close_warps>600 and close_warps<1300 and distant_warps>close_warps*2.5 and distant_warps<3600,"Warp is substantially more likely far behind after redistributing jammer odds, racers=%d"%count)
 	for rank in range(1,7):
 		for gap in [0.,150.,500.,1500.,10000.]:
 			var odds:Vector3=race.Weapons.weights(rank,6,gap)

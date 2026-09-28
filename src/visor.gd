@@ -6,6 +6,7 @@ var surface:SubViewport
 var projection:ShaderMaterial
 var hud:Control
 var systems_online:=true
+var suspended:=false
 var brightness:=1.0
 
 func setup(instruments:Control)->void:
@@ -40,16 +41,17 @@ func set_resolution(pixels:Vector2i)->void:
 
 func sync_visibility()->void:
 	visible=hud.visible
-	surface.render_target_update_mode=SubViewport.UPDATE_ALWAYS if visible and systems_online else SubViewport.UPDATE_DISABLED
+	surface.render_target_update_mode=SubViewport.UPDATE_ALWAYS if visible and systems_online and not suspended else SubViewport.UPDATE_DISABLED
 
 func _process(dt:float)->void:
 	if not is_instance_valid(hud) or hud.race==null: return
 	var p:Dictionary=hud.race.racers[hud.player_index]
-	var powered:bool=p.emp_time<=0.
+	var glitch:float=hud.race.Weapons.emp_glitch(p)
+	var powered:bool=p.emp_time<=0. or glitch>0.
 	if systems_online!=powered:
 		systems_online=powered
 		sync_visibility()
-	brightness=move_toward(brightness,1.,dt*5.) if powered else 0.
+	brightness=glitch if p.emp_time>0. else move_toward(brightness,1.,dt*5.)
 	projection.set_shader_parameter("online",brightness)
 	projection.set_shader_parameter("damage",clampf(p.flash,0.,1.))
 	projection.set_shader_parameter("quiet",p.finished or hud.race.over)

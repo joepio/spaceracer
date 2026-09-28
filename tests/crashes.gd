@@ -39,10 +39,10 @@ func run()->void:
 	race.racers.pop_back()
 	var effect:=Vfx.new();root.add_child(effect)
 	effect.update(p,0.);effect.update(p,.2)
-	var debris:Transform3D=effect.debris.get_instance_transform(0)
-	check(effect.visible and effect.flash.light_energy>0.,"Impact displays debris and a short light flash")
+	var frozen_age:float=effect.blast.age
+	check(effect.visible and effect.flash.light_energy>0.,"Impact displays the fire/smoke burst and a short light flash")
 	effect.update(p,.2)
-	check(effect.debris.get_instance_transform(0)==debris,"Paused clock freezes explosion motion")
+	check(effect.blast.age==frozen_age,"Paused clock freezes explosion motion")
 	check(not race.can_reset(p),"Wreck hides the manual-reset prompt and touch button")
 	race.step(.5,[{"reset":true}])
 	check(p.crashed and p.wreck_time<2.,"Y cannot skip or restart the automatic wreck delay")
@@ -51,7 +51,7 @@ func run()->void:
 	check(p.distance<=500. and Race.Track.supported(race.track.sample(p.distance),p.x),"Recovery cannot advance race progress")
 	check(p.speed==90. and p.weapon_guard==2. and p.crash_id==id,"Automatic recovery restores momentum and protection without another explosion")
 	effect.update(p,race.vfx_clock)
-	check(effect.debris.visible_instance_count==0 and effect.blast.visible,"Recovery hides debris while the impact smoke finishes fading")
+	check(not effect.fire_mesh.visible and effect.blast.visible,"Recovery hides debris while the impact smoke finishes fading")
 	effect.update(p,4.)
 	check(not effect.visible,"Explosion fully expires after its smoke tail")
 	effect.queue_free()
@@ -78,6 +78,9 @@ func run()->void:
 	for tick in range(600):
 		flyer.air_time+=1./120.;Race.Flight.integrate_air(flyer,1./120.,0.,0.,1.,0.)
 	check(flyer.speed<=235.01 and flyer.speed<Race.TOP_SPEED,"Sustained flight is slower than unboosted driving, including dives")
+	if "--crash-only" in OS.get_cmdline_user_args():
+		print("CRASH_LIFECYCLE_TESTS ",checks," checks, ",failures," failures")
+		await process_frame;quit(1 if failures else 0);return
 	for seed_value in [6,31,145,421]:
 		var normal:=Race.Track.new(seed_value,"normal")
 		var hard:=Race.Track.new(seed_value,"hard")

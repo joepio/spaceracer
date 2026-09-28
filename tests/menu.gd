@@ -181,13 +181,29 @@ func run()->void:
 	check(game.difficulty=="hard","Hold up raises difficulty without wrapping hard to easy")
 	await hold(JOY_BUTTON_X,.99)
 	check(game.race==previous and game.local_paused,"Short random-race hold cannot discard race")
+	seed(73)
+	var random_world:String=game.Race.Track.BIOMES.pick_random()
+	seed(73)
+	game.biome=game.Race.Track.BIOMES[(game.Race.Track.BIOMES.find(random_world)+1)%3]
 	await hold(JOY_BUTTON_X,1.01)
 	check(game.running and not game.local_paused and game.race!=previous and game.race.track.seed_value!=seed_before,"Full X hold immediately starts a different random track")
-	check(game.human_count==2 and game.race.track.biome=="forest" and game.race.track.difficulty=="hard" and game.laps==3,"Quick random race preserves all race settings")
+	check(game.human_count==2 and game.race.track.biome==random_world and game.biome==random_world and game.race.track.difficulty=="hard" and game.laps==3,"Quick random race rolls scenery while preserving players, difficulty and laps")
 	await press(JOY_BUTTON_START)
 	seed_before=game.selected_seed
 	row("random_race").grab_focus();await press(JOY_BUTTON_A)
 	check(game.running and game.race.track.seed_value!=seed_before and game.views.size()==2,"Random-race menu button works with A and preserves player count")
+	seed(91);random_world=game.Race.Track.BIOMES.pick_random();seed(91)
+	await tap_key(KEY_F5)
+	check(game.race.track.biome==random_world and game.biome==random_world,"F5 rolls scenery for the next track")
+	await press(JOY_BUTTON_START)
+	var restart_world:String=game.race.track.biome
+	var restart_seed:int=game.race.track.seed_value
+	row("restart").grab_focus();await press(JOY_BUTTON_A)
+	check(game.race.track.biome==restart_world and game.race.track.seed_value==restart_seed,"Restart preserves the same track and scenery")
+	seed(117);random_world=game.Race.Track.BIOMES.pick_random();seed(117)
+	game.race.over=true;game.results_clock=8.
+	game._physics_process(0.)
+	check(game.race.track.biome==random_world and game.race.track.difficulty=="hard" and game.human_count==2,"Automatic next race rolls scenery and keeps race settings")
 	print("MENU_TESTS ",failures," failures")
 	game.queue_free()
 	await process_frame

@@ -113,14 +113,16 @@ func transition_checks()->void:
 			check(p.air_frame.z.dot(expected.basis.z)>.99999,"Takeoff preserves the visible attitude")
 			break
 	check(p.airborne,"Sustained back-stick eventually releases magnetic adhesion")
-	check(warning_frames>35,"Visible lift warning lasts long enough to react before takeoff")
+	check(warning_frames>18,"Shorter lift buildup retains a readable warning before takeoff")
 	check(max_relative_step<.7,"Chase camera offset has no takeoff discontinuity")
 	# A pilot can abort the launch during the warning by pushing forward.
 	var abort:=Race.new([{"slot":0,"bot":false}],31)
 	abort.countdown=0
 	var q:Dictionary=abort.racers[0]
 	q.speed=265.0
-	for tick in range(65): abort.step(1.0/120,[{"throttle":1.0,"trim":-1.0}])
+	for tick in range(65):
+		abort.step(1.0/120,[{"throttle":1.0,"trim":-1.0}])
+		if q.lift>.4: break
 	check(not q.airborne and q.lift>.3,"Partial takeoff has a recoverable warning phase")
 	for tick in range(180): abort.step(1.0/120,[{"throttle":1.0,"trim":1.0}])
 	check(not q.airborne and q.lift<.03,"Forward stick settles the craft without forced launch")
@@ -232,6 +234,9 @@ func run()->void:
 		else: check(pilot_air.air_rates.z>1.5 and absf(pilot_air.air_rates.y)<.001,"Right-stick input rolls without yawing")
 	# Reset preserves its cost except a depleted hull gets a small survival reserve.
 	var reset_race:=Race.new([{"slot":0}],31,1,"normal")
+	# Isolate reset cost from charging strips that can now cover the recovery point.
+	for node in reset_race.track.nodes:
+		if node.zone=="repair": node.zone=""
 	reset_race.countdown=0
 	var reset_p:Dictionary=reset_race.racers[0]
 	reset_p.energy=40.

@@ -13,17 +13,15 @@ static func step(p:Dictionary,track:RefCounted,dt:float,clock:float)->void:
 		p.victory_mounts=[]
 		if p.weapon!="": p.victory_mounts.append(p.weapon)
 		if p.drone_time>0.: p.victory_mounts.append("drone")
-		if p.jammer_time>0.: p.victory_mounts.append("jammer")
 		if p.warp_time>0. or p.warp_fx>0.: p.victory_mounts.append("warp")
 		p.warp_time=0.;p.boost=0.;p.on_pad=false
-		p.emp_time=0.;p.jam_strength=0.
+		p.emp_time=0.
 		p.airborne=false;p.crashed=false;p.recovery=0.;p.flash=0.
 		p.bump_time=0.;p.drone_target=-1
 	# Finishers retain their hardware. Active effects settle naturally to idle,
 	# without firing, damaging opponents or disappearing from the replay shots.
-	p.drone_time=maxf(0.,p.drone_time-dt);p.jammer_time=maxf(0.,p.jammer_time-dt)
+	p.drone_time=maxf(0.,p.drone_time-dt)
 	p.warp_fx=move_toward(p.warp_fx,0.,dt*4.)
-	p.jammer_deploy=move_toward(p.jammer_deploy,.3 if "jammer" in p.victory_mounts else 0.,dt*2.)
 	p.impact_age=minf(.55,p.impact_age+dt);p.pickup_fx=maxf(0.,p.pickup_fx-dt)
 	var age:float=p.victory_age+dt
 	p.victory_age=age

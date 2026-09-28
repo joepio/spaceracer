@@ -15,7 +15,7 @@ func check(ok:bool,message:String)->void:
 func fresh()->RefCounted:
 	var race:=Race.new([{"slot":2},{"slot":7},{"slot":11}],31)
 	race.track=StraightRoad.new();race.countdown=0.;race.clock=5.
-	race.weapons.pickups.clear();race.weapons.batteries.clear()
+	race.weapons.pickups.clear()
 	for i in range(3):
 		var p:Dictionary=race.racers[i]
 		p.distance=100.+i*30.;p.x=0.;p.speed=265.;p.startup=1.;p.ignited=true;p.engine_power=1.

@@ -5,6 +5,8 @@ var buckets:Dictionary={}
 var shapes:Array[Dictionary]=[]
 var moving:Array[Transform3D]=[]
 var terrain:RefCounted
+var traffic:RefCounted
+var ground_traffic:RefCounted
 
 func add_box(frame:Transform3D,bounds:AABB=AABB(Vector3.ONE*-.5,Vector3.ONE))->void:
 	var world:AABB=frame*bounds
@@ -50,6 +52,14 @@ func trace(from:Vector3,to:Vector3,radius:float=3.6)->Dictionary:
 	if terrain!=null:
 		nearest=terrain.trace(from,to,radius)
 		if not nearest.is_empty(): best=from.distance_squared_to(nearest.position)
+	if traffic!=null:
+		var contact:Dictionary=traffic.trace(from,to,radius)
+		if not contact.is_empty() and from.distance_squared_to(contact.position)<best:
+			nearest=contact;best=from.distance_squared_to(contact.position)
+	if ground_traffic!=null:
+		var contact:Dictionary=ground_traffic.trace(from,to,radius)
+		if not contact.is_empty() and from.distance_squared_to(contact.position)<best:
+			nearest=contact;best=from.distance_squared_to(contact.position)
 	for cell in Cells.cells(AABB(from,Vector3.ZERO).expand(to).grow(radius)):
 		for id in buckets.get(cell,[]):
 			if seen.has(id): continue

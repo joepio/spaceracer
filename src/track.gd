@@ -1,7 +1,10 @@
 extends RefCounted
+const Recharge=preload("res://src/recharge_strips.gd")
+var recharge_strips:Array[Dictionary]=[]
 const Components=preload("res://src/track_components.gd")
 const HazardCollision=preload("res://src/obstacles.gd")
 const Profiles=preload("res://src/track_profiles.gd")
+const CornerWarnings=preload("res://src/corner_warnings.gd")
 ## Closed magnetic ribbon with continuous frames through inverted sections.
 const THEMES = [
 	["MIDNIGHT GRID", Color("050b26"), Color("223e85"), Color("24eacd"), Color("ff4d9e")],
@@ -38,6 +41,7 @@ var obstacles:RefCounted
 var hazards:=HazardCollision.new()
 var components:Array[Dictionary]=[]
 var dead_ends:Array[Dictionary]=[]
+var corner_warnings:Array[Dictionary]=[]
 
 func base_position(u: float) -> Vector3:
 	var a := u * TAU
@@ -167,7 +171,9 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 			if u>loop.start and u<loop.end: loop_section=true
 		var zone:=""
 		if u<.065: zone="repair"
-		elif (u>.115 and u<.142) or (u>.63 and u<.65): zone="boost"
+		else:
+			for span in profile.boosts:
+				if u>span[0] and u<span[1]: zone="boost";break
 		var section:="MAGNETIC LOOP" if loop_section else ("SKYLINE DIVE" if u>.49 and u<.64 else ("TECHNICAL SECTOR" if u>.38 and u<.48 else "HIGH SPEED SWEEP"))
 		var hint:=base_position(u+.001)-base_position(u-.001)
 		hint.y=0
@@ -208,11 +214,15 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 		n.curve=derivative.dot(right)
 		n.crest=derivative.dot(up)
 
-	# Amber edge bars precede the sharper apexes; central boost arrows remain distinct.
-	for i in range(count):
-		var next_corner:Dictionary=nodes[(i+10)%count]
-		nodes[i].brake_hint=not nodes[i].loop and not next_corner.loop and absf(next_corner.curve)>.007
 	build_features()
+	recharge_strips=Recharge.install(self)
+	corner_warnings=CornerWarnings.plan(self)
+	for n in nodes:
+		n.brake_level=0;n.brake_hint=false
+	for warning in corner_warnings:
+		for ahead in range(0,ceili(warning.ahead),maxi(1,roundi(step))):
+			var index:=posmod(roundi((warning.distance+ahead)/step),count)
+			nodes[index].brake_level=warning.level;nodes[index].brake_hint=true
 	if biome=="forest":
 		water_level=INF
 		for n in nodes: water_level=minf(water_level,n.p.y-24.)
@@ -276,7 +286,10 @@ func build_features()->void:
 			n.section="SPIRAL ASCENT" if component.kind=="spiral" else "HAIRPIN · BRAKE"
 			if component.kind=="hairpin":
 				var q:float=(n.u-component.start)/(component.end-component.start)
-				n.width=lerpf(n.width,16.,smooth_phase(clampf(minf(q,1.-q)/.12,0.,1.)));n.rails=false
+				# Keep the exposed apex challenge without stacking it with a
+				# 32 m pinch. Protect the seed-dependent entry/exit transitions.
+				n.width=lerpf(n.width,22.,smooth_phase(clampf(minf(q,1.-q)/.12,0.,1.)))
+				n.rails=q<.12 or q>.88
 		for jump in jumps:
 			if n.u<=jump.start or n.u>=jump.end: continue
 			var t:float=(n.u-jump.start)/(jump.end-jump.start)
@@ -403,11 +416,11 @@ static func supported(n:Dictionary,lateral:float,margin:float=0.)->bool:
 static func basis_at(n:Dictionary)->Basis:
 	return n.frame
 
-func project(position:Vector3,reference:float,reach:float)->Dictionary:
+func project(position:Vector3,reference:float,reach:float,closest_hint:int=-1)->Dictionary:
 	# Coarse spatial search, then exact projection onto nearby ribbon segments.
 	var closest:=0
 	var best:=INF
-	for i in range(0,nodes.size(),8):
+	for i in range(0,nodes.size(),8) if closest_hint<0 else [closest_hint]:
 		var arc:=reference+fposmod(i*step-reference+length*.5,length)-length*.5
 		if absf(arc-reference)>reach: continue
 		var squared:float=position.distance_squared_to(nodes[i].p)

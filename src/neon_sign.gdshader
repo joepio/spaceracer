@@ -1,9 +1,10 @@
 shader_type spatial;
 #include "res://src/neon_sign.gdshaderinc"
-uniform vec4 neon_color : source_color=vec4(.1,.8,1.,1.);
-uniform float style=0.;
+uniform float race_time=0.;
+varying float style;
+void vertex(){style=INSTANCE_CUSTOM.r;}
 void fragment(){
     ALBEDO=vec3(.012,.018,.026);
     ROUGHNESS=.38;
-    EMISSION=neon_sign_art(UV,style,neon_color.rgb)*3.;
+    EMISSION=city_poster_art(UV,style,race_time)*1.8;
 }

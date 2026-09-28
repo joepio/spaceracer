@@ -188,7 +188,9 @@ def main():
             updated = wait(read, lambda s: s["racers"][0]["name"] == "Azure Updated")
             assert updated["clock"] == paused["clock"] and updated["racers"][1]["name"] == "Rose"
             host.send("resume", session=session)
-            wait(read, lambda s: s["clock"] > paused["clock"] + .2)
+            resumed = wait(read, lambda s: s["clock"] > paused["clock"] + .2 and s["racers"][0].get("face_revision",0) >= 2)
+            assert resumed["racers"][0]["face_signature"][0] == players[0]["avatar"], "Hull decal follows player identity"
+            assert resumed["racers"][1]["face_revision"] == 1, "Other pilot decal remains cached"
             stop.set()
             time.sleep(.4)
             before = read()["racers"][0]["speed"]

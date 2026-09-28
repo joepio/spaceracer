@@ -7,6 +7,8 @@ var layout:RefCounted
 var traffic:MultiMesh
 var cabins:MultiMesh
 var lamps:MultiMesh
+var air_traffic:RefCounted
+var ground_traffic:RefCounted
 var animation_time:=0.0
 var local_lights:Array[Light3D]=[]
 var reflection_boxes:Array[Dictionary]=[]
@@ -55,6 +57,7 @@ func build(parent:Node3D,race:RefCounted)->void:
 	accent=race.track.theme[3]
 	secondary=race.track.theme[4]
 	layout=Layout.new(race.track)
+	for podium in layout.podiums: part(0,podium.center,podium.size,podium.color)
 	for b in layout.buildings:
 		var c:Vector3=b.center
 		var w:float=b.width
@@ -130,26 +133,20 @@ func build(parent:Node3D,race:RefCounted)->void:
 	build_billboards(parent)
 	neon=Accents.new()
 	neon.build(self,parent,race.track)
-	var paint:=mat(Color("657892"))
-	paint.vertex_color_use_as_albedo=true
-	traffic=batch(parent,BoxMesh.new(),paint,layout.routes.size()*2,2)
-	cabins=batch(parent,BoxMesh.new(),mat(Color("121d34")),traffic.instance_count,2)
-	lamps=batch(parent,BoxMesh.new(),mat(Color("8eeaff"),2),traffic.instance_count,2)
+	air_traffic=load("res://src/city_traffic.gd").new()
+	air_traffic.build(parent,layout,race.track.seed_value)
+	traffic=air_traffic.batches[0] # compatibility with scenery diagnostics
+	if obstacles: obstacles.traffic=air_traffic
+	ground_traffic=load("res://src/ground_traffic.gd").new()
+	ground_traffic.build(parent,layout,race.track.seed_value)
+	if obstacles: obstacles.ground_traffic=ground_traffic
 	animate(0)
 
 func animate(time:float)->void:
 	animation_time=time
-	if obstacles: obstacles.moving.clear()
-	for i in range(traffic.instance_count):
-		var route:Dictionary=layout.routes[i/2]
-		var along:=fposmod(time*(58+i%5*9)+i*173,route.length)
-		var position:Vector3=route.start+Vector3.RIGHT*(along if route.direction>0 else route.length-along)
-		var basis:=Basis(Vector3.UP,PI*.5*route.direction)
-		traffic.set_instance_transform(i,Transform3D(basis.scaled(Vector3(4.8,1.6,9)),position))
-		if obstacles: obstacles.moving.append(Transform3D(basis.scaled(Vector3(4.8,2.6,9)),position+Vector3.UP*.5))
-		traffic.set_instance_color(i,Color("829cc0").lerp(Color("c35494"),float(i%5)/5))
-		cabins.set_instance_transform(i,Transform3D(basis.scaled(Vector3(3.4,1.0,4)),position+Vector3.UP*1.1))
-		lamps.set_instance_transform(i,Transform3D(basis.scaled(Vector3(3.8,.35,8)),position-basis.z*7))
+	air_traffic.animate(time)
+	ground_traffic.animate(time)
+	if neon: neon.animate(time)
 
 func build_billboards(parent:Node3D)->void:
 	var materials:Array[ShaderMaterial]=[]

@@ -38,15 +38,25 @@ void fragment(){
     float ring=1.-smoothstep(.003,.008,abs(fract(UV.y/90.)-.5));
     light+=vec3(.12,.48,.58)*tube*(guide*.65+ring*.5);
     // Functional markings are small insets in dark asphalt, never full colored lanes.
-    if(COLOR.b>.5 && lateral>.79 && lateral<.92){
+    if(COLOR.b>.16 && lateral>.79 && lateral<.92){
         float bar=step(.78,fract(UV.y/12.));
-        light+=vec3(.65,.31,.09)*bar*.35;
+        vec3 caution=COLOR.b>.83 ? vec3(.9,.055,.08) : (COLOR.b>.5 ? vec3(.85,.27,.025) : vec3(.7,.53,.045));
+        light+=caution*bar*.20;
     }
     float zone=COLOR.r*2.;
-    if(zone>.8 && zone<1.2 && UV.x<-.35){
-        float outline=1.-smoothstep(.008,.019,min(abs(UV.x+.40),abs(UV.x+.89)));
-        float dash=step(.82,fract(UV.y/16.-race_time*.28));
-        light+=vec3(.18,.55,.40)*(outline*.09+dash*.012);
+    if(UV2.x>.5 && UV.x>-.88 && UV.x<.30){
+        // Wide shared charging carpet: textured cells, clear mint edges and
+        // repeated plus marks. Separate mask avoids fake repair zones where
+        // interpolated boost-strip vertex colors pass through the old zone ID.
+        float across=(UV.x+.88)/1.18;
+        float border=1.-smoothstep(.010,.022,min(across,1.-across));
+        float rib=1.-smoothstep(.04,.10,abs(fract(UV.y/9.)-.5));
+        vec2 cell=abs(fract(vec2(across*5.,UV.y/22.))-.5);
+        float cross_mark=max((1.-smoothstep(.035,.065,cell.x))*(1.-smoothstep(.16,.19,cell.y)),
+                             (1.-smoothstep(.035,.065,cell.y))*(1.-smoothstep(.16,.19,cell.x)));
+        float pulse=pow(.5+.5*sin(UV.y*.045-race_time*3.),8.);
+        base=mix(base,vec3(.022,.095,.075),.72);
+        light+=vec3(.10,1.,.62)*(border*.95+rib*.22+cross_mark*.65+pulse*.12);
     }
     if(zone>1.8 && lateral<.30){
         // UV.y increases along the race: put the chevron tip ahead of its wings.
@@ -108,7 +118,7 @@ void fragment(){
         // Narrow ripples stretch the reflected image along the road surface.
         uv.x=clamp(uv.x+(noise(vec2(UV.x*220.,UV.y*1.5))-.5)*.022,.003,.997);
         vec3 art=texture(billboard_art,vec2((sign_data[i].z+uv.x)*.25,uv.y)).rgb;
-        if(sign_colors[i].a>.5){art=neon_sign_art(uv,sign_data[i].z,sign_colors[i].rgb)*(3./2.2);}
+        if(sign_colors[i].a>.5){art=city_poster_art(uv,sign_data[i].z,race_time)*(1.8/2.2);}
         screens=art*2.2*mix(.18,.8,pow(1.-max(dot(n,eye),0.),3.))*exp(-distance*.0015);
     }
     EMISSION=light+reflection+screens*mix(.38,1.,grain);

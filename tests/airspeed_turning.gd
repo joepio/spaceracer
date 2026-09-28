@@ -23,8 +23,10 @@ func _initialize()->void:
 	var unpowered:=flight(130.,22.,0.)
 	check(flat.air_position.y< -10. and raised.air_position.y>flat.air_position.y+10.,"A moderate nose-up attitude catches approach-speed sink")
 	check(raised.air_position.y>unpowered.air_position.y+10. and raised.speed>unpowered.speed+20.,"Throttle matters for recovering slow flight")
-	var stalled:=flight(60.,60.,1.)
-	check(stalled.air_position.y< -4.,"Extreme nose-up input cannot make a slow craft hover")
+	var stalled:=flight(60.,60.,0.)
+	check(stalled.air_position.y< -4.,"A stalled wing cannot hover without engine thrust")
+	var powered_stall:=flight(60.,60.,1.)
+	check(powered_stall.air_velocity.y>stalled.air_velocity.y+40.,"Powered nose-up flight can thrust out of a low-speed stall")
 	var coasting:=flight(235.,0.,0.,3.)
 	check(coasting.air_position.y< -20. and coasting.air_velocity.y< -20.,"Releasing throttle eventually loses speed and lift")
 	for direction in [-1.,1.]:

@@ -22,6 +22,6 @@ void fragment(){
     float halo=exp(-.24*radial*radial)*(1.-smoothstep(3.,4.,radial));
     float contact=smoothstep(.94,1.,distance_along);
     // Faint airborne scattering; the actual contact carries the white radiance.
-    ALBEDO=mix(vec3(.9,.18,.22),vec3(1.,.97,.94),contact)*(.65+contact*2.);
-    ALPHA=(core+halo*.08)*strength*(.16+contact*.24);
+    ALBEDO=mix(vec3(.9,.18,.22),vec3(1.,.97,.94),contact)*(2.0+contact*4.);
+    ALPHA=(core+halo*.08)*strength*(.30+contact*.32);
 }

@@ -16,7 +16,7 @@ func run()->void:
 		var city:=Layout.new(track)
 		var repeat:=Layout.new(track)
 		check(city.buildings==repeat.buildings and city.routes==repeat.routes and city.billboards==repeat.billboards,"City generation is deterministic")
-		check(city.buildings.size()>700,"Dense city has enough buildings")
+		check(city.buildings.size()>2000,"Manhattan blocks contain substantially more buildings")
 		check(city.routes.size()>=12,"City has safe traffic routes")
 		check(city.billboards.size()>=8,"City has prominent building-mounted advertisements")
 		for board in city.billboards:
@@ -35,7 +35,9 @@ func run()->void:
 			kinds[building.kind]=true
 			roofs[building.roof]=true
 			narrow=narrow or building.width<35
-			broad=broad or building.width>145
+			broad=broad or building.width>90
+			var block:Vector2i=building.block
+			check(absf(building.center.x-block.x*120.)+building.width*.5<=48. and absf(building.center.z-block.y*120.)+building.depth*.5<=48.,"Buildings align within blocks and leave a continuous street grid")
 			var collision:=false
 			for ribbon in road:
 				if ribbon.intersects(building.bounds): collision=true;break
@@ -76,13 +78,15 @@ func run()->void:
 	var world:=Node3D.new()
 	root.add_child(world)
 	scenery.build(world,race)
-	check(scenery.neon.signs.size()>=8 and scenery.neon.signs.size()<=64,"City has a bounded set of attached neon signs")
+	check(scenery.neon.signs.size()>=320 and scenery.neon.signs.size()<=640,"City has hundreds of attached neon signs within a fixed budget")
 	check(scenery.local_lights.size()<=64,"Artwork and neon share a bounded local light budget")
 	for sign in scenery.neon.signs:
 		check(scenery.layout.buildings.any(func(building):return building.bounds.encloses(sign.bounds)),"Neon housing stays inside an audited building lot")
 		check(scenery.layout.clear(sign.bounds),"Neon housing clears the driving and flight corridors")
 	for child in world.get_children():
 		if not child is MultiMeshInstance3D: continue
+		if child.get_meta("air_traffic",false): continue # Shader-motion bounds audited in city_traffic.gd.
+		if child.get_meta("ground_traffic",false): continue # Ground circuits audit the whole swept car volume.
 		var data:MultiMesh=child.multimesh
 		if data in [scenery.traffic,scenery.cabins,scenery.lamps]: continue
 		for i in range(data.instance_count):

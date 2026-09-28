@@ -48,6 +48,8 @@ func _handle(msg: Variant) -> void:
 		if not session.is_empty():
 			disposed.emit(session)
 		session = msg.get("session", "")
+		frames.clear()
+		frame_at = -10000
 		phase = "preparing"
 		prepared.emit(session, msg.get("seats", []), msg.get("players", []))
 	elif kind == "setting_changed" or kind == "error":

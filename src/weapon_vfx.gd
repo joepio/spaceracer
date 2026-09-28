@@ -3,25 +3,27 @@ const Weapons=preload("res://src/weapons.gd")
 const Blast=preload("res://src/blast_vfx.gd")
 const Ship=preload("res://src/ship.gd")
 const Impact=preload("res://src/impact_vfx.gd")
+const EmpSparks=preload("res://src/emp_sparks.gd")
 var race:RefCounted
 var cores:MultiMesh
-var battery_batches:Array[MultiMesh]=[]
 var missile_nodes:Dictionary={}
+var fading_trails:Array[Dictionary]=[]
+var bomb_nodes:Dictionary={}
+var rail_effects:Array[Node3D]=[]
 var turrets:Array[Node3D]=[]
 var mounts:Array[Dictionary]=[]
 var impacts:Array[Node3D]=[]
 var warp_wakes:Array[MeshInstance3D]=[]
 var warp_lenses:Array[MeshInstance3D]=[]
 var tracers:Array[MeshInstance3D]=[]
+var shot_frame:=-1
+var presented_shots:Array[Dictionary]=[]
 var explosions:Array[Node3D]=[]
 var blast_lights:Array[OmniLight3D]=[]
-var smoke:MultiMesh
-var smoke_count:=0
+static var trail_shape:ArrayMesh
 var emp_fields:Array[MeshInstance3D]=[]
 var emp_rings:Array[MeshInstance3D]=[]
 var emp_arcs:Array[MeshInstance3D]=[]
-var dishes:Array[Node3D]=[]
-var radio_waves:Array[Array]=[]
 var pickup_bases:Array[MeshInstance3D]=[]
 var pickup_echoes:Array[MeshInstance3D]=[]
 var pickup_halos:Array[MeshInstance3D]=[]
@@ -57,14 +59,6 @@ static func ring(inner:float,outer:float)->TorusMesh:
 static func cylinder(radius:float,height:float,tip:bool=false)->CylinderMesh:
 	var shape:=CylinderMesh.new();shape.bottom_radius=radius;shape.top_radius=0. if tip else radius;shape.height=height;shape.radial_segments=12;return shape
 
-func battery_batch(parts:Array,mat:Material)->void:
-	var surface:=SurfaceTool.new();surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for part in parts: surface.append_from(box(part[0]),0,Transform3D(Basis.IDENTITY,part[1]))
-	var instances:=MultiMesh.new();instances.transform_format=MultiMesh.TRANSFORM_3D;instances.mesh=surface.commit()
-	instances.instance_count=race.weapons.batteries.size();battery_batches.append(instances)
-	var batch:=MultiMeshInstance3D.new();batch.multimesh=instances;batch.material_override=mat
-	batch.layers=2;batch.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(batch)
-
 func warp_wake_mesh()->ArrayMesh:
 	var surface:=SurfaceTool.new();surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	# A handful of curved threads peel away from the hull into a long wake.
@@ -89,15 +83,6 @@ func configure(state:RefCounted)->void:
 	flame=material(Color("ffac42"),3.);laser_material=material(Color("ff385e"),2.8)
 	bump_material=ShaderMaterial.new();bump_material.shader=load("res://src/plasma.gdshader")
 	bump_material.set_shader_parameter("jet_tint",Vector3(1.,.35,.06))
-	# Three instanced materials for every battery: housing, charge bars, white +.
-	battery_batch([[Vector3(2.8,3.9,1.8),Vector3.ZERO],[Vector3(1.1,.45,1.),Vector3(0,2.15,0)]],material(Color("263342")))
-	var cells:Array=[];var symbols:Array=[]
-	for side in [-1.,1.]:
-		for y in [-1.1,-.4,.3]: cells.append([Vector3(2.,.44,.1),Vector3(0,y,side*.95)])
-		symbols.append([Vector3(.9,.19,.12),Vector3(0,1.2,side*.96)])
-		symbols.append([Vector3(.19,.9,.12),Vector3(0,1.2,side*.96)])
-	battery_batch(cells,material(Color("ffbf38"),1.7))
-	battery_batch(symbols,material(Color("fff4c9"),2.))
 	cores=MultiMesh.new();cores.transform_format=MultiMesh.TRANSFORM_3D;cores.mesh=box(Vector3.ONE*3.5)
 	cores.instance_count=race.weapons.pickups.size()
 	var batch:=MultiMeshInstance3D.new();batch.multimesh=cores;batch.material_override=mint
@@ -123,25 +108,22 @@ func configure(state:RefCounted)->void:
 		var flash:=OmniLight3D.new();flash.light_color=Color("b4ffac");flash.omni_range=20.
 		flash.shadow_enabled=false;flash.light_energy=0.;flash.omni_attenuation=1.6
 		add_child(flash);pickup_lights.append(flash)
-		dishes.append(make_dish())
-		var waves:Array=[]
-		for j in range(3):
-			var wave_mat:=ShaderMaterial.new();wave_mat.shader=load("res://src/jammer_wave.gdshader")
-			waves.append(mesh(self,ring(.972,1.),wave_mat))
-		radio_waves.append(waves)
 		var pulse_mat:=ShaderMaterial.new();pulse_mat.shader=load("res://src/emp.gdshader")
 		var pulse_shape:=sphere(1.);pulse_shape.radial_segments=64;pulse_shape.rings=32
 		emp_fields.append(mesh(self,pulse_shape,pulse_mat))
 		emp_rings.append(mesh(self,ring(.991,1.),material(Color("6fcaff"),2.5)))
-		var arc_mat:=pulse_mat.duplicate() as ShaderMaterial
-		arc_mat.set_shader_parameter("shutdown",true)
-		emp_arcs.append(mesh(self,sphere(1.),arc_mat))
+		var arc_mat:=ShaderMaterial.new();arc_mat.shader=load("res://src/emp_sparks.gdshader")
+		arc_mat.set_shader_parameter("seed",float(p.slot))
+		var sparks:=mesh(self,EmpSparks.shape(),arc_mat)
+		sparks.name="EmpSurfaceSparks%d"%p.slot
+		sparks.extra_cull_margin=.4
+		emp_arcs.append(sparks)
 		turrets.append(make_turret())
 		var rack:=Node3D.new();add_child(rack)
-		mesh(rack,box(Vector3(.8,.35,4.6)),steel,Vector3(0,-.65,-.3))
+		mesh(rack,box(Vector3(.8,.20,2.9)),steel,Vector3(0,-.34,-.3))
 		var stored:=Node3D.new();rack.add_child(stored);missile_hull(stored)
-		stored.scale=Vector3.ONE*.62
-		mounts.append({"missile":rack,"warp":make_coil(true),"emp":make_coil(false)})
+		stored.scale=Vector3.ONE*.42
+		mounts.append({"missile":rack,"warp":make_coil(true),"emp":make_coil(false),"bomb":make_bomb(),"railgun":make_railgun()})
 		var impact:=Impact.new();add_child(impact);impacts.append(impact)
 		var wake_material:=ShaderMaterial.new();wake_material.shader=load("res://src/warp_wake.gdshader")
 		warp_wakes.append(mesh(self,wake_shape,wake_material))
@@ -150,40 +132,95 @@ func configure(state:RefCounted)->void:
 		var lens:=mesh(self,QuadMesh.new(),lens_material)
 		lens.custom_aabb=AABB(Vector3(-15.,-15.,-15.),Vector3.ONE*30.)
 		warp_lenses.append(lens)
-	for i in range(32): tracers.append(mesh(self,cylinder(1.,1.),flame))
+	for i in range(32): tracers.append(mesh(self,cylinder(1.,1.),material(Color("fff0c2"),5.)))
+	for i in range(12): rail_effects.append(make_rail_effect())
 	for i in range(24):
 		var blast:=Blast.new();add_child(blast);explosions.append(blast);blast_lights.append(blast.flash)
-	smoke=MultiMesh.new();smoke.transform_format=MultiMesh.TRANSFORM_3D;smoke.use_custom_data=true
-	var puff:=QuadMesh.new();puff.size=Vector2.ONE*2.;smoke.mesh=puff;smoke.instance_count=384
-	var smoke_node:=MultiMeshInstance3D.new();smoke_node.multimesh=smoke
-	var smoke_mat:=ShaderMaterial.new();smoke_mat.shader=load("res://src/missile_smoke.gdshader");smoke_node.material_override=smoke_mat
-	smoke_node.layers=2;smoke_node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(smoke_node)
 	update()
 
-func make_dish()->Node3D:
-	var dish:=Node3D.new();add_child(dish)
-	mesh(dish,box(Vector3(1.2,.18,1.3)),steel)
-	mesh(dish,cylinder(.16,1.4),steel,Vector3(0,.7,0))
-	mesh(dish,sphere(.3),steel,Vector3(0,1.3,0))
-	var bowl:=SurfaceTool.new();bowl.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for row in range(6):
-		for slice in range(32):
-			var corners:Array[Vector3]=[]
-			for corner in [Vector2(row,slice),Vector2(row+1,slice),Vector2(row+1,slice+1),Vector2(row,slice+1)]:
-				var r:float=corner.x/6.*1.65;var angle:float=corner.y/32.*TAU
-				corners.append(Vector3(cos(angle)*r,sin(angle)*r+1.5,r*r*.22))
-			for index in [0,1,2,0,2,3]: bowl.add_vertex(corners[index])
-	bowl.generate_normals()
-	var alloy:=material(Color("b4c2c9"));alloy.cull_mode=BaseMaterial3D.CULL_DISABLED
-	mesh(dish,bowl.commit(),alloy)
-	var rim:=mesh(dish,ring(1.6,1.68),material(Color("ffaa51"),1.7),Vector3(0,1.5,.6))
-	rim.rotation.x=PI*.5
-	var feed:=Vector3(0,1.5,1.65)
-	for angle in [0.,TAU/3.,TAU*2./3.]:
-		var support:=mesh(dish,cylinder(1.,1.),steel)
-		line(support,Vector3(cos(angle)*1.55,1.5+sin(angle)*1.55,.53),feed,.055)
-	mesh(dish,sphere(.2),material(Color("ffcb7f"),3.),feed)
-	return dish
+func make_railgun()->Node3D:
+	var gun:=Node3D.new();add_child(gun)
+	mesh(gun,box(Vector3(1.3,.65,1.7)),steel,Vector3(0,0,-.5))
+	var cyan:=material(Color("4cdbff"),2.)
+	for side in [-1.,1.]:
+		mesh(gun,box(Vector3(.25,.42,4.3)),steel,Vector3(side*.48,.16,1.4))
+		mesh(gun,box(Vector3(.08,.12,3.8)),cyan,Vector3(side*.33,.4,1.5))
+		for z in [-.7,-.15,.4]: mesh(gun,box(Vector3(.15,.8,.17)),cyan,Vector3(side*.7,.05,z))
+	# A compact adapter raises the firing rails clear of the new cockpit canopy.
+	for child in gun.get_children(): child.position.y+=.32
+	mesh(gun,box(Vector3(.72,.6,1.1)),steel,Vector3(0,-.02,-.5))
+	return gun
+
+func make_rail_effect()->Node3D:
+	var effect:=Node3D.new();add_child(effect)
+	var beam_mat:=ShaderMaterial.new();beam_mat.shader=load("res://src/rail_beam.gdshader")
+	var core_mat:=beam_mat.duplicate() as ShaderMaterial;core_mat.set_shader_parameter("core",true)
+	effect.set_meta("core",mesh(effect,cylinder(1.,1.),core_mat))
+	effect.set_meta("halo",mesh(effect,cylinder(1.,1.),beam_mat))
+	var rings:Array[MeshInstance3D]=[]
+	for i in range(5): rings.append(mesh(effect,ring(.93,1.),beam_mat))
+	effect.set_meta("rings",rings)
+	var flash_mat:=ShaderMaterial.new();flash_mat.shader=load("res://src/rail_flash.gdshader")
+	var flash_shape:=QuadMesh.new();flash_shape.size=Vector2(8.,8.)
+	effect.set_meta("muzzle",mesh(effect,flash_shape,flash_mat))
+	effect.set_meta("hit",mesh(effect,flash_shape,flash_mat))
+	for name_value in ["muzzle_light","hit_light"]:
+		var light:=OmniLight3D.new();light.light_color=Color("68dfff");light.omni_range=22.;light.shadow_enabled=false
+		effect.add_child(light);effect.set_meta(name_value,light)
+	effect.visible=false
+	return effect
+
+func update_rails()->void:
+	for i in range(rail_effects.size()):
+		var effect:=rail_effects[i];effect.visible=i<race.weapons.rail_shots.size()
+		if not effect.visible: continue
+		var shot:Dictionary=race.weapons.rail_shots[i]
+		var age:float=Weapons.Railgun.LIFE-shot.life
+		var strength:=pow(clampf(shot.life/Weapons.Railgun.LIFE,0.,1.),2.)
+		var core:MeshInstance3D=effect.get_meta("core")
+		var halo:MeshInstance3D=effect.get_meta("halo")
+		line(core,shot.from,shot.to,.07+.06*strength)
+		line(halo,shot.from,shot.to,.40+age*.9)
+		core.material_override.set_shader_parameter("power",strength)
+		halo.material_override.set_shader_parameter("power",strength*.85)
+		var rings:Array=effect.get_meta("rings")
+		for j in range(rings.size()):
+			var radius:float=(.7+age*7.)*(1.-j*.1)
+			var position_value:Vector3=shot.from.lerp(shot.to,minf(.98,.025+j*.12+age*.8))
+			rings[j].transform=Transform3D(shot.basis*Basis(Vector3.RIGHT,PI*.5).scaled(Vector3.ONE*radius),position_value)
+		var muzzle:MeshInstance3D=effect.get_meta("muzzle");muzzle.position=shot.from;muzzle.scale=Vector3.ONE*(.25+strength*.7)
+		muzzle.material_override.set_shader_parameter("power",strength)
+		var hit:MeshInstance3D=effect.get_meta("hit");hit.visible=shot.contact;hit.position=shot.to;hit.scale=Vector3.ONE*(.3+strength*1.2)
+		var light:OmniLight3D=effect.get_meta("muzzle_light");light.position=shot.from;light.light_energy=strength*7.
+		light=effect.get_meta("hit_light");light.position=shot.to;light.visible=shot.contact;light.light_energy=strength*9.
+
+func make_bomb()->Node3D:
+	var payload:=Node3D.new();add_child(payload)
+	var body:=mesh(payload,cylinder(.72,3.1),steel)
+	body.rotation.x=PI*.5
+	mesh(payload,sphere(.72),steel,Vector3(0,0,1.5))
+	var stripe:=mesh(payload,cylinder(.75,.42),material(Color("efa83d")),Vector3(0,0,.85));stripe.rotation.x=PI*.5
+	for angle in [0.,PI*.5]:
+		var fin:=mesh(payload,box(Vector3(2.5,.12,1.15)),steel,Vector3(0,0,-1.45));fin.rotation.z=angle
+	var wings:=Node3D.new();payload.add_child(wings);payload.set_meta("glide_wings",wings)
+	for side in [-1.,1.]:
+		var wing:=mesh(wings,box(Vector3(3.4,.13,1.05)),steel,Vector3(side*2.,.12,-.2))
+		wing.rotation.y=side*.24
+		mesh(wing,box(Vector3(.12,.15,.6)),material(Color("efb45a"),1.4),Vector3(side*1.55,0,0))
+	wings.scale.x=.22
+	mesh(payload,sphere(.16),flame,Vector3(0,.73,.8))
+	var motor:=Node3D.new();payload.add_child(motor);payload.set_meta("glide_motor",motor)
+	motor.position.z=-2.05;motor.visible=false
+	mesh(motor,sphere(.30),material(Color("fff0d8"),7.))
+	var glow:=ShaderMaterial.new();glow.shader=load("res://src/engine_glow.gdshader")
+	glow.set_shader_parameter("jet_tint",Vector3(1.,.5,.16))
+	var glow_quad:=QuadMesh.new();glow_quad.size=Vector2.ONE*2.8
+	mesh(motor,glow_quad,glow)
+	for angle in [0.,PI*.5]:
+		var ribbon:=QuadMesh.new();ribbon.size=Vector2(1.05,4.5)
+		var plume:=mesh(motor,ribbon,bump_material,Vector3(0,0,-2.25))
+		plume.basis=Basis(Vector3.BACK,angle)*Basis(Vector3.RIGHT,PI*.5)
+	return payload
 
 static func line(node:MeshInstance3D,from:Vector3,to:Vector3,width:float)->void:
 	var direction:=to-from
@@ -194,25 +231,91 @@ static func line(node:MeshInstance3D,from:Vector3,to:Vector3,width:float)->void:
 	node.transform=Transform3D(Basis(right,direction,right.cross(direction)).scaled_local(Vector3(width,length,width)),(from+to)*.5)
 	node.visible=true
 
+static func sentry_cylinder(radius:float,height:float)->CylinderMesh:
+	var shape:=cylinder(radius,height);shape.radial_segments=8;shape.rings=1;return shape
+
+static func sentry_ring(inner:float,outer:float)->TorusMesh:
+	var shape:=ring(inner,outer);shape.rings=12;shape.ring_segments=3;return shape
+
+static func sentry_bulb(radius:float)->SphereMesh:
+	var shape:=sphere(radius);shape.radial_segments=8;shape.rings=3;return shape
+
 func make_turret()->Node3D:
 	var root:=Node3D.new();add_child(root)
+	# The weapon socket rails sit below the old plate: a short adapter physically
+	# joins the shoe to the turret instead of leaving the whole gun suspended.
+	mesh(root,box(Vector3(.88,.34,1.1)),steel,Vector3(0,-.22,-.1))
 	mesh(root,box(Vector3(1.6,.25,1.7)),steel)
-	mesh(root,cylinder(.68,.6),steel,Vector3(0,.3,0))
-	mesh(root,ring(.57,.69),mint,Vector3(0,.58,0))
+	mesh(root,sentry_cylinder(.68,.6),steel,Vector3(0,.3,0))
+	mesh(root,sentry_ring(.57,.69),mint,Vector3(0,.58,0))
 	var head:=Node3D.new();root.add_child(head);head.position=Weapons.SENTRY_PIVOT;root.set_meta("head",head)
 	var armor:=material(Color("8394a6"));armor.cull_mode=BaseMaterial3D.CULL_DISABLED
 	var housing:=Ship.loft(head,"ArmoredHead",[Vector3(-.8,.48,.6),Vector3(-.5,.8,.85),Vector3(.45,.7,.65),Vector3(.75,.5,.45)],armor,Vector3.ZERO,true)
 	housing.layers=2;housing.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mesh(head,sphere(.18),mint,Vector3(0,.18,.7))
-	mesh(head,cylinder(.2,.12),steel,Vector3(0,.53,-.35))
-	var status_led:=mesh(head,sphere(.14),material(Color("b5fff0"),3.),Vector3(0,.63,-.35))
+	sentry_details(root,head)
+	mesh(head,sentry_bulb(.18),mint,Vector3(0,.18,.7))
+	mesh(head,sentry_cylinder(.2,.12),steel,Vector3(0,.53,-.35))
+	var status_led:=mesh(head,sentry_bulb(.14),material(Color("b5fff0"),3.),Vector3(0,.63,-.35))
 	root.set_meta("status_led",status_led)
 	var barrels:=Node3D.new();head.add_child(barrels);root.set_meta("barrels",barrels)
-	for side in [-1.,1.]:
-		var barrel:=mesh(barrels,cylinder(.17,2.2),steel,Vector3(side*.48,-.06,1.5));barrel.rotation.x=PI*.5
-		var collar:=mesh(barrels,cylinder(.24,.4),steel,Vector3(side*.48,-.06,2.3));collar.rotation.x=PI*.5
-		var flash:=mesh(barrels,sphere(.23),flame,Vector3(side*.48,-.06,2.65));flash.name="MuzzleL" if side<0. else "MuzzleR"
+	for index in range(6):
+		var angle:=TAU*index/6.
+		var offset:=Vector3(cos(angle)*.31,sin(angle)*.31,0.)
+		var barrel:=mesh(barrels,sentry_cylinder(.105,2.2),steel,offset+Vector3(0,0,1.5));barrel.rotation.x=PI*.5
+		var collar:=mesh(barrels,sentry_cylinder(.14,.25),steel,offset+Vector3(0,0,2.45));collar.rotation.x=PI*.5
+	var clamp_ring:=mesh(barrels,sentry_ring(.38,.49),steel,Vector3(0,0,2.1));clamp_ring.rotation.x=PI*.5
+	var flash_mat:=ShaderMaterial.new();flash_mat.shader=load("res://src/sentry_flash.gdshader")
+	var quad:=QuadMesh.new();quad.size=Vector2.ONE*2.4
+	var flash:=mesh(head,quad,flash_mat,Vector3(0,0,2.7));flash.visible=false;root.set_meta("muzzle",flash)
+	var light:=OmniLight3D.new();light.position=flash.position;light.light_color=Color("ffdc9b")
+	light.omni_range=7.;light.light_energy=2.5;light.shadow_enabled=false;light.visible=false
+	head.add_child(light);root.set_meta("muzzle_light",light)
+	Ship.Design.batch_details(root)
+	for node in root.find_children("*","MeshInstance3D",true,false):
+		node.layers=2;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
 	return root
+
+func sentry_details(turret:Node3D,head:Node3D)->void:
+	var details:=Node3D.new();details.name="DriveAndFeeder";head.add_child(details)
+	var gunmetal:=material(Color("43515a"));gunmetal.metallic=.8
+	var black:=material(Color("20262b"));black.metallic=.15;black.roughness=.62
+	var edge:=material(Color("7f8d91"));edge.metallic=.85
+	var copper:=material(Color("92724c"));copper.metallic=.8
+	# Left: a finned electric drive with an exposed rear shaft and protective hoop.
+	var motor:=mesh(details,sentry_cylinder(.34,1.32),gunmetal,Vector3(-.97,.02,-.22));motor.rotation.x=PI*.5
+	mesh(details,box(Vector3(.42,.36,.64)),gunmetal,Vector3(-.66,-.13,-.10))
+	for z in [-.70,-.38,-.06,.26]:
+		var fin:=mesh(details,sentry_cylinder(.39,.065),edge,Vector3(-.97,.02,z));fin.rotation.x=PI*.5
+	var cover:=mesh(details,sentry_cylinder(.30,.10),black,Vector3(-.97,.02,-.92));cover.rotation.x=PI*.5
+	var hoop:=mesh(details,sentry_ring(.24,.30),copper,Vector3(-.97,.02,-.99));hoop.rotation.x=PI*.5
+	var axle:=mesh(details,sentry_cylinder(.10,.18),gunmetal,Vector3(-.97,.02,-1.));axle.rotation.x=PI*.5
+	var rotor:=Node3D.new();rotor.name="BarrelDriveRotor";rotor.position=Vector3(-.97,.02,-1.025);details.add_child(rotor)
+	turret.set_meta("drive_rotor",rotor)
+	var hub:=mesh(rotor,sentry_cylinder(.09,.05),copper);hub.rotation.x=PI*.5
+	for angle in [0.,TAU/3.,2.*TAU/3.]:
+		var spoke:=mesh(rotor,box(Vector3(.065,.40,.04)),edge);spoke.rotation.z=angle
+	# Right: a black ammunition cassette and ribbed feed chute entering the breech.
+	# A closed magazine casing replaces the thin loft shell. Its inset cover
+	# overlaps the solid roof; there are no freestanding straps or overhangs.
+	var cassette:=mesh(details,box(Vector3(.68,.88,1.22)),black,Vector3(1.02,.06,-.04));cassette.name="AmmoCassette"
+	mesh(details,box(Vector3(.40,.045,.88)),gunmetal,Vector3(1.02,.495,-.04))
+	mesh(details,box(Vector3(.32,.27,.62)),gunmetal,Vector3(.72,-.06,-.05))
+	var path:=[Vector3(1.02,.06,-.65),Vector3(1.03,.06,-.85),Vector3(.98,.08,-1.08),Vector3(.80,.10,-1.23),Vector3(.56,.10,-1.25),Vector3(.37,.10,-1.09),Vector3(.34,.10,-.82)]
+	for i in range(path.size()-1):
+		var a:Vector3=path[i];var b:Vector3=path[i+1]
+		var link:=mesh(details,box(Vector3(.27,.24,a.distance_to(b)+.035)),black,(a+b)*.5)
+		link.basis=Basis.looking_at((b-a).normalized(),Vector3.UP,true)
+		var rib:=mesh(details,box(Vector3(.29,.27,.04)),gunmetal,a)
+		rib.basis=link.basis
+	# Rear service plate stays readable between the asymmetric side modules.
+	mesh(details,box(Vector3(.82,.37,.09)),black,Vector3(0,.035,-.815))
+	for y in [-.08,.02,.12]: mesh(details,box(Vector3(.40,.03,.045)),edge,Vector3(-.10,y,-.875))
+	# Tiny bolts were subpixel geometry. Keep the readable service grille instead.
+	# Repeated ribs and rings share draws; the rotor remains independent.
+	Ship.Design.batch_details(details)
+	for node in details.find_children("*","MeshInstance3D",true,false):
+		node.layers=2;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 func make_coil(warp:bool)->Node3D:
 	var root:=Node3D.new();add_child(root)
@@ -229,18 +332,38 @@ func make_coil(warp:bool)->Node3D:
 	return root
 
 func missile_hull(root:Node3D)->void:
-	var hull:=material(Color("c4c9ce"));hull.metallic=.7
-	var body:=mesh(root,cylinder(1.25,8.),hull);body.rotation.x=PI*.5
-	var nose:=mesh(root,cylinder(1.25,3.,true),laser_material,Vector3(0,0,5.5));nose.rotation.x=PI*.5
-	var band:=mesh(root,cylinder(1.28,.5),flame,Vector3(0,0,2.8));band.rotation.x=PI*.5
-	var nozzle:=mesh(root,cylinder(.9,.12),material(Color("080d17")),Vector3(0,0,-4.08));nozzle.rotation.x=PI*.5
-	var rim:=mesh(root,ring(.82,1.04),steel,Vector3(0,0,-4.15));rim.rotation.x=PI*.5
-	for angle in [0.,PI*.5]:
-		var fin:=mesh(root,box(Vector3(4.8 if angle==0. else 2.8,.2,2.5)),steel,Vector3(0,0,-2.7));fin.rotation.z=angle
+	# Broad faceted radome, flush body and slim swept surfaces, inspired by the
+	# reference's compact modern cruise missile rather than a cone-tipped rocket.
+	var hull:=material(Color("b9c1b5"));hull.metallic=.24;hull.roughness=.47
+	var radome:=material(Color("68736a"));radome.metallic=.18;radome.roughness=.5
+	Ship.loft(root,"MissileBody",[Vector3(-4.,.63,1.1),Vector3(-3.3,.95,1.55),Vector3(2.6,.95,1.55),Vector3(3.1,.85,1.4)],hull,Vector3.ZERO,true)
+	Ship.loft(root,"FacetedNose",[Vector3(3.08,.85,1.4),Vector3(4.35,.67,1.06),Vector3(5.9,.05,.10)],radome,Vector3.ZERO,true)
+	for side in [-1.,1.]:
+		var wing:=Ship.loft(root,"CruiseWing",[Vector3(-1.7,1.35,.08),Vector3(-1.2,1.45,.10),Vector3(.45,.1,.06)],radome,Vector3(side*1.85,-.28,-.1),true)
+		wing.rotation.z=side*-.07
+		var tail:=Ship.loft(root,"CantedTail",[Vector3(-.65,.9,.09),Vector3(.1,.85,.1),Vector3(1.05,.03,.04)],radome,Vector3(side*.9,.4,-3.15),true)
+		tail.rotation.z=side*.65
+		mesh(root,box(Vector3(.025,.10,2.7)),steel,Vector3(side*.94,.13,.65))
+		mesh(root,box(Vector3(.027,.10,.32)),hull,Vector3(side*.95,.13,.2))
+	mesh(root,box(Vector3(.5,.04,.45)),steel,Vector3(0,1.13,-1.9))
+	mesh(root,box(Vector3(.5,.04,.45)),steel,Vector3(0,1.13,.9))
+	var nozzle:=mesh(root,cylinder(.50,.12),material(Color("080d17")),Vector3(0,0,-4.08));nozzle.rotation.x=PI*.5
+	var rim:=mesh(root,ring(.48,.66),steel,Vector3(0,0,-4.15));rim.rotation.x=PI*.5
+
+static func missile_trail_mesh()->ArrayMesh:
+	if trail_shape!=null: return trail_shape
+	var surface:=SurfaceTool.new();surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(47):
+		for uv in [Vector2(0,0),Vector2(1,0),Vector2(0,1),Vector2(0,1),Vector2(1,0),Vector2(1,1)]:
+			surface.set_uv(Vector2(uv.x,(i+uv.y)/47.));surface.set_normal(Vector3.UP);surface.add_vertex(Vector3(uv.x,0,i+uv.y))
+	trail_shape=surface.commit();return trail_shape
 
 func make_missile()->Node3D:
 	var root:=Node3D.new();add_child(root);missile_hull(root)
-	root.scale=Vector3.ONE*.62
+	var trail_material:=ShaderMaterial.new();trail_material.shader=load("res://src/missile_trail.gdshader")
+	trail_material.set_shader_parameter("daylight",race.track.biome=="forest")
+	var trail:=mesh(self,missile_trail_mesh(),trail_material);root.set_meta("trail",trail)
+	root.scale=Vector3.ONE*.42
 	var engine:=Node3D.new();root.add_child(engine);root.set_meta("engine",engine)
 	engine.position.z=-4.2
 	mesh(engine,sphere(.9),material(Color("fff5dc"),12.))
@@ -264,29 +387,23 @@ func make_missile()->Node3D:
 	var beam_material:=ShaderMaterial.new();beam_material.shader=load("res://src/missile_laser.gdshader")
 	var beam:=mesh(self,QuadMesh.new(),beam_material);root.set_meta("laser",beam)
 	var contact_material:=ShaderMaterial.new();contact_material.shader=load("res://src/missile_contact.gdshader")
-	var contact_quad:=QuadMesh.new();contact_quad.size=Vector2.ONE*2.2
+	var contact_quad:=QuadMesh.new();contact_quad.size=Vector2.ONE*2.8
 	root.set_meta("contact",mesh(self,contact_quad,contact_material))
-	var contact_light:=OmniLight3D.new();contact_light.omni_range=4.;contact_light.shadow_enabled=false
+	var contact_light:=OmniLight3D.new();contact_light.omni_range=5.5;contact_light.shadow_enabled=false
 	contact_light.light_color=Color("fff4ed");contact_light.light_bake_mode=Light3D.BAKE_DISABLED
 	add_child(contact_light);root.set_meta("contact_light",contact_light)
 	return root
 
-func puff(position_value:Vector3,radius:float,opacity:float,heat:float,seed_value:float)->void:
-	if smoke_count>=smoke.instance_count: return
-	smoke.set_instance_transform(smoke_count,Transform3D(Basis.IDENTITY.scaled(Vector3.ONE*radius),position_value))
-	smoke.set_instance_custom_data(smoke_count,Color(opacity,heat,seed_value,1.));smoke_count+=1
-
 func update()->void:
+	# Consume events once per presented frame, not once per physics tick. All
+	# split-screen cameras see the same shot; no tracer survives the next frame.
+	var frame_id:=Engine.get_process_frames()
+	if frame_id!=shot_frame:
+		shot_frame=frame_id
+		presented_shots=race.weapons.shots.duplicate()
+		race.weapons.shots.clear()
 	var time:float=race.vfx_clock
-	smoke_count=0
 	bump_material.set_shader_parameter("race_time",time)
-	for i in range(race.weapons.batteries.size()):
-		var battery:Dictionary=race.weapons.batteries[i]
-		var frame:Transform3D=battery.pose
-		frame.origin+=frame.basis.y*sin(time*2.3+i)*.45
-		frame.basis=frame.basis*Basis(Vector3.UP,sin(time*.9+i)*.3)
-		frame.basis=frame.basis.scaled(Vector3.ONE*(1.35 if battery.get("air",false) else 1.)*(battery.reveal if battery.cooldown<=0. else 0.))
-		for batch in battery_batches: batch.set_instance_transform(i,frame)
 	for i in range(emp_fields.size()):
 		emp_fields[i].visible=i<race.weapons.pulses.size()
 		emp_rings[i].visible=i<race.weapons.pulses.size()
@@ -310,7 +427,6 @@ func update()->void:
 	var active:Dictionary={}
 	for m in race.weapons.missiles:
 		var tail_fade:float=clampf(m.fade/1.1,0.,1.) if m.get("disabled",false) else 1.
-		for j in range(m.trail.size()): puff(m.trail[j],1.4+j*.22,(1.-j/16.)*.45*tail_fade,0.,j*1.37)
 		active[m.id]=true
 		if not missile_nodes.has(m.id): missile_nodes[m.id]=make_missile()
 		var node:Node3D=missile_nodes[m.id]
@@ -326,22 +442,36 @@ func update()->void:
 			var forward:Vector3=m.velocity.normalized()
 			var up:Vector3=race.track.sample(m.distance).frame.y
 			if absf(forward.dot(up))>.98: up=Vector3.UP if absf(forward.y)<.98 else Vector3.RIGHT
-			node.basis=m.launch_basis.slerp(Basis.looking_at(forward,up,true),smoothstep(.12,.65,m.age)).scaled(Vector3.ONE*.62)
+			node.basis=m.launch_basis.slerp(Basis.looking_at(forward,up,true),smoothstep(.12,.65,m.age)).scaled(Vector3.ONE*.42)
+		var trail:MeshInstance3D=node.get_meta("trail")
+		trail.visible=m.trail.size()>1
+		if trail.visible:
+			var points:=PackedVector3Array();points.resize(48)
+			var bounds:=AABB(m.position,Vector3.ZERO)
+			for j in range(48):
+				points[j]=m.trail[mini(j,m.trail.size()-1)]
+				bounds=bounds.expand(points[j])
+			if not m.get("disabled",false): points[0]=node.transform*Vector3(0,0,-4.2)
+			trail.custom_aabb=bounds.grow(10.)
+			trail.material_override.set_shader_parameter("points",points)
+			trail.material_override.set_shader_parameter("point_count",m.trail.size())
+			trail.material_override.set_shader_parameter("race_time",time)
+			trail.material_override.set_shader_parameter("opacity",tail_fade)
 		var beam:MeshInstance3D=node.get_meta("laser")
-		var warning:=1.-clampf(Weapons.missile_eta(race,m)/2.,0.,1.)
+		var warning:=Weapons.laser_strength(race,m)
 		beam.visible=warning>0.
 		var contact:MeshInstance3D=node.get_meta("contact")
 		var contact_light:OmniLight3D=node.get_meta("contact_light")
 		contact.visible=beam.visible;contact_light.visible=beam.visible
 		if warning>0.:
-			var intensity:=smoothstep(0.,1.,warning)
+			var intensity:=warning
 			var target_frame:=Weapons.pose(race,race.racers[m.target])
 			# Contact sits on the exposed canopy instead of inside the hull.
 			var destination:=target_frame*Vector3(0.,1.45,-.6)
 			contact.position=destination
 			contact.material_override.set_shader_parameter("strength",intensity)
 			contact_light.position=destination+target_frame.basis.y*.3
-			contact_light.light_energy=intensity*2.5
+			contact_light.light_energy=intensity*4.5
 			var beam_material:ShaderMaterial=beam.material_override
 			beam_material.set_shader_parameter("strength",intensity)
 			beam_material.set_shader_parameter("beam_radius",lerpf(.012,.03,intensity))
@@ -349,21 +479,48 @@ func update()->void:
 			beam_material.set_shader_parameter("tail_world",destination)
 			# Vertex shader faces each camera; CPU bounds still span the real segment.
 			beam.custom_aabb=AABB(m.position,Vector3.ZERO).expand(destination).grow(1.)
+	var live_bombs:Dictionary={}
+	for bomb in race.weapons.bombs:
+		live_bombs[bomb.id]=true
+		if not bomb_nodes.has(bomb.id): bomb_nodes[bomb.id]=make_bomb()
+		var payload:Node3D=bomb_nodes[bomb.id]
+		payload.position=bomb.position
+		payload.get_meta("glide_wings").scale.x=lerpf(.22,1.,smoothstep(.05,.38,bomb.age))
+		var motor:Node3D=payload.get_meta("glide_motor")
+		var power:=Weapons.DiveBomb.motor_power(bomb.age)
+		motor.visible=power>.001;motor.scale=Vector3.ONE*maxf(.001,power)
+		if bomb.velocity.length_squared()>.01:
+			var direction:Vector3=bomb.velocity.normalized()
+			payload.basis=Basis.looking_at(direction,Vector3.UP if absf(direction.y)<.98 else Vector3.RIGHT,true)
+	for id in bomb_nodes.keys():
+		if not live_bombs.has(id): bomb_nodes[id].queue_free();bomb_nodes.erase(id)
 	for id in missile_nodes.keys():
 		if active.has(id): continue
+		var trail:MeshInstance3D=missile_nodes[id].get_meta("trail")
+		if trail.visible: fading_trails.append({"mesh":trail,"until":time+.65})
+		else: trail.queue_free()
 		missile_nodes[id].get_meta("laser").queue_free()
 		missile_nodes[id].get_meta("contact").queue_free()
 		missile_nodes[id].get_meta("contact_light").queue_free()
 		missile_nodes[id].queue_free();missile_nodes.erase(id)
+	for tail in fading_trails.duplicate():
+		if time>=tail.until:
+			tail.mesh.queue_free();fading_trails.erase(tail)
+		else:
+			tail.mesh.material_override.set_shader_parameter("opacity",(tail.until-time)/.65)
+			tail.mesh.material_override.set_shader_parameter("race_time",time)
+	while fading_trails.size()>24:
+		var oldest:Dictionary=fading_trails.pop_front();oldest.mesh.queue_free()
 	for i in range(race.racers.size()):
 		var p:Dictionary=race.racers[i]
 		var frame:=Weapons.pose(race,p)
+		# Active hardware owns the single socket; queued inventory stays in the HUD.
+		var mounted:=mounted_kind(p)
 		for kind in mounts[i]:
 			var attachment:Node3D=mounts[i][kind]
-			attachment.visible=not p.crashed and (p.weapon==kind or kind in p.get("victory_mounts",[]) or (kind=="warp" and p.warp_fx>.01))
-			var socket:Vector3=Weapons.MISSILE_MOUNT if kind=="missile" else (Vector3(-2.45,.65,1.35) if kind=="warp" else Vector3(0.,.55,2.1))
-			attachment.transform=frame*Transform3D(Basis.IDENTITY,socket)
-			if kind!="missile":
+			attachment.visible=not p.crashed and mounted==kind
+			attachment.transform=frame*Transform3D(Basis.IDENTITY,Ship.Design.SOCKET)
+			if kind in ["warp","emp"]:
 				var core:MeshInstance3D=attachment.get_meta("core")
 				core.scale=Vector3.ONE*(1.+sin(time*(10. if p.warp_time>0. else 2.5))*.08)
 				if kind=="warp":
@@ -387,27 +544,12 @@ func update()->void:
 		pickup_lights[i].visible=flash>0. and not p.crashed
 		pickup_lights[i].position=frame.origin+frame.basis.y*3.
 		pickup_lights[i].light_energy=flash*3.
-		var dish:=dishes[i]
-		dish.visible=(p.weapon=="jammer" or "jammer" in p.get("victory_mounts",[]) or p.jammer_deploy>.01) and not p.crashed
-		var deployment:=maxf(.3 if p.weapon=="jammer" else .01,p.jammer_deploy)
-		dish.transform=frame*Transform3D(Basis.IDENTITY.scaled(Vector3(.65,deployment*.65,.65)),Vector3(-2.45,.65,-1.4))
-		for j in range(3):
-			var wave:MeshInstance3D=radio_waves[i][j]
-			wave.visible=p.jammer_time>0. and p.emp_time<=0. and not p.crashed and not p.finished
-			var phase:=fposmod(time*.9+j/3.,1.)
-			var ahead:=5.+phase*Weapons.JAMMER_RANGE
-			var radius:=ahead*tan(deg_to_rad(Weapons.JAMMER_HALF_ANGLE))
-			wave.transform=frame*Transform3D(Basis(Vector3.RIGHT,PI*.5).scaled(Vector3.ONE*radius),Vector3(0,0,ahead))
-			var envelope:=smoothstep(0.,.10,phase)*pow(1.-phase,2.2)*smoothstep(0.,1.,p.jammer_time)
-			wave.material_override.set_shader_parameter("power",envelope*p.jammer_deploy)
-			wave.material_override.set_shader_parameter("phase",phase)
-			wave.material_override.set_shader_parameter("race_time",time)
 		var arcs:=emp_arcs[i]
 		arcs.visible=p.emp_time>0. and not p.crashed
-		arcs.transform=frame.scaled_local(Vector3(5.3,2.3,5.8))
-		arcs.material_override.set_shader_parameter("age",time+p.slot)
-		arcs.material_override.set_shader_parameter("strength",minf(1.,p.emp_time*4.))
-		var turret:=turrets[i];turret.visible=(p.weapon=="drone" or p.drone_time>0. or "drone" in p.get("victory_mounts",[])) and not p.crashed
+		arcs.transform=frame
+		arcs.material_override.set_shader_parameter("age",maxf(0.,Weapons.EMP_DURATION-p.emp_time))
+		arcs.material_override.set_shader_parameter("strength",smoothstep(0.,.55,p.emp_time))
+		var turret:=turrets[i];turret.visible=mounted=="drone" and not p.crashed
 		turret.transform=frame*Transform3D(Basis.IDENTITY,Weapons.SENTRY_MOUNT)
 		var head:Node3D=turret.get_meta("head")
 		var sentry_active:bool=p.drone_time>0.
@@ -424,10 +566,16 @@ func update()->void:
 		status_led.material_override.albedo_color=led_color
 		status_led.material_override.emission=led_color
 		status_led.material_override.emission_energy_multiplier=3. if led_on else 0.
-		var recoil:=clampf((p.drone_cooldown-.30)/.10,0.,1.) if p.drone_target>=0 and p.drone_time>0. else 0.
-		var barrels:Node3D=turret.get_meta("barrels");barrels.position.z=-recoil*.22
-		for barrel in barrels.get_children():
-			if str(barrel.name).begins_with("Muzzle"): barrel.visible=recoil>.5
+		var firing:=false
+		for shot in presented_shots:
+			if shot.get("owner",-1)==i: firing=true;break
+		var barrels:Node3D=turret.get_meta("barrels")
+		barrels.position.z=-.07 if firing else 0.
+		barrels.rotation.z=time*(38. if p.drone_target>=0 else 9.) if sentry_active else 0.
+		turret.get_meta("drive_rotor").rotation.z=-barrels.rotation.z*1.8
+		turret.get_meta("muzzle").visible=firing
+		turret.get_meta("muzzle_light").visible=firing
+
 		impacts[i].show_hit(p)
 		var wake:=warp_wakes[i]
 		wake.visible=p.warp_fx>.01 and not p.crashed
@@ -438,14 +586,23 @@ func update()->void:
 		lens.visible=wake.visible;lens.transform=frame
 		lens.material_override.set_shader_parameter("strength",p.warp_fx)
 		lens.material_override.set_shader_parameter("race_time",time)
+	update_rails()
 	for i in range(tracers.size()):
-		tracers[i].visible=i<race.weapons.shots.size()
+		tracers[i].visible=i<presented_shots.size()
 		if tracers[i].visible:
-			var shot:Dictionary=race.weapons.shots[i];line(tracers[i],shot.from,shot.to,.055)
+			var shot:Dictionary=presented_shots[i];line(tracers[i],shot.from,shot.to,.025)
 	for i in range(explosions.size()):
 		explosions[i].visible=i<race.weapons.bursts.size()
 		if explosions[i].visible:
 			var burst:Dictionary=race.weapons.bursts[i]
-			var age:float=Weapons.MISSILE_BLAST_LIFE-burst.life
-			explosions[i].show_blast(burst.id,burst.position,age,14.,1. if race.track.biome=="forest" else .75)
-	smoke.visible_instance_count=smoke_count
+			var age:float=float(burst.get("duration",Weapons.MISSILE_BLAST_LIFE))-burst.life
+			explosions[i].show_blast(burst.id,burst.position,age,float(burst.get("size",14.)),1. if race.track.biome=="forest" else .75)
+
+static func mounted_kind(p:Dictionary)->String:
+	if p.drone_time>0.: return "drone"
+	if p.warp_time>0. or p.warp_fx>.01: return "warp"
+	var finished_mounts:Array=p.get("victory_mounts",[])
+	if "drone" in finished_mounts: return "drone"
+	if "warp" in finished_mounts: return "warp"
+	if not finished_mounts.is_empty(): return str(finished_mounts[0])
+	return p.weapon

@@ -25,7 +25,7 @@ static func build(track:RefCounted)->Array[Dictionary]:
 				points.append(entry+right*radius*(1.-cos(theta))+forward*radius*sin(theta)+Vector3.UP*170.*i/24.)
 			points.append(origin+forward*span*.76+Vector3.UP*125.)
 		else:
-			var radius:=58.
+			var radius:=72. # Hard still needs braking, with room for a recoverable slide.
 			for i in range(13):
 				var theta:=PI*i/12.
 				points.append(origin+forward*(180.+radius*sin(theta))+right*radius*(1.-cos(theta)))

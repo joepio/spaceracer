@@ -8,6 +8,8 @@ const Slipstream=preload("res://src/slipstream.gd")
 const Checkpoints=preload("res://src/checkpoints.gd")
 const TOP_SPEED := 265.0
 const BOOST_SPEED := 390.0
+const STACK_BOOST_SPEED := 475.0
+const MAX_SPEED := 520.0
 const CRASH_RESPAWN_DELAY := 2.0
 const ENERGY_REFILL_RATE := 1.5
 const ENERGY_REFILL_DELAY := 2.0
@@ -42,9 +44,14 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 		Bump.initialize(p)
 		checkpoints.initialize(p)
 		p.energy_previous=p.energy;p.energy_refill_delay=ENERGY_REFILL_DELAY
+		p.rebuild_time=0.
 		p.ai_boost_lap=1;p.ai_boost_cycle=0;p.ai_boost_seen=false;p.ai_boost_ready_at=0.
 		racers.append(p)
 	weapons=Weapons.new(track)
+
+static func speed_instability(speed:float,planted:float)->float:
+	# Progressive loss of magnetic adhesion, controllable with nose-down trim.
+	return smoothstep(365.,510.,speed)*(1.-clampf(planted,0.,1.)*.72)
 
 func bot(p: Dictionary) -> Dictionary:
 	if p.crashed or p.finished: return {}
@@ -61,7 +68,8 @@ func bot(p: Dictionary) -> Dictionary:
 	var peak:=absf(n.curve)
 	# Corner limits constrain braking; cruising speed is not a braking limit.
 	# Otherwise normal/easy bots brake away their own boost on straight road.
-	var safe_speed:=BOOST_SPEED
+	var boost_ceiling:float=STACK_BOOST_SPEED if n.zone=="boost" else BOOST_SPEED
+	var safe_speed:=boost_ceiling
 	# Hard pilots carry speed with coordinated yaw/strafe instead of holding
 	# half brake through every bend. Ordinary pilots keep their gentler pace.
 	# Include the current apex on hard so late recovery still requests braking.
@@ -69,12 +77,12 @@ func bot(p: Dictionary) -> Dictionary:
 		var upcoming:Dictionary=n if ahead==0. else track.sample(p.distance+ahead)
 		var bend:=absf(upcoming.curve)
 		peak=maxf(peak,bend)
-		var corner_speed:=clampf((2.7 if hard else 1.65)/maxf(.001,bend),160. if hard else 125.,BOOST_SPEED)
+		var corner_speed:=clampf((2.7 if hard else 1.65)/maxf(.001,bend),160. if hard else 125.,boost_ceiling)
 		if upcoming.feature=="hairpin": corner_speed=clampf(1.5/maxf(.001,bend),75.,BOOST_SPEED)
 		safe_speed=minf(safe_speed,sqrt(corner_speed*corner_speed+2*150*ahead))
 	var brake:=clampf((p.speed-safe_speed)/35.0,0,1)
 	if not hard and absf(n.curve)>.006 and p.speed>145: brake=maxf(brake,.48)
-	var target:float=-n.width*.63 if n.zone=="repair" and p.energy<85 else sin(p.slot*2)*4
+	var target:float=n.width*Track.Recharge.CENTER if n.zone=="repair" and p.energy<85 else sin(p.slot*2)*4
 	if float(n.get("split_gap",0.))>.01:
 		var route:float=n.get("preferred_route",0.)
 		if route==0.: route=p.get("route",0.)
@@ -97,11 +105,11 @@ func bot(p: Dictionary) -> Dictionary:
 	if not jump.is_empty() and fposmod(p.distance,track.length)<jump.takeoff: brake=0.
 	# Spend a useful burst on the exit, retaining enough hull energy for a hit.
 	# Never latch the boost button while EMP/recovery prevents activation, or
-	# waste the paid burst on a free pad that already supplies the same thrust.
+	# Combine paid boost with free pads when the road ahead permits it.
 	var boost_ready:bool=clock>=p.ai_boost_ready_at and p.recovery==0. and p.emp_time<=0. and p.warp_time<=0. and not p.boost_held
-	if hard: boost_ready=boost_ready and n.zone!="boost" and p.unload<.25 and absf(p.x-target)<n.width*.5
+	if hard: boost_ready=boost_ready and p.unload<.25 and absf(p.x-target)<n.width*.5
 	return {"steer":turn,"strafe":strafe,"throttle":1.0,"brake":brake,"left":false,"right":false,
-		"fire":p.weapon != "" and clock-p.weapon_acquired>.9 and not p.fire_held,"boost":boost_ready and p.lap>1 and p.energy>(30. if hard else 40.) and peak<(.0055 if hard else .0025) and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
+		"fire":(Weapons.Railgun.opportunity(self,p) if p.weapon=="railgun" else p.weapon != "" and clock-p.weapon_acquired>.9 and not p.fire_held),"boost":boost_ready and p.lap>1 and p.energy>(30. if hard else 40.) and peak<(.0055 if hard else .0025) and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
 
 func bot_boost_delay(p:Dictionary,minimum:float,maximum:float)->float:
 	var rng:=RandomNumberGenerator.new()
@@ -125,7 +133,7 @@ func air_bot(p:Dictionary)->Dictionary:
 	var target:Vector3=Track.point(aim,0.,-.5)
 	var desired:Vector3=(target-p.air_position).normalized()*220.
 	var goal:Vector3=desired+(desired-p.air_velocity)*.8
-	return {"throttle":.85,"brake":clampf((p.speed-235.)/100.,0.,.25),
+	return {"fire":Weapons.Railgun.opportunity(self,p) if p.weapon=="railgun" else Weapons.DiveBomb.opportunity(self,p),"throttle":.85,"brake":clampf((p.speed-235.)/100.,0.,.25),
 		"trim":clampf(-atan2(goal.dot(frame.y),maxf(20.,goal.dot(frame.z)))*1.6,-1.,1.),
 		"steer":clampf(-atan2(goal.dot(frame.x),maxf(20.,goal.dot(frame.z)))*3.,-1.,1.),
 		"strafe":clampf(-atan2(aim.frame.y.dot(frame.x),aim.frame.y.dot(frame.y))*1.37,-1.,1.)}
@@ -140,6 +148,19 @@ static func begin_recovery(p:Dictionary,delay:float)->void:
 	p.wreck_wait=false
 	p.recovery=delay
 
+func respawn_target(p:Dictionary)->Dictionary:
+	# Camera and recovery must agree, including missed checkpoints and split decks.
+	if p.get("respawn_target_id",-1)==p.crash_id: return p.respawn_target
+	var distance:float=checkpoints.return_distance(p) if p.checkpoint_missed else p.distance
+	if track.has_method("safe_respawn"): distance=track.safe_respawn(distance)
+	var n:Dictionary=track.sample(distance)
+	var x:=0.
+	if float(n.get("split_gap",0.))>.01:
+		x=(1. if p.slot%2==0 else -1.)*(n.split_gap+(n.width-n.split_gap)*.5)
+	p.respawn_target={"distance":distance,"x":x,"pose":Transform3D(Track.surface_frame(n,x),Track.point(n,x,Flight.HOVER))}
+	p.respawn_target_id=p.crash_id
+	return p.respawn_target
+
 func step(dt: float, inputs: Array) -> void:
 	vfx_clock+=dt
 	for p in racers:
@@ -147,7 +168,6 @@ func step(dt: float, inputs: Array) -> void:
 	if over:
 		return
 	weapons.begin_step(self,dt,inputs)
-	inputs=weapons.jam_inputs(self,inputs)
 	for i in range(racers.size()):
 		var input:Dictionary=inputs[i]
 		var pilot:Dictionary=racers[i]
@@ -190,6 +210,7 @@ func step(dt: float, inputs: Array) -> void:
 		var p := racers[i]
 		var c: Dictionary = inputs[i]
 		p.flash = maxf(0, p.flash - dt)
+		p.rebuild_time=maxf(0.,p.rebuild_time-dt)
 		p.launch_cooldown=maxf(0,p.launch_cooldown-dt)
 		if p.finished:
 			continue
@@ -259,14 +280,10 @@ func step(dt: float, inputs: Array) -> void:
 				if not p.manual_reset: p.energy=65.
 				elif p.energy<=1.: p.energy=25. # Rebuilt hull must survive the next mandatory landing.
 				p.manual_reset=false
-				if p.checkpoint_missed:
-					p.distance=checkpoints.return_distance(p);p.checkpoint_missed=false
-				p.x = 0.0
+				var destination:=respawn_target(p)
+				p.distance=destination.distance;p.x=destination.x;p.checkpoint_missed=false
 				p.route=0.
-				if track.has_method("safe_respawn"): p.distance=track.safe_respawn(p.distance)
-				var respawn_node:Dictionary=track.sample(p.distance)
-				if float(respawn_node.get("split_gap",0.))>.01:
-					p.x=(1. if p.slot%2==0 else -1.)*(respawn_node.split_gap+(respawn_node.width-respawn_node.split_gap)*.5)
+				p.rebuild_time=.7
 				p.heading = 0.0
 				p.slip = 0.0
 				p.speed = 90.0
@@ -281,19 +298,21 @@ func step(dt: float, inputs: Array) -> void:
 			continue
 		p.on_pad = n.zone == "boost" and absf(p.x) < n.width * .35 and brake<.05 and p.lift<1 and p.emp_time<=0.
 		var fast: bool = (p.boost > 0 or p.on_pad) and brake<.05
-		var target:float=(BOOST_SPEED if fast else TOP_SPEED)+loose*60-planted*35
+		var stacked:bool=fast and p.boost>0. and p.on_pad
+		var target:float=(STACK_BOOST_SPEED if stacked else (BOOST_SPEED if fast else TOP_SPEED))+loose*60-planted*35
 		var drag:float=Slipstream.drag_multiplier(p,fast)
 		var acceleration: float = throttle * (1-brake*.9) * 125 * (1 - pow(p.speed / target, 2)*drag)
 		if fast:
-			acceleration += maxf(0, target - p.speed) * 3
+			acceleration += maxf(0, target - p.speed) * (4.2 if stacked else 3.)
 		if throttle == 0:
 			acceleration -= 38*drag
 		acceleration -= 240*brake+planted*p.speed*.12
 		acceleration -= absf(steer) * p.speed * lerpf(.045,.08,p.slide) + n.slope * 28*cos(p.heading)
 		p.acceleration=maxf(0,acceleration)
-		p.speed = clampf(p.speed + acceleration * dt, 0, 440)
-		var yaw:=steer*lerpf(1.65,3.8,p.slide)
-		var assistance:float=smoothstep(35.,130.,p.speed)*lerpf(3.5,.8,p.slide)
+		p.speed = clampf(p.speed + acceleration * dt, 0, MAX_SPEED)
+		var instability:=speed_instability(p.speed,planted)
+		var yaw:=steer*lerpf(1.65,3.8,p.slide)*(1.+instability*.22)
+		var assistance:float=smoothstep(35.,130.,p.speed)*lerpf(3.5,.8,p.slide)*(1.-instability*.45)
 		var facing:float=wrapf(p.heading,-PI,PI)
 		var side_speed:float=strafe*46+Bump.velocity(p)
 		var advance:float=p.speed*cos(facing)-side_speed*sin(facing)
@@ -301,8 +320,8 @@ func step(dt: float, inputs: Array) -> void:
 		var lateral:float=sin(p.heading)*p.speed+side_speed*cos(p.heading)
 		# Momentum carries outward as the road turns under a low-grip craft.
 		var forward_speed:float=p.speed*cos(p.heading)-side_speed*sin(p.heading)
-		p.slip-=n.curve*forward_speed*forward_speed*lerpf(.25,1,p.slide)*dt
-		var grip:float=lerpf(14,1.8,p.slide)*(1+planted*.75-loose*.48)*(1-p.unload*.35)
+		p.slip-=n.curve*forward_speed*forward_speed*lerpf(.25,1,p.slide)*(1.+instability*.5)*dt
+		var grip:float=lerpf(14,1.8,p.slide)*(1+planted*.75-loose*.48)*(1-p.unload*.35)*(1.-instability*.58)
 		p.slip=lerpf(p.slip,lateral,1-exp(-grip*dt))
 		var crest_force:float=maxf(0,-n.crest)*forward_speed*forward_speed
 		var hold_force:float=230*(1-loose*.82)+planted*180+brake*80
@@ -320,14 +339,15 @@ func step(dt: float, inputs: Array) -> void:
 				p.heading = -side * .10
 				p.flash = .18
 		constrain_surface(p,n)
-		if n.zone == "repair" and p.x < -n.width * .35 and p.lift<1:
-			p.energy = minf(100, p.energy + 34 * dt)
+		Track.Recharge.apply(p,n,dt)
 		p.distance += (p.speed*cos(p.heading)-side_speed*sin(p.heading))*dt
 		update_lap(p)
 		var next_node:Dictionary=track.sample(p.distance)
 		constrain_surface(p,next_node)
 		var next_pose:=Flight.ground_pose(p,next_node,clock)
-		p.ground_velocity=(next_pose.origin-previous_pose.origin)/dt
+		var next_velocity:Vector3=(next_pose.origin-previous_pose.origin)/dt
+		p.ground_acceleration=(next_velocity-p.ground_velocity)/dt
+		p.ground_velocity=next_velocity
 		var contact:Dictionary=track.hazards.trace(previous_pose.origin,next_pose.origin)
 		if not contact.is_empty() and not p.finished:
 			p.air_position=contact.position;p.air_frame=next_pose.basis;p.air_velocity=p.ground_velocity

@@ -8,6 +8,6 @@ void fragment(){
     float radius=length(UV*2.-1.);
     float core=exp(-radius*radius*150.);
     float glow=exp(-radius*radius*14.);
-    ALBEDO=vec3(1.,.97,.94)*(core*9.+glow*1.5);
+    ALBEDO=vec3(1.,.97,.94)*(core*16.+glow*3.);
     ALPHA=(core+glow*.25)*strength*(1.-smoothstep(.65,1.,radius));
 }

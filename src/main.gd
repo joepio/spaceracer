@@ -216,7 +216,7 @@ func new_race(random_scenery:bool=false) -> void:
 	views.clear()
 	if next_seed == 0: next_seed = randi_range(1,MAX_SEED)
 	next_seed=clampi(next_seed,1,MAX_SEED)
-	race = Race.new(roster,next_seed,laps,difficulty,biome)
+	race = Race.new(roster,next_seed,laps,difficulty,biome,randi_range(1,10000000))
 	next_seed = next_seed%MAX_SEED+1
 	results_clock = 0
 	world = World.new()

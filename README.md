@@ -58,6 +58,17 @@ A small progress bar shows the hold. Short taps do nothing, and a continuous
 hold acts only once. These shortcuts are menu-only; racing D-pad steering stays
 available.
 Standalone races have six machines, filling spare positions with AI.
+AI pilots have individual skill, risk and pickup preferences. They change racing
+lines and pace over several seconds, pick a passing side, sometimes chase an
+item and sometimes stay on their line. Corner judgements can produce a clean
+apex or a late, wide slide; missed turns can genuinely leave an unguarded edge.
+Hard pilots make fewer mistakes. Crashes trigger a short conservative spell,
+and stranded airborne bots can use the same costly reset as players. Boost and
+weapon timing vary between drivers. All of this uses ordinary vehicle controls,
+with no speed bonuses or forced crashes. A rematch reshuffles driver decisions
+without changing the shared track seed. Simulation tests can pass a separate
+AI seed to `Race.new` to reproduce a race.
+
 The camera keeps the same horizontal lens in wide two-player viewports, with a
 stronger, smooth acceleration/boost FOV increase. HUD instruments sit near the corners,
 with very light curvature in split-screen and no decorative cockpit brackets.

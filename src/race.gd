@@ -1,4 +1,5 @@
 extends RefCounted
+const AIPilot=preload("res://src/ai_pilot.gd")
 const Track = preload("res://src/track.gd")
 const Weapons=preload("res://src/weapons.gd")
 const Flight=preload("res://src/flight.gd")
@@ -28,7 +29,7 @@ var laps := 3
 var over := false
 var finish_deadline := INF
 
-func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String="normal", biome:String="city") -> void:
+func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String="normal", biome:String="city",ai_seed:int=0) -> void:
 	track = Track.new(track_seed,difficulty,biome)
 	checkpoints=Checkpoints.new(track)
 	laps = lap_count
@@ -46,6 +47,7 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 		p.energy_previous=p.energy;p.energy_refill_delay=ENERGY_REFILL_DELAY
 		p.rebuild_time=0.
 		p.ai_boost_lap=1;p.ai_boost_cycle=0;p.ai_boost_seen=false;p.ai_boost_ready_at=0.
+		AIPilot.initialize(p,track_seed*9176+ai_seed,difficulty)
 		racers.append(p)
 	weapons=Weapons.new(track)
 
@@ -60,11 +62,13 @@ func bot(p: Dictionary) -> Dictionary:
 		p.ai_boost_ready_at=clock+bot_boost_delay(p,.15,1.5)
 	if p.boost>0. and not p.ai_boost_seen:
 		p.ai_boost_seen=true;p.ai_boost_cycle+=1
-		p.ai_boost_ready_at=clock+p.boost+bot_boost_delay(p,.2,1.1)
+		p.ai_boost_ready_at=clock+p.boost+bot_boost_delay(p,.4,3.8)
 	elif p.boost<=0.: p.ai_boost_seen=false
-	if p.airborne: return air_bot(p)
 	var n:Dictionary=track.sample(p.distance)
+	AIPilot.update(self,p,n)
+	if p.airborne: return air_bot(p)
 	var hard:bool=track.difficulty=="hard"
+	var quality:=AIPilot.corner_quality(p,clock)
 	var peak:=absf(n.curve)
 	# Corner limits constrain braking; cruising speed is not a braking limit.
 	# Otherwise normal/easy bots brake away their own boost on straight road.
@@ -79,10 +83,11 @@ func bot(p: Dictionary) -> Dictionary:
 		peak=maxf(peak,bend)
 		var corner_speed:=clampf((2.7 if hard else 1.65)/maxf(.001,bend),160. if hard else 125.,boost_ceiling)
 		if upcoming.feature=="hairpin": corner_speed=clampf(1.5/maxf(.001,bend),75.,BOOST_SPEED)
+		if bend>.002:corner_speed*=p.ai.pace*(1.5 if quality<0. else (1.035 if quality>0. else 1.))
 		safe_speed=minf(safe_speed,sqrt(corner_speed*corner_speed+2*150*ahead))
 	var brake:=clampf((p.speed-safe_speed)/35.0,0,1)
 	if not hard and absf(n.curve)>.006 and p.speed>145: brake=maxf(brake,.48)
-	var target:float=n.width*Track.Recharge.CENTER if n.zone=="repair" and p.energy<85 else sin(p.slot*2)*4
+	var target:float=AIPilot.line(self,p,n)
 	if float(n.get("split_gap",0.))>.01:
 		var route:float=n.get("preferred_route",0.)
 		if route==0.: route=p.get("route",0.)
@@ -97,9 +102,13 @@ func bot(p: Dictionary) -> Dictionary:
 	var desired_lateral:=clampf((target-p.x)*2.4,-45,45)
 	var lateral_demand:float=desired_lateral+n.curve*p.speed*p.speed*inertia/grip
 	# Share cornering between yaw and real right-stick strafe, just like a pilot.
-	var strafe:=clampf(lateral_demand*.30/46.,-.65,.65)
+	var strafe:=clampf(lateral_demand*(.42 if quality>0. else .30)/46.,-.75,.75)
 	var desired_heading:=asin(clampf((lateral_demand-strafe*46.)/maxf(p.speed,60),-.75,.75))
 	var turn:=clampf((n.curve*p.speed+desired_heading*lerpf(3.5,.8,slide)+(desired_heading-p.heading)*3.8+(desired_lateral-p.slip)*.012)/lerpf(1.65,3.8,slide),-1,1)
+	# Late turn-in naturally runs wide; physics determines slips/falls and recovery.
+	if quality<0.:
+		turn*=.35
+		strafe*=.5
 	# Keep momentum and a centred approach before a mandatory jump.
 	var jump:Dictionary=track.jump_at(p.distance,180.)
 	if not jump.is_empty() and fposmod(p.distance,track.length)<jump.takeoff: brake=0.
@@ -109,7 +118,7 @@ func bot(p: Dictionary) -> Dictionary:
 	var boost_ready:bool=clock>=p.ai_boost_ready_at and p.recovery==0. and p.emp_time<=0. and p.warp_time<=0. and not p.boost_held
 	if hard: boost_ready=boost_ready and p.unload<.25 and absf(p.x-target)<n.width*.5
 	return {"steer":turn,"strafe":strafe,"throttle":1.0,"brake":brake,"left":false,"right":false,
-		"fire":(Weapons.Railgun.opportunity(self,p) if p.weapon=="railgun" else p.weapon != "" and clock-p.weapon_acquired>.9 and not p.fire_held),"boost":boost_ready and p.lap>1 and p.energy>(30. if hard else 40.) and peak<(.0055 if hard else .0025) and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
+		"fire":(Weapons.Railgun.opportunity(self,p) if p.weapon=="railgun" else p.weapon != "" and clock-p.weapon_acquired>p.ai.fire_delay and not p.fire_held),"boost":boost_ready and p.lap>1 and p.energy>(30. if hard else 40.) and peak<(.0055 if hard else .0025) and p.boost==0 and brake<.05 and track.jump_at(p.distance,500.).is_empty()}
 
 func bot_boost_delay(p:Dictionary,minimum:float,maximum:float)->float:
 	var rng:=RandomNumberGenerator.new()
@@ -130,10 +139,11 @@ func air_bot(p:Dictionary)->Dictionary:
 	# Lead the displaced landing centre and cancel drift before reaching the deck.
 	# Aim through the hover plane so direct jet steering completes touchdown
 	# instead of asymptotically skimming just above it until flight times out.
-	var target:Vector3=Track.point(aim,0.,-.5)
+	var landing_x:float=p.ai.line*minf(aim.width*.3,6.)
+	var target:Vector3=Track.point(aim,landing_x,-.5)
 	var desired:Vector3=(target-p.air_position).normalized()*220.
 	var goal:Vector3=desired+(desired-p.air_velocity)*.8
-	return {"fire":Weapons.Railgun.opportunity(self,p) if p.weapon=="railgun" else Weapons.DiveBomb.opportunity(self,p),"throttle":.85,"brake":clampf((p.speed-235.)/100.,0.,.25),
+	return {"reset":p.air_time>7. and p.air_position.distance_to(target)>100.,"fire":Weapons.Railgun.opportunity(self,p) if p.weapon=="railgun" else Weapons.DiveBomb.opportunity(self,p),"throttle":.85,"brake":clampf((p.speed-235.)/100.,0.,.25),
 		"trim":clampf(-atan2(goal.dot(frame.y),maxf(20.,goal.dot(frame.z)))*1.6,-1.,1.),
 		"steer":clampf(-atan2(goal.dot(frame.x),maxf(20.,goal.dot(frame.z)))*3.,-1.,1.),
 		"strafe":clampf(-atan2(aim.frame.y.dot(frame.x),aim.frame.y.dot(frame.y))*1.37,-1.,1.)}

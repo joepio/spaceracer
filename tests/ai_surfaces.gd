@@ -36,7 +36,7 @@ func run()->void:
 		check(ship.get_node("Airbrake-1").rotation.x>0.,"AI braking opens airbrakes")
 	# The fixed wing no longer hides the elevon at its neutral position.
 	var fixed:MeshInstance3D=ship.get_node("Wing-1")
-	var flap:MeshInstance3D=ship.get_node("WingControlL/Elevon")
+	var flap:MeshInstance3D=ship.get_node("WingControlL/Elevon-1")
 	check(fixed.mesh.get_aabb().position.z>flap.position.z+flap.get_parent().position.z+flap.mesh.get_aabb().end.z,"Fixed wing ends before moving flap")
 	place(race,p,1.);p.finished=true
 	race.Victory.step(p,race.track,.1,race.clock);Ship.animate_controls(ship,p)

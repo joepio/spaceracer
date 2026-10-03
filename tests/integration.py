@@ -120,6 +120,7 @@ def main():
             assert next(m for m in hello if m["type"] == "hello")["token"] == "spaceracer-test-token"
             host.send("welcome", protocol_version=1, party={})
             host.send("setting_changed", key="laps", value=1)
+            host.send("setting_changed", key="weapon_pickups", value=False)
             host.send("setting_changed", key="difficulty", value="easy")
             host.send("setting_changed", key="biome", value="forest")
             seats = [dict(index=i, occupant=dict(kind="local", player_id=f"p{i}"), controller=token)

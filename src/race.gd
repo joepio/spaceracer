@@ -17,6 +17,10 @@ const ENERGY_REFILL_DELAY := 2.0
 const HULL_HALF_WIDTH := 4.7
 const HULL_HALF_LENGTH := 4.45
 const HULL_CENTER := .65
+var boost_cost := 22.0
+var boost_duration := 1.25
+var energy_refill := 1.0
+var respawn_seconds := CRASH_RESPAWN_DELAY
 var weapons:RefCounted
 var checkpoints:RefCounted
 var track: RefCounted
@@ -181,7 +185,7 @@ func step(dt: float, inputs: Array) -> void:
 				var reset_pose:=Flight.pose(pilot,track.sample(pilot.distance),clock)
 				pilot.air_position=reset_pose.origin;pilot.air_frame=reset_pose.basis
 			Flight.crash(pilot)
-			begin_recovery(pilot,CRASH_RESPAWN_DELAY)
+			begin_recovery(pilot,respawn_seconds)
 		pilot.reset_held=reset_pressed
 		# Only recovery and pause remain available once the craft is destroyed.
 		if pilot.crashed:
@@ -218,7 +222,7 @@ func step(dt: float, inputs: Array) -> void:
 		if p.wreck_wait:
 			p.wreck_time+=dt
 			p.speed=0.;p.thrust=0.
-			if p.wreck_time<CRASH_RESPAWN_DELAY: continue
+			if p.wreck_time<respawn_seconds: continue
 			# Complete recovery this tick after the explosion/debris have played.
 			begin_recovery(p,dt)
 		if p.warp_time>0.:
@@ -256,9 +260,9 @@ func step(dt: float, inputs: Array) -> void:
 				var countersteer:=.6 if steer*p.heading<-.015 else 0.0
 				p.slide=move_toward(p.slide,0.0,dt*(.65+planted*2.8+countersteer))
 		p.drifting=p.slide>.18
-		if c.get("boost", false) and not p.boost_held and p.lap > 1 and p.energy > 22 and p.recovery == 0 and brake<.05 and not p.airborne and p.emp_time<=0.:
-			p.energy -= 22
-			p.boost = 1.25
+		if c.get("boost", false) and not p.boost_held and p.lap > 1 and p.energy > boost_cost and p.recovery == 0 and brake<.05 and not p.airborne and p.emp_time<=0.:
+			p.energy -= boost_cost
+			p.boost = boost_duration
 		p.boost_held = c.get("boost", false)
 		p.boost = maxf(0, p.boost - dt)
 		if p.recovery > 0:
@@ -363,7 +367,7 @@ func step(dt: float, inputs: Array) -> void:
 			Flight.crash(p)
 	resolve_contacts()
 	weapons.end_step(self,dt)
-	for p in racers: refill_energy(p,dt)
+	for p in racers: refill_energy(p,dt,energy_refill)
 	var ordered := standings()
 	var all_finished := not racers.is_empty()
 	for i in range(ordered.size()):
@@ -371,14 +375,14 @@ func step(dt: float, inputs: Array) -> void:
 		all_finished = all_finished and ordered[i].finished
 	over = all_finished or clock >= finish_deadline or clock >= 240
 
-static func refill_energy(p:Dictionary,dt:float)->void:
+static func refill_energy(p:Dictionary,dt:float,rate:float=1.0)->void:
 	# The shared shield/boost reserve recovers slowly between bursts and hits.
 	if p.energy<p.energy_previous or p.boost>0. or p.warp_time>0. or p.emp_time>0. or p.crashed or p.recovery>0. or p.finished:
 		p.energy_refill_delay=ENERGY_REFILL_DELAY
 	else:
 		var refill_time:=maxf(0.,dt-p.energy_refill_delay)
 		p.energy_refill_delay=maxf(0.,p.energy_refill_delay-dt)
-		if p.energy>0.: p.energy=minf(100.,p.energy+ENERGY_REFILL_RATE*refill_time)
+		if p.energy>0.: p.energy=minf(100.,p.energy+ENERGY_REFILL_RATE*rate*refill_time)
 	p.energy_previous=p.energy
 
 func update_lap(p:Dictionary)->void:

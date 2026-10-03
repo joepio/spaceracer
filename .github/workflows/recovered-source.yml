@@ -1,0 +1,43 @@
+name: Ion Rush
+on:
+  pull_request:
+    paths: ['**', '.github/workflows/recovered-source.yml']
+  push:
+    branches: [main]
+    paths: ['**', '.github/workflows/recovered-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  simulation-and-integration:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned Godot
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'godot.zip'
+          Invoke-WebRequest 'https://github.com/godotengine/godot-builds/releases/download/4.5.2-stable/Godot_v4.5.2-stable_win64.exe.zip' -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash -ne '3766090865330AB2A0ED33594520394B711C620B1378F9223904FAEEF60F2F14') { throw 'Godot checksum mismatch' }
+          Expand-Archive $archive "$env:RUNNER_TEMP/godot"
+      - name: Import and simulate
+        shell: pwsh
+        run: |
+          $godot = "$env:RUNNER_TEMP/godot/Godot_v4.5.2-stable_win64_console.exe"
+          & $godot --headless --path . --editor --import --quit
+          if ($LASTEXITCODE -ne 0) { throw 'Import failed' }
+          & $godot --headless --path . --script res://tests/run.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Simulation failed' }
+          & $godot --headless --path . --script res://tests/menu.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Menu input failed' }
+          & $godot --headless --path . --script res://tests/flight.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Flight failed' }
+      - name: Synthetic host lifecycle
+        shell: pwsh
+        run: |
+          python tests/integration.py --godot "$env:RUNNER_TEMP/godot/Godot_v4.5.2-stable_win64.exe" --headless
+          if ($LASTEXITCODE -ne 0) { throw 'Integration failed' }

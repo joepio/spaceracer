@@ -1,0 +1,211 @@
+extends Node3D
+const Track = preload("res://src/track.gd")
+const Scenery = preload("res://src/scenery.gd")
+const Flight=preload("res://src/flight.gd")
+const Ship = preload("res://src/ship.gd")
+var scenery: RefCounted
+var ships: Array[Node3D] = []
+var cameras: Array[Camera3D] = []
+var race: RefCounted
+var road_material: ShaderMaterial
+var ship_colors: Array[Color] = []
+const PALETTE = [Color("53ffe0"), Color("ff617b"), Color("ffd16b"), Color("ac8cff"), Color("68baff"), Color("ff9f58"), Color("aaff78"), Color("f8aaff")]
+
+static func color_for(p: Dictionary) -> Color:
+	return Color.from_string(str(p.get("color", "")), PALETTE[int(p.slot) % PALETTE.size()])
+
+static func material(color: Color, glow: float = 0) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = color
+	m.roughness = .38
+	m.metallic = .35
+	if glow > 0:
+		m.emission_enabled = true
+		m.emission = color
+		m.emission_energy_multiplier = glow
+	return m
+
+func build(state: RefCounted) -> void:
+	race = state
+	var environment := WorldEnvironment.new()
+	var env := Environment.new()
+	env.background_mode = Environment.BG_SKY
+	var sky := Sky.new()
+	var sky_material := ShaderMaterial.new()
+	sky_material.shader = load("res://src/sky.gdshader")
+	var top: Color = race.track.theme[1]
+	var horizon: Color = race.track.theme[2]
+	sky_material.set_shader_parameter("top_color",Vector3(top.r,top.g,top.b))
+	sky_material.set_shader_parameter("horizon_color",Vector3(horizon.r,horizon.g,horizon.b))
+	var secondary:Color=race.track.theme[4]
+	sky_material.set_shader_parameter("aurora_color",Vector3(secondary.r,secondary.g,secondary.b))
+	sky.sky_material = sky_material
+	env.sky = sky
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color("a8c8e8")
+	env.ambient_light_energy = .48
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.fog_enabled = true
+	env.fog_light_color = race.track.theme[2]
+	env.fog_density = .00013
+	env.fog_sky_affect = .08
+	environment.environment = env
+	add_child(environment)
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-35, -35, 0)
+	sun.light_color = Color("d3e5ff")
+	sun.light_energy = 1.6
+	sun.shadow_enabled = false
+	add_child(sun)
+	road_material = ShaderMaterial.new()
+	road_material.shader = load("res://src/road.gdshader")
+	road_material.set_shader_parameter("accent", Vector3(race.track.theme[3].r, race.track.theme[3].g, race.track.theme[3].b))
+	road_material.set_shader_parameter("secondary",Vector3(secondary.r,secondary.g,secondary.b))
+	build_track()
+	scenery=Scenery.new()
+	scenery.build(self,race)
+	for p in race.racers:
+		var ship := build_ship(color_for(p))
+		add_child(ship)
+		ships.append(ship)
+		ship_colors.append(color_for(p))
+	update_ships()
+
+func vertex(surface: SurfaceTool, n: Dictionary, x: float, h: float, uv: Vector2) -> void:
+	surface.set_uv(uv)
+	var zone := 1.0 if n.zone == "repair" else (2.0 if n.zone == "boost" else 0.0)
+	surface.set_color(Color(zone / 2, 1.0 if n.loop else 0.0, 1.0 if n.get("brake_hint",false) else 0.0))
+	surface.add_vertex(Track.point(n, x, h))
+
+func strip(surface: SurfaceTool, a: Dictionary, b: Dictionary, left: float, right: float, height: float, distance: float) -> void:
+	vertex(surface, a, a.width * left, height, Vector2(left, distance))
+	vertex(surface, b, b.width * left, height, Vector2(left, distance + race.track.step))
+	vertex(surface, a, a.width * right, height, Vector2(right, distance))
+	vertex(surface, a, a.width * right, height, Vector2(right, distance))
+	vertex(surface, b, b.width * left, height, Vector2(left, distance + race.track.step))
+	vertex(surface, b, b.width * right, height, Vector2(right, distance + race.track.step))
+
+func build_track() -> void:
+	var nodes: Array = race.track.nodes
+	var rail_material := material(race.track.theme[3], .55)
+	var dark := material(Color("152236"))
+	for chunk in range(0, nodes.size(), 32):
+		var surface := SurfaceTool.new()
+		var rail := SurfaceTool.new()
+		var underside := SurfaceTool.new()
+		surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+		rail.begin(Mesh.PRIMITIVE_TRIANGLES)
+		underside.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for i in range(chunk, mini(chunk + 32, nodes.size())):
+			var a: Dictionary = nodes[i]
+			var b: Dictionary = nodes[(i + 1) % nodes.size()]
+			strip(surface, a, b, -1, 1, 0, i * race.track.step)
+			strip(rail, a, b, -1.015, -1, .65, i * race.track.step)
+			strip(rail, a, b, 1, 1.015, .65, i * race.track.step)
+			strip(underside, a, b, -1.09, 1.09, -1.4, i * race.track.step)
+			wall(underside,a,b,-1.09,i*race.track.step)
+			wall(underside,a,b,1.09,i*race.track.step)
+		for pair in [[surface, road_material], [rail, rail_material], [underside, dark]]:
+			pair[0].generate_normals()
+			var mesh := MeshInstance3D.new()
+			mesh.mesh = pair[0].commit()
+			mesh.material_override = pair[1]
+			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(mesh)
+	# Tunnel ribs and track-side turn chevrons are static geometry.
+	var rib := material(Color("31465d"))
+	for i in range(0, nodes.size(), 5):
+		var n: Dictionary = nodes[i]
+		if n.tunnel or i == 0:
+			var frame := Node3D.new()
+			add_child(frame)
+			frame.transform = Transform3D(Track.basis_at(n), n.p)
+			box(frame, Vector3(-n.width - 1, 9, 0), Vector3(1.7, 18, 2.2), rib)
+			box(frame, Vector3(n.width + 1, 9, 0), Vector3(1.7, 18, 2.2), rib)
+			box(frame, Vector3(0, 18, 0), Vector3(n.width * 2 + 4, 1.8, 2.2), rib)
+			box(frame, Vector3(0, 16.8, -.1), Vector3(n.width * 2, .3, 1.3), rail_material)
+		elif absf(n.curve) > .002:
+			var sign_node := Node3D.new()
+			add_child(sign_node)
+			sign_node.transform = Transform3D(Track.basis_at(n), Track.point(n, -signf(n.curve) * (n.width + 2), 4))
+			box(sign_node, Vector3.ZERO, Vector3(.5, 3, 6), rib)
+			for z in [-1.5,1.5]:
+				var marker:=box(sign_node,Vector3(0,0,z),Vector3(.7,.38,2),rail_material)
+				marker.rotation.x=.65*signf(n.curve)
+
+func wall(surface:SurfaceTool,a:Dictionary,b:Dictionary,side:float,distance:float)->void:
+	for item in [[a,0,distance],[a,-1.4,distance],[b,0,distance+race.track.step],
+		[b,0,distance+race.track.step],[a,-1.4,distance],[b,-1.4,distance+race.track.step]]:
+		vertex(surface,item[0],item[0].width*side,item[1],Vector2(side,item[2]))
+
+static func box(parent: Node3D, position_value: Vector3, size_value: Vector3, mat: Material) -> MeshInstance3D:
+	var mesh := MeshInstance3D.new()
+	var shape := BoxMesh.new()
+	shape.size = size_value
+	mesh.mesh = shape
+	mesh.material_override = mat
+	mesh.position = position_value
+	parent.add_child(mesh)
+	return mesh
+
+func build_ship(tint: Color) -> Node3D:
+	return Ship.build(tint)
+
+func update_ships() -> void:
+	road_material.set_shader_parameter("race_time",race.clock)
+	if scenery: scenery.animate(race.clock)
+	for i in range(race.racers.size()):
+		var p: Dictionary = race.racers[i]
+		Ship.animate_controls(ships[i],p)
+		var n: Dictionary = race.track.sample(p.distance)
+		var base: Basis = Track.basis_at(n)
+		base = Flight.ground_basis(base,p.heading,p.trim,p.slip)
+		ships[i].transform = Transform3D(base, Track.point(n, p.x, Flight.hover_height(p.trim) + p.lift + sin(race.clock * 9 + i) * .1))
+		if p.airborne: ships[i].transform=Transform3D(p.air_frame,p.air_position)
+		ships[i].visible = not (p.crashed and p.recovery>0) and (p.recovery<=0 or fmod(p.recovery,.2)<.1)
+		var tint := color_for(p)
+		if ship_colors[i] != tint:
+			ships[i].get_node("Body").material_override.set_shader_parameter("tint",Vector3(tint.r,tint.g,tint.b))
+			for side in [-1,1]:
+				var light:StandardMaterial3D=ships[i].get_node("Light%d"%side).material_override
+				light.albedo_color=tint
+				light.emission=tint
+			ship_colors[i] = tint
+		var burning:bool=(p.boost>0 or p.on_pad) and p.thrust>0
+		var thrust:float=0.0 if p.recovery>0 or p.finished else maxf(.08,p.thrust)
+		var length:=lerpf(.75,5.5,thrust)+(5.5 if burning else 0.0)
+		for name_value in ["ExhaustL", "ExhaustR"]:
+			var exhaust:MeshInstance3D=ships[i].get_node(name_value)
+			exhaust.scale=Vector3(.8 if burning else .6,.65 if burning else .45,length)
+			exhaust.material_override.set_shader_parameter("race_time",race.clock+i*.71)
+			exhaust.material_override.set_shader_parameter("power",thrust)
+			exhaust.material_override.set_shader_parameter("boost_amount",1.0 if burning else 0.0)
+		var wake:MultiMesh=ships[i].get_node("EngineWake").multimesh
+		for particle in range(20):
+			var age:=fposmod(race.clock*(2.2 if burning else 1.6)+particle*.173+i*.31,1.0)
+			var side:=1 if particle%2==0 else -1
+			var phase:=particle*2.4
+			var position:=Vector3(side*2.45+sin(phase)*age*.6,-.12+cos(phase)*age*.4,-3.8-age*length*1.55)
+			var size:=Vector3(.035,.035,.3+age*.7)*(thrust if race.countdown<=0 else 0.0)
+			wake.set_instance_transform(particle,Transform3D(Basis.IDENTITY.scaled(size),position))
+			wake.set_instance_color(particle,Color(.3,.8,1,(1-age)*thrust*.7))
+
+func update_camera(camera: Camera3D, index: int, _dt: float, _snap: bool = false) -> void:
+	var p: Dictionary = race.racers[index]
+	if p.airborne:
+		var frame:Basis=p.air_frame
+		var position:Vector3=p.air_position
+		camera.position=position-frame.z*(20+p.speed*.008)+frame.y*7
+		camera.look_at(position+frame.z*28,frame.y)
+		camera.fov=clampf(76+p.speed/32.0,76,94)
+		return
+	var n: Dictionary = race.track.sample(p.distance)
+	var base: Basis = Track.basis_at(n)
+	var focus := Track.point(n, p.x, 1.5 + p.lift*.65)
+	var target: Vector3 = focus - base.z * (17 + p.speed * .006) + base.y * 7
+	# Smoothing forward position adds speed-dependent lag (and hides the craft).
+	# The ribbon is already smooth; keep the chase distance stable at 1,000 km/h.
+	camera.position = target
+	var aim: Vector3 = focus + base.z * 24 + base.y * 1.5
+	camera.look_at(aim, base.y)
+	camera.fov = 76 + p.speed / 32.0 + (5 if p.boost > 0 else 0)

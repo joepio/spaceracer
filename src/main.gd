@@ -1,4 +1,5 @@
 extends Node
+var settings = preload("res://src/settings.gd").new()
 const Race = preload("res://src/race.gd")
 const World = preload("res://src/world.gd")
 const Hud = preload("res://src/hud.gd")
@@ -84,12 +85,7 @@ func _ready() -> void:
 	bridge.daemon_disconnected.connect(func(): get_tree().quit())
 	bridge.setting_changed.connect(setting_changed)
 	add_child(bridge)
-	bridge.declare_settings([
-		{"key":"laps","label":"Laps (next race)","kind":"number","default":3,"min":1,"max":5},
-		{"key":"difficulty","label":"Track difficulty (next race)","kind":"choice","default":"normal","options":["easy","normal","hard"]},
-		{"key":"biome","label":"World (next race)","kind":"choice","default":"city","options":Race.Track.BIOMES},
-		{"key":"seed","label":"Track seed (0 = random, next race)","kind":"number","default":0,"min":0,"max":99999},
-		{"key":"quality","label":"Graphics","kind":"choice","default":"high","options":["performance","balanced","high"]}])
+	bridge.declare_settings(settings.SPECS)
 	ui = Control.new()
 	ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var canvas := CanvasLayer.new()
@@ -217,6 +213,8 @@ func new_race(random_scenery:bool=false) -> void:
 	if next_seed == 0: next_seed = randi_range(1,MAX_SEED)
 	next_seed=clampi(next_seed,1,MAX_SEED)
 	race = Race.new(roster,next_seed,laps,difficulty,biome,randi_range(1,10000000))
+	settings.apply_live(race)
+	if not settings.values.weapon_pickups: race.weapons.pickups.clear()
 	next_seed = next_seed%MAX_SEED+1
 	results_clock = 0
 	world = World.new()
@@ -885,6 +883,8 @@ func update_profiles(seats:Array,players:Array,presence:Array)->void:
 			if status.get("player_id","")==p.get("id",""): p.sleeping=status.get("state","")=="sleeping"
 
 func setting_changed(key:String,value:Variant)->void:
+	if not settings.change(key,value): return
+	if race != null: settings.apply_live(race)
 	if key=="laps": laps=clampi(int(value),1,5)
 	elif key=="difficulty" and str(value) in Race.Track.DIFFICULTIES: difficulty=str(value)
 	elif key=="biome" and str(value) in Race.Track.BIOMES: biome=str(value)

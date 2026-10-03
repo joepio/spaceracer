@@ -923,3 +923,7 @@ The glide bomb shows its acquired rival automatically while airborne, even if th
 Flight engines deliver stronger thrust below normal flying speed, tapering smoothly from 140 to 44 m/s² as forward airspeed rises from 90 to 210 m/s. Full throttle can recover slow flight; a modest nose-up attitude helps arrest descent. Gravity, unpowered stalls, EMP shutdown, and the 235 m/s airspeed cap remain in effect.
 
 Crashes shed the actual hull, wings and engine housings, with current vehicle colors under irregular black scorch patches. Small volumetric flames follow four tumbling components and fade before recovery. Generic box confetti and flat metal chips have been removed from crash and hit effects.
+
+## Assistant controls
+
+See [GameNight settings](docs/gamenight-settings.md) for all supported tweaks, their ranges and when they apply. The phone and lobby assistant discover these controls automatically from the running game.

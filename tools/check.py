@@ -21,7 +21,7 @@ def main():
     parser.add_argument("--godot", type=Path, required=True)
     args = parser.parse_args()
     run_godot(args.godot.resolve(), "--editor", "--import", "--quit")
-    for name in ["run", "menu", "flight", "effects", "city", "emp", "recharge_strips", "ai_boost", "ai_surfaces", "ai_variety", "settings", "energy"]:
+    for name in ["run", "menu", "flight", "effects", "city", "emp", "recharge_strips", "ai_boost", "ai_surfaces", "ai_variety", "settings", "energy", "desert"]:
         run_godot(args.godot.resolve(), "--script", f"res://tests/{name}.gd")
 
 

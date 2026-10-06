@@ -28,7 +28,8 @@ const SPECS = [
     "options": [
       "city",
       "forest",
-      "cell"
+      "cell",
+      "desert"
     ]
   },
   {

@@ -12,13 +12,13 @@ func dynamic_tree(node:Node)->void:
 	if node is Light3D: check(node.light_bake_mode==Light3D.BAKE_DISABLED,"Short-lived lights stay responsive direct illumination")
 	for child in node.get_children(): dynamic_tree(child)
 func run()->void:
-	for biome in ["city","forest","cell"]:
+	for biome in ["city","forest","cell","desert"]:
 		var race:=Race.new([{"slot":0,"view":true}],31,3,"hard",biome)
 		var world:=World.new();root.add_child(world);world.build(race)
 		world.advanced_renderer=true # Exercise policy under the headless renderer too.
 		world.bounce_lighting=true;world.set_quality(1.,3)
 		check(world.scene_environment.sdfgi_enabled,"Desktop High supports the SDFGI experiment in three views")
-		check(world.scene_environment.sdfgi_read_sky_light==(biome=="forest"),"Only daytime Forest injects the sky into GI")
+		check(world.scene_environment.sdfgi_read_sky_light==(biome in ["forest","desert"]),"Only daytime Forest and Desert inject the sky into GI")
 		var sources:=0
 		for child in world.get_children():
 			if child.has_meta("road_source"):

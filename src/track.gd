@@ -33,7 +33,7 @@ var corner_shift:float
 var features:Array[Dictionary]=[]
 const DIFFICULTIES := ["easy","normal","hard"]
 var difficulty := "normal"
-const BIOMES := ["city","forest","cell"]
+const BIOMES := ["city","forest","cell","desert"]
 var biome := "city"
 var water_level:float=-INF
 var jumps:Array[Dictionary]=[]
@@ -57,6 +57,8 @@ func base_position(u: float) -> Vector3:
 	var ridge := 170 * exp(-pow((u - .55) / .075, 2))
 	var altitude:=200 + climb * sin(hills * a + phase) + 12 * sin(3*a+phase*.4) + ridge
 	if biome=="forest": altitude=80+climb*.42*sin(hills*a+phase)+6*sin(3*a+phase*.4)+ridge*.3
+	# Desert canyons: the course hugs the wash floor, cresting over the dunes.
+	if biome=="desert": altitude=90+climb*.5*sin(hills*a+phase)+8*sin(3*a+phase*.4)+ridge*.35
 	if profile.shape=="stadium":
 		var horizontal:=Profiles.stadium(u,radius,stretch)
 		return Vector3(horizontal.x,altitude,horizontal.y)
@@ -112,6 +114,7 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 	theme = THEMES[rng.randi_range(0,3)]
 	if biome=="forest": theme=["VERDANT REACH",Color("173c43"),Color("426a60"),Color("8bd8bd"),Color("e5b96c")]
 	if biome=="cell": theme=["THE CELL",Color("153c42"),Color("716080"),Color("83dfc6"),Color("eda3ba")]
+	if biome=="desert": theme=["SCORCHED DUNES",Color("3b2117"),Color("a5603a"),Color("ffb85c"),Color("53d8e6")]
 	radius = rng.randf_range(900,1100)
 	lobes = rng.randi_range(2,4)
 	amplitude = rng.randf_range(65,155)
@@ -180,8 +183,11 @@ func _init(track_seed: int = 1, challenge:String="normal", setting:String="city"
 		var enclosed:=false
 		for span in profile.tunnels:
 			if u>span[0] and u<span[1]: enclosed=true
+		# The desert has no neon tubes: those stretches become sheer slot canyons.
+		var canyon:=enclosed and biome=="desert"
+		if canyon: enclosed=false;section="SLOT CANYON"
 		nodes.append({"p":raw[j].lerp(raw[j+1],f),"u":u,"width":(23+6*pow(sin(u*TAU*3+phase),2))*profile.width_scale,
-			"bank":0.0,"zone":zone,"tunnel":enclosed,"loop":loop_section,"section":section,
+			"bank":0.0,"zone":zone,"tunnel":enclosed,"canyon":canyon,"loop":loop_section,"section":section,
 			"right_hint":hint.normalized().cross(Vector3.UP)})
 		if difficulty=="easy": nodes[-1].width+=9.
 	for i in range(count):

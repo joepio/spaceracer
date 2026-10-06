@@ -51,7 +51,7 @@ The title and pause screens share the same menu: up/down selects a row; left/rig
 immediately adjusts players, world, level, seed or graphics. Use the analog stick,
 keyboard arrows or on-screen arrows. A/click activates actions.
 **New random race**, directly below Play/Resume, launches a different seed and
-randomly chooses City, Forest or The Cell, preserving players, difficulty and lap count. In either menu, **hold X
+randomly chooses City, Forest, The Cell or Desert, preserving players, difficulty and lap count. In either menu, **hold X
 for one second** to do this immediately. **Hold D-pad left/right** for the
 previous/next seed with random scenery, or **up/down** for harder/easier; Start applies those choices.
 A small progress bar shows the hold. Short taps do nothing, and a continuous
@@ -119,7 +119,7 @@ these families. Character is independent of scenery and difficulty. This generat
 revision intentionally changes older layouts outside the Grand Circuit family;
 sharing a seed requires the same game version. See [track generation notes](docs/track-identities.md).
 
-**World** switches between the neon **City**, **Forest — Verdant Reach**, and **The Cell**.
+**World** switches between the neon **City**, **Forest — Verdant Reach**, **The Cell** and the **Desert — Scorched Dunes**.
 Hard mode adds distinct hazard components to the layout families:
 - Grand Circuit has a rising 360-degree spiral (a wider version also appears on Normal).
 - Hard Switchback has a 44-metre-wide double hairpin with 72-metre-radius turns: brake before the apex and use yaw/strafe to hold the slide. Entry and exit rails protect the transitions; the middle remains exposed.
@@ -127,7 +127,7 @@ Hard mode adds distinct hazard components to the layout families:
 - Split routes on Hard include a warning-marked dead branch. Red Xs lead to a crash barrier or an open drop; the other branch remains passable. Signs precede the fork, and the seed selects the blocked side and ending.
 
 Try Hard seeds **00031** (spiral, turbo jump and barrier), **00033** (exposed hairpins),
-or **00037** (spiral and broken branch). Components work in all three biomes.
+or **00037** (spiral and broken branch). Components work in all four biomes.
 Easy keeps its continuous guarded road. This geometry revision changes affected seeds;
 sharing a seed requires the same game build. Spiral checkpoints prevent skipping the
 entire coil while preserving legal flight shortcuts between gates.
@@ -166,8 +166,19 @@ solid structures and moving bodies can be hit in free flight. Animation pauses
 with the race. All three difficulties, seeds, weapons and split-screen modes work
 in this setting too.
 
+**Desert — Scorched Dunes** races through a hot, hazy afternoon over rippled dunes,
+between layered sandstone mesas and sheer canyon walls. Long stretches of the lap
+run through canyons; the Underpass family's tunnels become narrow slot canyons.
+Natural sandstone arches span the road, and hoodoos, boulders and saguaro cacti
+dot the dunes. In three open dune basins a giant **sandworm** bursts out of the
+sand beside the course, arcs high over the road and dives back in on the far side,
+throwing up sand at both holes. It erupts just ahead of the leading pilot and now
+and then on its own. The worm is spectacle only and never collides; canyon walls,
+rock and cacti do. Everything is procedural, seeded and paused with the race.
+See [desert notes](docs/desert-biome.md).
+
 GameNight exposes **World (next race)**, and standalone accepts `--biome=forest`,
-`--biome=city`, or `--biome=cell` after `--`.
+`--biome=city`, `--biome=cell` or `--biome=desert` after `--`.
 
 Adjust **Level** with left/right in either menu:
 
@@ -793,6 +804,7 @@ godot --headless --path . --script res://tests/world_jumps.gd
 godot --headless --path . --script res://tests/difficulty_soak.gd
 godot --headless --path . --script res://tests/speed_feel.gd
 godot --headless --path . --script res://tests/forest.gd
+godot --headless --path . --script res://tests/desert.gd
 python tests/integration.py --godot /path/to/Godot_console.exe --headless
 python tests/integration.py --godot /path/to/Godot_console.exe
 ```

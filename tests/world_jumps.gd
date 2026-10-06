@@ -9,7 +9,7 @@ func check(ok:bool,message:String)->void:
 	if not ok: failures+=1;push_error(message)
 func _initialize()->void: call_deferred("run")
 func run()->void:
-	for example in [["forest",31],["city",31],["forest",34],["city",34],["cell",34]]:
+	for example in [["forest",31],["city",31],["forest",34],["city",34],["cell",34],["desert",31],["desert",34]]:
 		var biome:String=example[0]
 		var seed_value:int=example[1]
 		for difficulty in ["normal","hard"]:

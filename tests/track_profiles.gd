@@ -17,9 +17,12 @@ func run()->void:
 				check(track.layout==Track.Profiles.title(seed_value),"Identity survives difficulty and biome changes")
 				var tunnels:=0;var tight:=0;var straight:=0;var pipes:=0;var minimum_width:=INF
 				for n in track.nodes:
-					check(not n.tunnel or (not n.loop and not n.air_gap and n.shape_angle==0.),"Tunnels never intersect loops, flight gaps or curved decks")
+					# Desert slot canyons replace tunnels on the same spans.
+					var enclosed:bool=n.tunnel or n.canyon
+					check(not (n.tunnel and n.canyon),"A span is either a tunnel or a slot canyon")
+					check(not enclosed or (not n.loop and not n.air_gap and n.shape_angle==0.),"Tunnels never intersect loops, flight gaps or curved decks")
 					check(n.frame.is_finite() and n.frame.determinant()>.999,"Every component has a valid rideable frame")
-					if n.tunnel: tunnels+=1
+					if enclosed: tunnels+=1
 					if not n.loop and absf(n.curve)>.007: tight+=1
 					if not n.loop and absf(n.curve)<.00005: straight+=1
 					if n.feature in ["halfpipe","tube"]: pipes+=1

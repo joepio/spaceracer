@@ -361,7 +361,7 @@ static func missile_trail_mesh()->ArrayMesh:
 func make_missile()->Node3D:
 	var root:=Node3D.new();add_child(root);missile_hull(root)
 	var trail_material:=ShaderMaterial.new();trail_material.shader=load("res://src/missile_trail.gdshader")
-	trail_material.set_shader_parameter("daylight",race.track.biome=="forest")
+	trail_material.set_shader_parameter("daylight",race.track.biome in ["forest","desert"])
 	var trail:=mesh(self,missile_trail_mesh(),trail_material);root.set_meta("trail",trail)
 	root.scale=Vector3.ONE*.42
 	var engine:=Node3D.new();root.add_child(engine);root.set_meta("engine",engine)
@@ -596,7 +596,7 @@ func update()->void:
 		if explosions[i].visible:
 			var burst:Dictionary=race.weapons.bursts[i]
 			var age:float=float(burst.get("duration",Weapons.MISSILE_BLAST_LIFE))-burst.life
-			explosions[i].show_blast(burst.id,burst.position,age,float(burst.get("size",14.)),1. if race.track.biome=="forest" else .75)
+			explosions[i].show_blast(burst.id,burst.position,age,float(burst.get("size",14.)),1. if race.track.biome in ["forest","desert"] else .75)
 
 static func mounted_kind(p:Dictionary)->String:
 	if p.drone_time>0.: return "drone"

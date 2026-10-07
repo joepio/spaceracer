@@ -121,6 +121,19 @@ static func limb(surface:SurfaceTool,path:Array,radius:float)->void:
 				surface.add_vertex(vertex[0]+vertex[1]*vertex[2])
 
 func build(parent:Node3D,race:RefCounted)->void:
+	index_course(race)
+	terrain=Terrain.new(track)
+	ground=terrain.build(parent,Basis.from_euler(SUN_ROTATION*PI/180.).z)
+	if track.obstacles: track.obstacles.terrain=terrain
+	scatter(parent)
+	build_arches(parent)
+	worm=Sandworm.new()
+	worm.build(parent,race,self)
+	add_probes(parent)
+	animate(0.)
+
+## Spatial lookups of the swept road, used by every placement test.
+func index_course(race:RefCounted)->void:
 	track=race.track
 	for i in range(track.nodes.size()):
 		var p:Vector3=track.nodes[i].p
@@ -135,9 +148,8 @@ func build(parent:Node3D,race:RefCounted)->void:
 		for cell in Cells.cells(bounds):
 			if not corridor.has(cell): corridor[cell]=[]
 			corridor[cell].append(bounds)
-	terrain=Terrain.new(track)
-	ground=terrain.build(parent,Basis.from_euler(SUN_ROTATION*PI/180.).z)
-	if track.obstacles: track.obstacles.terrain=terrain
+
+func scatter(parent:Node3D)->void:
 	rock_material=ShaderMaterial.new();rock_material.shader=load("res://src/desert_rock.gdshader")
 	cactus_material=ShaderMaterial.new();cactus_material.shader=load("res://src/desert_rock.gdshader")
 	cactus_material.set_shader_parameter("vegetation",true)
@@ -200,9 +212,8 @@ func build(parent:Node3D,race:RefCounted)->void:
 		var data:=Batch.batch(parent,cactus,cactus_material,cactus_groups[key].size())
 		for i in range(cactus_groups[key].size()):
 			data.set_instance_transform(i,cactus_groups[key][i]);data.set_instance_color(i,Color.WHITE)
-	build_arches(parent)
-	worm=Sandworm.new()
-	worm.build(parent,race,self)
+
+func add_probes(parent:Node3D)->void:
 	for fraction in [.03,.35,.72]:
 		var n:Dictionary=track.sample(track.length*fraction)
 		var probe:=ReflectionProbe.new()
@@ -211,7 +222,6 @@ func build(parent:Node3D,race:RefCounted)->void:
 		probe.cull_mask=1;probe.reflection_mask=6;probe.box_projection=true
 		probe.update_mode=ReflectionProbe.UPDATE_ONCE
 		parent.add_child(probe);probes.append(probe)
-	animate(0.)
 
 func eligible(n:Dictionary)->bool:
 	return n.feature in ["ribbon","open"] and not n.loop and n.split_gap<.01 and n.get("shape_angle",0.)<.001 and absf(n.slope)<.2

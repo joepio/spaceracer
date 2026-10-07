@@ -12,7 +12,7 @@ func dynamic_tree(node:Node)->void:
 	if node is Light3D: check(node.light_bake_mode==Light3D.BAKE_DISABLED,"Short-lived lights stay responsive direct illumination")
 	for child in node.get_children(): dynamic_tree(child)
 func run()->void:
-	for biome in ["city","forest","cell","desert"]:
+	for biome in ["city","forest","cell","desert","ocean"]:
 		var race:=Race.new([{"slot":0,"view":true}],31,3,"hard",biome)
 		var world:=World.new();root.add_child(world);world.build(race)
 		world.advanced_renderer=true # Exercise policy under the headless renderer too.

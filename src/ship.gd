@@ -65,7 +65,7 @@ static func loft(parent:Node3D,name_value:String,sections:Array,material:Materia
 	parent.add_child(mesh)
 	return mesh
 
-static func build(tint:Color)->Node3D:
+static func build(tint:Color,variant:int=0)->Node3D:
 	var root:=Node3D.new()
 	var jet_tint:=Color("67cfff").lerp(tint,.65)
 	root.set_meta("jet_tint",jet_tint)
@@ -73,7 +73,11 @@ static func build(tint:Color)->Node3D:
 	paint.shader=load("res://src/ship.gdshader")
 	paint.set_shader_parameter("tint",tint)
 	paint.set_shader_parameter("wear_mask",load("res://assets/paint-wear.png"))
-	Design.build(root,paint,loft)
+	# Each airframe family wears its own livery pattern and trim colour.
+	var marking:Color=Design.variant_of(variant).marking
+	paint.set_shader_parameter("livery",posmod(variant,Design.VARIANTS.size()))
+	paint.set_shader_parameter("marking_tint",marking)
+	Design.build(root,paint,loft,variant)
 	Rebuild.build(root)
 	root.set_meta("pilot_face",PilotFace.new())
 	for side in [-1,1]:

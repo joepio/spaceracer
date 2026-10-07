@@ -11,6 +11,8 @@ var floor_level:float
 var minimum:=INF
 var maximum:=-INF
 var basins:Array[float]=[]
+var shader_path:="res://src/desert_ground.gdshader"
+var terraced:=true
 const BASIN:=320.
 
 ## Open dune basins spread around the lap: the sandworm's hunting grounds.
@@ -34,7 +36,8 @@ static func terrace(h:float,base:float,band:float)->float:
 	var t:=(h-base)/band
 	return base+(floorf(t)+smoothstep(.62,1.,t-floorf(t)))*band
 
-func _init(track:RefCounted)->void:
+func _init(track:RefCounted,stepped:bool=true)->void:
+	terraced=stepped
 	basins=worm_basins(track)
 	var lowest:=INF
 	for n in track.nodes: lowest=minf(lowest,n.p.y)
@@ -64,7 +67,9 @@ func _init(track:RefCounted)->void:
 			# Flat-topped mesas: stepped plateaus with sheer cliffs between them.
 			var range_mask:=smoothstep(-.15,.3,mask.get_noise_2d(p.x,p.y))
 			var m:=ranges.get_noise_2d(p.x,p.y)*range_mask
-			h+=smoothstep(.10,.16,m)*110.+smoothstep(.27,.32,m)*95.+smoothstep(.42,.46,m)*80.
+			if terraced: h+=smoothstep(.10,.16,m)*110.+smoothstep(.27,.32,m)*95.+smoothstep(.42,.46,m)*80.
+			# Without strata the same ranges weather into rounded reefs and seamounts.
+			else: h+=smoothstep(.04,.3,m)*150.+smoothstep(.28,.5,m)*110.
 			# A broken ring of great mesas and buttes frames every horizon.
 			var radial:=p.length()
 			var far:=skyline.get_noise_2d(p.x,p.y)
@@ -132,7 +137,7 @@ func _init(track:RefCounted)->void:
 		var strength:=maxf(walls[id],slot[id])
 		var rise:=smoothstep(inner,inner+(55. if slot[id]>.5 else 110.),d)*(1.-smoothstep(260.,REACH,d))
 		var wall:=anchor+40.+(175.+slot[id]*120.)*strength
-		wall=terrace(wall,floor_level,46.)
+		if terraced: wall=terrace(wall,floor_level,46.)
 		h=maxf(h,lerpf(h,wall,rise))
 		# Basins stay low, rolling sand so the worm has room to breach.
 		h=lerpf(h,minf(h,low[id]+18.+(h-floor_level)*.15),open[id])
@@ -157,7 +162,7 @@ func normal_at(x:float,z:float)->Vector3:
 
 func build(parent:Node3D,sun_direction:Vector3)->ShaderMaterial:
 	var material:=ShaderMaterial.new()
-	material.shader=load("res://src/desert_ground.gdshader")
+	material.shader=load(shader_path)
 	material.set_shader_parameter("floor_level",floor_level)
 	material.set_shader_parameter("sun_direction",sun_direction)
 	for cz in range(0,CELLS,CHUNK):
@@ -178,7 +183,7 @@ func build(parent:Node3D,sun_direction:Vector3)->ShaderMaterial:
 			arrays[Mesh.ARRAY_VERTEX]=vertices;arrays[Mesh.ARRAY_NORMAL]=normals;arrays[Mesh.ARRAY_INDEX]=indices
 			var mesh:=ArrayMesh.new();mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
 			var instance:=MeshInstance3D.new();instance.mesh=mesh;instance.material_override=material
-			instance.name="Dunes_%d_%d"%[cx,cz]
+			instance.name="Ground_%d_%d"%[cx,cz]
 			parent.add_child(instance)
 	return material
 

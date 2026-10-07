@@ -51,7 +51,7 @@ The title and pause screens share the same menu: up/down selects a row; left/rig
 immediately adjusts players, world, level, seed or graphics. Use the analog stick,
 keyboard arrows or on-screen arrows. A/click activates actions.
 **New random race**, directly below Play/Resume, launches a different seed and
-randomly chooses City, Forest, The Cell or Desert, preserving players, difficulty and lap count. In either menu, **hold X
+randomly chooses City, Forest, The Cell, Desert or Ocean, preserving players, difficulty and lap count. In either menu, **hold X
 for one second** to do this immediately. **Hold D-pad left/right** for the
 previous/next seed with random scenery, or **up/down** for harder/easier; Start applies those choices.
 A small progress bar shows the hold. Short taps do nothing, and a continuous
@@ -119,7 +119,7 @@ these families. Character is independent of scenery and difficulty. This generat
 revision intentionally changes older layouts outside the Grand Circuit family;
 sharing a seed requires the same game version. See [track generation notes](docs/track-identities.md).
 
-**World** switches between the neon **City**, **Forest — Verdant Reach**, **The Cell** and the **Desert — Scorched Dunes**.
+**World** switches between the neon **City**, **Forest — Verdant Reach**, **The Cell**, the **Desert — Scorched Dunes** and the **Ocean — Abyssal Reef**.
 Hard mode adds distinct hazard components to the layout families:
 - Grand Circuit has a rising 360-degree spiral (a wider version also appears on Normal).
 - Hard Switchback has a 44-metre-wide double hairpin with 72-metre-radius turns: brake before the apex and use yaw/strafe to hold the slide. Entry and exit rails protect the transitions; the middle remains exposed.
@@ -177,8 +177,19 @@ and then on its own. The worm is spectacle only and never collides; canyon walls
 rock and cacti do. Everything is procedural, seeded and paused with the race.
 See [desert notes](docs/desert-biome.md).
 
+**Ocean — Abyssal Reef** races along the seafloor under a rippled, sunlit
+surface. Light shafts and caustics fall through blue-green water onto rounded
+reefs crusted with sponges and coral, through deep trenches (the Underpass
+tunnels) and under coral-covered rock arches. Golden kelp forests sway, giant
+glowing lantern weed, sea fans and tube sponges grow between them, fish schools
+circle beside the road, swarms of pulsing jellyfish drift overhead, manta rays
+glide past and giant octopuses sprawl on the open sand plains, curling their arms
+toward the course. Marine snow and bubble columns fill the water. Creatures are
+spectacle only and keep clear of the racing line; rock, plants and the octopus
+bodies collide. See [ocean notes](docs/ocean-biome.md).
+
 GameNight exposes **World (next race)**, and standalone accepts `--biome=forest`,
-`--biome=city`, `--biome=cell` or `--biome=desert` after `--`.
+`--biome=city`, `--biome=cell`, `--biome=desert` or `--biome=ocean` after `--`.
 
 Adjust **Level** with left/right in either menu:
 
@@ -421,6 +432,15 @@ shader, not separate raised meshes. Engine stripes follow the loft UVs through
 the taper; other markings follow each component's local surface, including
 moving rudders. They share the underlying paint's lighting, wear and rebuild
 scan, with anti-aliased edges and no extra material pass.
+
+Racers come in five airframe families, assigned by grid slot: **Arrow** (the
+original), **Delta** (broad delta wings, flat hull, outward-canted fins),
+**Raptor** (forward-swept wings and nose canards), **Brute** (bulky pods, stubby
+wings with drooped tips and a raised rear wing) and **Needle** (slim hull, long
+swept wings with upturned tips, tall fins). Each has its own livery pattern and
+trim colour on top of the pilot's paint. Engines, cockpit, weapon hardpoint,
+controls and the collision envelope are shared, so handling is identical. See
+`tests/racer_lineup_render.gd` for a side-by-side render.
 
 After a crash, the camera carries a little momentum into a smooth trip toward
 the exact safe respawn point during the existing two-second recovery delay.
@@ -805,6 +825,7 @@ godot --headless --path . --script res://tests/difficulty_soak.gd
 godot --headless --path . --script res://tests/speed_feel.gd
 godot --headless --path . --script res://tests/forest.gd
 godot --headless --path . --script res://tests/desert.gd
+godot --headless --path . --script res://tests/ocean.gd
 python tests/integration.py --godot /path/to/Godot_console.exe --headless
 python tests/integration.py --godot /path/to/Godot_console.exe
 ```

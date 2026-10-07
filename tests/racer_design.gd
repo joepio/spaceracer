@@ -33,14 +33,22 @@ func inspect(node:Node3D,frame:Transform3D)->void:
 		if child is Node3D: inspect(child,frame)
 func _initialize()->void: call_deferred("run")
 func run()->void:
-	var ship:=Ship.build(Color("bf3334"));root.add_child(ship)
-	# Physical mesh budget excludes the existing animated exhaust and optical effects.
-	for name_value in ["Body","Canopy","Nacelle-1","Nacelle1","Wing-1","Wing1","WingControlL","WingControlR","RudderL","RudderR","Nozzle-1","Nozzle1","Airbrake-1","Airbrake1"]:
-		inspect(ship.get_node(name_value),Transform3D.IDENTITY)
-	print("RACER_GEOMETRY triangles=",triangles," surfaces=",surfaces," bounds=",bounds.size)
-	check(triangles<9000,"Detailed racer stays below 9000 physical triangles")
-	check(surfaces<=65,"Physical surfaces stay within per-vehicle draw budget")
-	check(bounds.size.x<=9.5 and bounds.position.z>=-4.1 and bounds.end.z<=5.1,"New silhouette retains the gameplay collision envelope")
+	var designs:={}
+	for variant in range(Ship.Design.VARIANTS.size()):
+		triangles=0;surfaces=0;bounds=AABB()
+		var ship:=Ship.build(Color("bf3334"),variant);root.add_child(ship)
+		designs[ship.get_meta("design")]=true
+		# Physical mesh budget excludes the existing animated exhaust and optical effects.
+		for name_value in ["Body","Canopy","Nacelle-1","Nacelle1","Wing-1","Wing1","WingControlL","WingControlR","RudderL","RudderR","Nozzle-1","Nozzle1","Airbrake-1","Airbrake1"]:
+			inspect(ship.get_node(name_value),Transform3D.IDENTITY)
+		for name_value in ["Winglet-1","Winglet1","Canard-1","Canard1","Spoiler","Pylon-1","Pylon1","Endplate-1","Endplate1"]:
+			if ship.has_node(name_value): inspect(ship.get_node(name_value),Transform3D.IDENTITY)
+		print("RACER_GEOMETRY ",ship.get_meta("design")," triangles=",triangles," surfaces=",surfaces," bounds=",bounds)
+		check(triangles<9000,"Detailed racer stays below 9000 physical triangles")
+		check(surfaces<=65,"Physical surfaces stay within per-vehicle draw budget")
+		check(bounds.size.x<=9.5 and bounds.position.z>=-4.1 and bounds.end.z<=5.1,"Every airframe retains the gameplay collision envelope: %s"%ship.get_meta("design"))
+		ship.queue_free()
+	check(designs.size()==Ship.Design.VARIANTS.size(),"Each airframe family is distinct")
 	var race:=Race.new([{"slot":0},{"slot":1}],31);var p:Dictionary=race.racers[0]
 	var vfx:=Vfx.new();root.add_child(vfx);vfx.configure(race)
 	for kind in Race.Weapons.NAMES:
@@ -59,5 +67,5 @@ func run()->void:
 	p.crashed=true;vfx.update()
 	for mount in vfx.mounts[0].values(): check(not mount.visible,"Crash removes mounted hardware")
 	check(not vfx.turrets[0].visible,"Crash removes sentry")
-	vfx.queue_free();ship.queue_free();await process_frame
+	vfx.queue_free();await process_frame
 	print("RACER_DESIGN_TESTS ",checks," checks, ",failures," failures");quit(1 if failures else 0)

@@ -14,6 +14,9 @@ instance uniform bool face_surface=false;
 instance uniform float face_side=1.;
 instance uniform int marking_style=0;
 uniform vec3 marking_tint : source_color=vec3(.898,.867,.816);
+// Livery pattern per airframe family: 0 classic, 1 chevrons, 2 bands,
+// 3 twin stripes, 4 split two-tone.
+uniform int livery=0;
 varying vec3 local_normal;
 varying vec3 local_position;
 varying float rebuild_height;
@@ -29,24 +32,65 @@ void fragment(){
     // Painted livery lives in the opaque hull pass: no decal geometry, gaps,
     // z-fighting or detached trim when the aerodynamic surfaces articulate.
     float marking_distance=100.;
+    vec3 p=local_position;
     if(marking_style==1 && local_normal.y>.15){
-        float t=clamp((local_position.z-2.15)/2.7,0.,1.);
-        marking_distance=max(abs(abs(local_position.x)-mix(.54,.16,t))-mix(.085,.025,t),
-                             max(2.15-local_position.z,local_position.z-4.85));
+        if(livery==1){
+            // Nested chevrons pointing down the nose.
+            float chevron=min(abs(p.z-3.1+abs(p.x)*1.1)-.13,abs(p.z-2.45+abs(p.x)*1.1)-.13);
+            marking_distance=max(chevron,abs(p.x)-.9);
+        }else if(livery==2){
+            marking_distance=max(abs(p.z-3.25)-.22,abs(p.x)-1.2);
+        }else if(livery==3){
+            // Twin racing stripes down the full spine.
+            marking_distance=max(abs(abs(p.x)-.3)-.085,max(-3.7-p.z,p.z-4.95));
+        }else if(livery==4){
+            marking_distance=max(abs(p.x)-.42,max(-3.7-p.z,p.z-4.95));
+        }else{
+            float t=clamp((p.z-2.15)/2.7,0.,1.);
+            marking_distance=max(abs(abs(p.x)-mix(.54,.16,t))-mix(.085,.025,t),
+                                 max(2.15-p.z,p.z-4.85));
+        }
     }else if(marking_style==2){
         // Loft UV.x follows the cross-section, so this hugs the shoulder even
         // where the engine pod narrows. UV.y remains the authored longitudinal UV.
         float shoulder=face_side<0. ? .20 : .50;
         marking_distance=max((abs(UV.x-shoulder)-.014)*8.,
-                             max(-1.55-local_position.z,local_position.z-2.2));
+                             max(-1.55-p.z,p.z-2.2));
+        if(livery==1) marking_distance=min(marking_distance,1.75-p.z);
+        else if(livery==2) marking_distance=min(marking_distance,max(abs(p.z+2.6)-.28,-.3-p.y));
+        else if(livery==3) marking_distance=min(marking_distance,abs(p.z+.9)-.32);
+        else if(livery==4) marking_distance=min(marking_distance,p.y-.05);
     }else if(marking_style==3 && local_normal.y>.5){
-        float t=clamp((-local_position.z-.45)/1.3,0.,1.);
-        marking_distance=max(abs(abs(local_position.x)-mix(3.22,4.09,t))-mix(.23,.36,t),
-                             max(local_position.z+.45,-1.75-local_position.z));
+        float span=abs(p.x);
+        if(livery==1){
+            marking_distance=max(abs(p.z+.4+(span-2.4)*.75)-.22,1.6-span);
+        }else if(livery==2){
+            // Chequered wingtips.
+            vec2 cell=floor(vec2(span,p.z)*2.2);
+            float check=mod(cell.x+cell.y,2.);
+            marking_distance=max(max(3.55-span,.5-check),-1.);
+        }else if(livery==3){
+            marking_distance=max(abs(span-3.75)-.16,-3.6-p.z);
+        }else if(livery==4){
+            marking_distance=-.8-p.z;
+        }else{
+            float t=clamp((-p.z-.45)/1.3,0.,1.);
+            marking_distance=max(abs(span-mix(3.22,4.09,t))-mix(.23,.36,t),
+                                 max(p.z+.45,-1.75-p.z));
+        }
     }else if(marking_style==4 && abs(local_normal.x)>.35){
-        float t=clamp(local_position.y/1.32,0.,1.);
-        marking_distance=max(abs(local_position.z-mix(-.38,-.22,t))-.09,
-                             max(.07-local_position.y,local_position.y-1.26));
+        if(livery==1 || livery==4){
+            marking_distance=.75-p.y;
+        }else if(livery==2){
+            vec2 cell=floor(vec2(p.y,p.z)*3.5);
+            marking_distance=.5-mod(cell.x+cell.y,2.);
+        }else if(livery==3){
+            marking_distance=min(abs(p.y-.55)-.08,abs(p.y-.85)-.08);
+        }else{
+            float t=clamp(p.y/1.32,0.,1.);
+            marking_distance=max(abs(p.z-mix(-.38,-.22,t))-.09,
+                                 max(.07-p.y,p.y-1.26));
+        }
     }
     // Bound the derivative at hard-normal/UV seams so a neighbouring face
     // cannot smear white paint onto an otherwise unmarked silhouette edge.

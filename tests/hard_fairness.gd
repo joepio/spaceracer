@@ -8,7 +8,7 @@ func check(ok:bool,message:String)->void:
 func _initialize()->void: call_deferred("run")
 func run()->void:
 	for seed_value in [33,80385]:
-		for biome in ["city","forest","cell","desert"]:
+		for biome in ["city","forest","cell","desert","ocean"]:
 			var race:=Race.new([{"slot":0,"bot":true}],seed_value,3,"hard",biome)
 			var track:RefCounted=race.track
 			var start:=0.;var end:=0.;var exposed:=0

@@ -4,7 +4,7 @@ static func prepare(node:Node)->void:
 	if node is GeometryInstance3D:
 		var excluded:bool=(node.layers&2)!=0 or node.get_meta("gi_dynamic",false)
 		var material:Material=node.material_override
-		if material is ShaderMaterial and material.shader.resource_path in ["res://src/forest_water.gdshader","res://src/forest_understory.gdshader","res://src/cell_membrane.gdshader","res://src/desert_dust.gdshader"]: excluded=true
+		if material is ShaderMaterial and material.shader.resource_path in ["res://src/forest_water.gdshader","res://src/forest_understory.gdshader","res://src/cell_membrane.gdshader","res://src/desert_dust.gdshader","res://src/ocean_jelly.gdshader","res://src/ocean_drift.gdshader"]: excluded=true
 		node.gi_mode=GeometryInstance3D.GI_MODE_DISABLED if excluded else GeometryInstance3D.GI_MODE_STATIC
 	if node is Light3D: node.light_bake_mode=Light3D.BAKE_STATIC
 	for child in node.get_children(): prepare(child)

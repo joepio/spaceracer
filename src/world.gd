@@ -4,6 +4,7 @@ const Scenery = preload("res://src/scenery.gd")
 const Forest = preload("res://src/forest.gd")
 const Cell = preload("res://src/cell.gd")
 const Desert = preload("res://src/desert.gd")
+const Ocean = preload("res://src/ocean.gd")
 const TurnMarkers = preload("res://src/turn_markers.gd")
 const Obstacles=preload("res://src/obstacles.gd")
 const CrashVfx=preload("res://src/crash_vfx.gd")
@@ -60,6 +61,7 @@ func build(state: RefCounted) -> void:
 	var forest:bool=race.track.biome=="forest"
 	var cell:bool=race.track.biome=="cell"
 	var desert:bool=race.track.biome=="desert"
+	var ocean:bool=race.track.biome=="ocean"
 	var daylight:bool=forest or desert
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
@@ -68,12 +70,13 @@ func build(state: RefCounted) -> void:
 	env.background_mode = Environment.BG_SKY
 	var sky := Sky.new()
 	var sky_material := ShaderMaterial.new()
-	sky_material.shader = load("res://src/cell_sky.gdshader" if cell else ("res://src/forest_sky.gdshader" if forest else ("res://src/desert_sky.gdshader" if desert else "res://src/sky.gdshader")))
+	sky_material.shader = load("res://src/cell_sky.gdshader" if cell else ("res://src/forest_sky.gdshader" if forest else ("res://src/desert_sky.gdshader" if desert else ("res://src/ocean_sky.gdshader" if ocean else "res://src/sky.gdshader"))))
 	var top:=Color("060a12")
 	var horizon:=Color("202735")
 	if forest: top=Color("2586d1");horizon=Color("b6e4f7")
 	if cell: top=Color("173c46");horizon=Color("426b60")
 	if desert: top=Color("1d5fae");horizon=Color("f2c88f")
+	if ocean: top=Color("0f6f80");horizon=Color("0a3f4f")
 	if RenderingServer.get_current_rendering_method()!="gl_compatibility":
 		top=top.srgb_to_linear()
 		horizon=horizon.srgb_to_linear()
@@ -114,6 +117,17 @@ func build(state: RefCounted) -> void:
 		env.fog_light_color=Color("e9c391")
 		env.fog_light_energy=1.
 		env.fog_density=.00013
+	if ocean:
+		# Deep, clear water: blue-green scatter swallows the distance.
+		env.ambient_light_color=Color("6fc2d0")
+		env.ambient_light_energy=.32
+		env.tonemap_exposure=1.05
+		env.adjustment_enabled=true
+		env.adjustment_contrast=1.05
+		env.adjustment_saturation=1.1
+		env.fog_light_color=Color("0b4d5e")
+		env.fog_light_energy=1.
+		env.fog_density=.0016
 	if cell:
 		env.ambient_light_color=Color("9bd4cb")
 		env.ambient_light_energy=.22
@@ -142,7 +156,7 @@ func build(state: RefCounted) -> void:
 		env.volumetric_fog_length=180.
 		env.volumetric_fog_ambient_inject=.12
 		env.volumetric_fog_temporal_reprojection_amount=.65
-		if forest or cell or desert:
+		if forest or cell or desert or ocean:
 			env.volumetric_fog_enabled=false
 			env.glow_intensity=.35 if daylight else .55
 	if RenderingServer.get_current_rendering_method()=="mobile":
@@ -173,6 +187,14 @@ func build(state: RefCounted) -> void:
 		sky_material.set_shader_parameter("sun_direction",night_fill.basis.z)
 		night_fill.light_specular=.6
 		night_fill.shadow_enabled=true
+	if ocean:
+		forest_sun=night_fill
+		night_fill.rotation_degrees=Ocean.OCEAN_SUN
+		night_fill.light_color=Color("bff4ff")
+		night_fill.light_energy=1.35
+		sky_material.set_shader_parameter("sun_direction",night_fill.basis.z)
+		night_fill.light_specular=.55
+		night_fill.shadow_enabled=true
 	if cell:
 		forest_sun=night_fill
 		night_fill.rotation_degrees=Vector3(-38,-50,0)
@@ -180,7 +202,7 @@ func build(state: RefCounted) -> void:
 		night_fill.shadow_enabled=true
 		var rim:=DirectionalLight3D.new();rim.rotation_degrees=Vector3(22,125,0)
 		rim.light_color=Color("76dfcd");rim.light_energy=.45;rim.light_specular=.45;add_child(rim)
-	if forest or cell or desert: Shadows.configure_sun(night_fill,1.,1,RenderingServer.get_current_rendering_method())
+	if forest or cell or desert or ocean: Shadows.configure_sun(night_fill,1.,1,RenderingServer.get_current_rendering_method())
 	else:
 		city_moon=night_fill
 		if advanced_renderer: Shadows.configure_sun(night_fill,1.,1,RenderingServer.get_current_rendering_method())
@@ -189,12 +211,12 @@ func build(state: RefCounted) -> void:
 	road_material.shader = load("res://src/road.gdshader")
 	tunnel_material=ShaderMaterial.new()
 	tunnel_material.shader=load("res://src/tunnel.gdshader")
-	scenery=Cell.new() if cell else (Forest.new() if forest else (Desert.new() if desert else Scenery.new()))
+	scenery=Cell.new() if cell else (Forest.new() if forest else (Desert.new() if desert else (Ocean.new() if ocean else Scenery.new())))
 	scenery.build(self,race)
 	road_material.set_shader_parameter("billboard_art",load("res://assets/city-billboards.png"))
 	build_track()
 	showpiece=Showpiece.new()
-	if forest or cell or desert: showpiece.probes=scenery.probes
+	if forest or cell or desert or ocean: showpiece.probes=scenery.probes
 	else: showpiece.build(self,race.track)
 	race.track.obstacles.add_visual_boxes(self)
 	GlobalLighting.prepare(self)
@@ -206,7 +228,7 @@ func build(state: RefCounted) -> void:
 			GlobalLighting.surface_proxy(self,child,capture)
 	for light in tunnel_lights: light.light_bake_mode=Light3D.BAKE_DISABLED
 	for p in race.racers:
-		var ship := build_ship(color_for(p))
+		var ship := build_ship(color_for(p),int(p.get("design",p.slot)))
 		set_dynamic_layer(ship)
 		add_child(ship)
 		ships.append(ship)
@@ -443,8 +465,8 @@ static func box(parent: Node3D, position_value: Vector3, size_value: Vector3, ma
 	parent.add_child(mesh)
 	return mesh
 
-func build_ship(tint: Color) -> Node3D:
-	return Ship.build(tint)
+func build_ship(tint: Color,variant:int=0) -> Node3D:
+	return Ship.build(tint,variant)
 
 func update_ships() -> void:
 	if weapon_vfx: weapon_vfx.update()

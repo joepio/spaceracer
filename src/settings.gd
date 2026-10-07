@@ -29,7 +29,8 @@ const SPECS = [
       "city",
       "forest",
       "cell",
-      "desert"
+      "desert",
+      "ocean"
     ]
   },
   {

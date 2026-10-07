@@ -8,6 +8,7 @@ var traffic:MultiMesh
 var cabins:MultiMesh
 var lamps:MultiMesh
 var air_traffic:RefCounted
+var searchlights:RefCounted
 var ground_traffic:RefCounted
 var animation_time:=0.0
 var local_lights:Array[Light3D]=[]
@@ -140,6 +141,8 @@ func build(parent:Node3D,race:RefCounted)->void:
 	ground_traffic=load("res://src/ground_traffic.gd").new()
 	ground_traffic.build(parent,layout,race.track.seed_value)
 	if obstacles: obstacles.ground_traffic=ground_traffic
+	searchlights=load("res://src/searchlights.gd").new()
+	searchlights.build(parent,layout.buildings,race.track.seed_value)
 	animate(0)
 
 func animate(time:float)->void:
@@ -147,6 +150,7 @@ func animate(time:float)->void:
 	air_traffic.animate(time)
 	ground_traffic.animate(time)
 	if neon: neon.animate(time)
+	if searchlights: searchlights.animate(time)
 
 func build_billboards(parent:Node3D)->void:
 	var materials:Array[ShaderMaterial]=[]

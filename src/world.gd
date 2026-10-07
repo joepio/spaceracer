@@ -101,7 +101,8 @@ func build(state: RefCounted) -> void:
 		env.adjustment_saturation=1.08
 		env.fog_light_color=Color("b6dcf0")
 		env.fog_light_energy=1.
-		env.fog_density=.00004
+		# Soft aerial perspective layers the distant hills and treelines.
+		env.fog_density=.00011
 	if desert:
 		# Bright, dusty afternoon: warm bounce from the sand, layered heat haze.
 		env.ambient_light_color=Color("f0d2a8")

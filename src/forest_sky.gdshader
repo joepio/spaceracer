@@ -31,6 +31,15 @@ void sky() {
     COLOR = mix(horizon_color, top_color, pow(elevation, .48));
     float sun = max(dot(ray, normalize(sun_direction)), 0.);
     COLOR += vec3(1., .86, .62) * (pow(sun, 80.) * .24 + pow(sun, 1800.) * 4.);
+    // Two ranges of hazy blue mountains rise behind the forest.
+    vec2 around = normalize(ray.xz + vec2(1e-5));
+    float far_ridge = .055 + .05 * cloud_noise(around * 2.4 + 1.7) + .025 * noise(around * 11. + 4.);
+    float near_ridge = .025 + .045 * cloud_noise(around * 3.6 + 9.);
+    vec3 haze = mix(horizon_color, top_color, .25);
+    if (ray.y < far_ridge) COLOR = mix(COLOR, haze * vec3(.82, .9, 1.), .55);
+    if (ray.y < near_ridge) COLOR = mix(COLOR, haze * vec3(.62, .74, .82), .7);
+    // Snow catches the sun along the highest far peaks.
+    COLOR += vec3(.25) * smoothstep(far_ridge - .012, far_ridge, ray.y) * step(ray.y, far_ridge) * smoothstep(.1, .14, far_ridge);
     // Project onto a high cloud plane; soften its distant edge into the horizon.
     if (ray.y > .025) {
         vec2 p = ray.xz / (ray.y + .12) * 1.6 + vec2(4.8, 2.1);

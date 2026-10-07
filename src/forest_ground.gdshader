@@ -16,7 +16,18 @@ void fragment(){
     float rock=1.-smoothstep(.68,.94,n.y);
     vec3 earth=mix(vec3(.095,.074,.037),vec3(.23,.20,.115),patch);
     float shore=1.-smoothstep(1.,9.,world.y-water_level);
-    ALBEDO=mix(mix(grass,stone,rock),earth,shore)*(.94+grain*.22);
+    // Sunny clearings: lighter meadow grass with wildflowers near the camera.
+    float meadow=smoothstep(.55,.8,noise(world.xz*.004+3.1))*(1.-rock)*(1.-shore);
+    grass=mix(grass,mix(vec3(.14,.24,.05),vec3(.25,.33,.07),patch),meadow*.7);
+    vec2 bloom_cell=floor(world.xz*.7);
+    float bloom=hash(bloom_cell);
+    float petal=smoothstep(.42,.12,length(fract(world.xz*.7)-.5-(vec2(hash(bloom_cell+5.3),hash(bloom_cell+9.1))-.5)*.5));
+    float flowers=step(.86-meadow*.18,bloom)*petal*(1.-smoothstep(60.,260.,length(VERTEX)));
+    vec3 blossom=bloom>.96?vec3(.85,.78,.95):(bloom>.92?vec3(.95,.78,.16):vec3(.62,.36,.85));
+    // Moss collects in the crevices of the stone.
+    stone=mix(stone,vec3(.08,.13,.04),smoothstep(.35,.7,noise(world.xz*.09))*.5);
+    vec3 ground=mix(mix(grass,stone,rock),earth,shore)*(.94+grain*.22);
+    ALBEDO=mix(ground,blossom,flowers*(1.-rock)*(1.-shore));
     ALBEDO*=mix(.63,1.,smoothstep(-1.,3.,world.y-water_level));
     ROUGHNESS=.95;
     SPECULAR=.12;

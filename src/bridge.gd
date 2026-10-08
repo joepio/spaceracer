@@ -1,9 +1,8 @@
 extends "res://addons/gamenight/gamenight.gd"
 ## The vendored SDK provides WebSocket transport. This adapter implements the
 ## current contract: host input, session guards, no focus-driven transitions.
-signal roster_changed(seats: Array, players: Array, presence: Array)
-var session := ""
-var phase := "idle"
+## `session`, `phase` and `roster_changed` come from the SDK; this adapter
+## drives them itself.
 var frames: Dictionary = {}
 var frame_at := -10000
 var connected_at := 0
@@ -80,8 +79,7 @@ func ready_for_session(value: String) -> void:
 	if session != value or phase != "preparing":
 		return
 	_send({"type": "participation", "session": session, "instant_join": false})
-	phase = "ready"
-	notify_ready(session)
+	notify_ready(session) # moves phase to "ready"
 
 func frame(token: String) -> Dictionary:
 	if Time.get_ticks_msec() - frame_at >= 250:

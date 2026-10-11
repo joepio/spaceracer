@@ -1,0 +1,8 @@
+{
+  "checked_on": "2026-10-06",
+  "audio_version": "turbine-2026-10-06",
+  "scope": "Active Windows SpaceRacer checkout C:/dev/ion-rush",
+  "sources": "All external audio in the redesigned bank is documented as CC0 in SOUND-CREDITS.txt. Runtime synthesis has been replaced by the bank; no other audio files were present before this redesign.",
+  "manifest": "assets/audio/racer/manifest.json",
+  "limits": "Published licenses checked; independent original ownership verification not performed."
+}

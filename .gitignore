@@ -6,3 +6,6 @@ __pycache__/
 .DS_Store
 .env
 .env.*
+# Downloaded web pages can contain third-party service tokens; retain source
+# URLs, source hashes and licenses instead of publishing raw page snapshots.
+/tools/audio_sources/*-source.html

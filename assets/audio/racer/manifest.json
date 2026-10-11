@@ -1,0 +1,902 @@
+{
+  "version": "turbine-2026-10-06",
+  "sample_rate": 48000,
+  "source_records": [
+    {
+      "id": 407540,
+      "author": "Sojan",
+      "source_url": "https://freesound.org/people/Sojan/sounds/407540/",
+      "download_url": "https://cdn.freesound.org/previews/407/407540_5477651-hq.mp3",
+      "license": "CC0-1.0",
+      "checked_on": "2026-10-06",
+      "sha256": "6fe0b8dec89f0fd111c1e626e43745cbbc514f8c51472f7fc445ecc624b1125a"
+    },
+    {
+      "id": 152509,
+      "author": "minian89",
+      "source_url": "https://freesound.org/people/minian89/sounds/152509/",
+      "download_url": "https://cdn.freesound.org/previews/152/152509_2467357-hq.mp3",
+      "license": "CC0-1.0",
+      "checked_on": "2026-10-06",
+      "sha256": "84c3f0c54f31d3594620b386529ab362febecb7bf299e82ed4651b820740215f"
+    }
+  ],
+  "kenney": {
+    "url": "https://kenney.nl/assets/impact-sounds",
+    "license": "CC0-1.0",
+    "archive_sha256": "029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8"
+  },
+  "assets": [
+    {
+      "file": "assets/audio/racer/idle.wav",
+      "sha256": "9bb0953a9bbb7d0b0e4d151afc7d7bcc685721a8fe759f8c3295780521ef1b85",
+      "seconds": 1.7609791666666668,
+      "peak": 0.6840476179869625,
+      "rms": 0.18,
+      "loop": true,
+      "sources": [
+        "Freesound:407540"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/drive.wav",
+      "sha256": "f0e6e01037d977b5f4b2d9d118b904e83561c95ea6411264d002a8e67f7f3d65",
+      "seconds": 6.8,
+      "peak": 0.45957215560753095,
+      "rms": 0.23,
+      "loop": true,
+      "sources": [
+        "Freesound:152509"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/boost_loop.wav",
+      "sha256": "f15ba65b728169c319bcf097de3e9172df676c5ab5fac78eef2ff840bb27218b",
+      "seconds": 6.8,
+      "peak": 0.4609613980021038,
+      "rms": 0.23000000000000004,
+      "loop": true,
+      "sources": [
+        "Freesound:152509"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/air.wav",
+      "sha256": "defc230a7b4a52126191f7992ca0062906b77e6047dc2b315ebcf4e0bc3b6f17",
+      "seconds": 6.8,
+      "peak": 0.82,
+      "rms": 0.18408174888483433,
+      "loop": true,
+      "sources": [
+        "original filtered noise"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/scrape.wav",
+      "sha256": "f49ed5aab9e0361d2b374b900054f7b953f1448548d895a9fba994a1555db958",
+      "seconds": 6.8,
+      "peak": 0.82,
+      "rms": 0.1508871522362064,
+      "loop": true,
+      "sources": [
+        "original filtered noise"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/sentry.wav",
+      "sha256": "a36a1ba38dee63f7d777a5dbf22f5536876b2e2e1f01073f41d878610c516621",
+      "seconds": 0.5,
+      "peak": 0.82,
+      "rms": 0.10562912492994768,
+      "loop": true,
+      "sources": [
+        "Kenney:impactMetal_heavy_000..004"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/explosion_1.wav",
+      "sha256": "408afa8961e0c5cc1093db9639340a397b995ae9b15aed8b089f16f40f936f52",
+      "seconds": 1.85,
+      "peak": 0.82,
+      "rms": 0.029831532218480672,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_000",
+        "original noise and bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/contact_1.wav",
+      "sha256": "def8f02cf4a43bb847300800240074caeb1162ce5b4bd809672cb7784021b93d",
+      "seconds": 0.36,
+      "peak": 0.82,
+      "rms": 0.0521308584122032,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_000",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/land_1.wav",
+      "sha256": "bffab6e59005a6ef6083fddf638e0d28d134b4ee69f7c2b85a52169357f1d160",
+      "seconds": 0.36,
+      "peak": 0.663101660014498,
+      "rms": 0.11348414657371074,
+      "loop": false,
+      "sources": [
+        "Kenney:impactPunch_heavy_000",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/boost_1.wav",
+      "sha256": "d62ea70ed67d3ffb7f6c2b3a22a415e14335425c1e7bb9b2c3ac0a96b4de55f8",
+      "seconds": 0.6,
+      "peak": 0.411306735092402,
+      "rms": 0.14755219329882968,
+      "loop": false,
+      "sources": [
+        "Freesound:152509"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/launch_1.wav",
+      "sha256": "db2bf0960a7f985df93d7dbf392c8cecd4c0fa6bed1897e63d34f8db9c2efa0e",
+      "seconds": 0.6,
+      "peak": 0.82,
+      "rms": 0.0808014017366864,
+      "loop": false,
+      "sources": [
+        "Freesound:152509",
+        "Kenney:impactMetal_heavy_000",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/rail_1.wav",
+      "sha256": "68abcf6172706059858da6ce68b821762345970fed0c0db2fac98bc96f3dc816",
+      "seconds": 0.6,
+      "peak": 0.8199999999999998,
+      "rms": 0.04855659464314978,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_000",
+        "original noise and resonance"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/emp_1.wav",
+      "sha256": "788553c8277380b46a72fef53b365cc605a3253c754c2be9d5cc44086ae94734",
+      "seconds": 0.6,
+      "peak": 0.509670236257207,
+      "rms": 0.06775134413030874,
+      "loop": false,
+      "sources": [
+        "original filtered noise"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/warp_1.wav",
+      "sha256": "10b4acc6b178ad2f2a36aa55f7a423587a2bdfaff7d6bc773cda1fee167a1da6",
+      "seconds": 0.6,
+      "peak": 0.4782437084425577,
+      "rms": 0.16554922773500838,
+      "loop": false,
+      "sources": [
+        "Freesound:152509",
+        "original resonance"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/pickup_1.wav",
+      "sha256": "ebe254f6715e723b8803d7ef746e14aa928580ce6aa0e9edd0856d37a8a1442a",
+      "seconds": 0.12,
+      "peak": 0.12902690529652883,
+      "rms": 0.03223320810917821,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/lap_1.wav",
+      "sha256": "27a792f0eb60377974ac4e437f37e9b62aca379a6fb8c939d04480a0ad2150e6",
+      "seconds": 0.22,
+      "peak": 0.13476405495491509,
+      "rms": 0.03325043572990079,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/finish_1.wav",
+      "sha256": "2404d3a7bb1254198c976783b9d746dfa041f8fd3982a75ca057cc6f39b53056",
+      "seconds": 0.65,
+      "peak": 0.20447427266443205,
+      "rms": 0.03771177901581566,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/tick_1.wav",
+      "sha256": "6f04f58cb4123e8e4b7e2ff545b0752f8b5de177d9cd3a163fb3ffb9b13a0de3",
+      "seconds": 0.1,
+      "peak": 0.12190877410068883,
+      "rms": 0.03181007803919487,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/go_1.wav",
+      "sha256": "33b0b1baca64ca57610b9048131e4fb51ba2ada0834e8ddd928ca69b7ccaf4ca",
+      "seconds": 0.22,
+      "peak": 0.13552506893509225,
+      "rms": 0.033248221678133856,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/warning_1.wav",
+      "sha256": "c09b81d1c66b98922f865998e0537dee2f9b71aa9a7ab280208d217067edcb9a",
+      "seconds": 0.18,
+      "peak": 0.1328482135449271,
+      "rms": 0.032955811229978677,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/explosion_2.wav",
+      "sha256": "2be3154835d77ab7fc49f8462886dd557f576fd7dc6f3a6357053baa4b80f6cf",
+      "seconds": 1.85,
+      "peak": 0.82,
+      "rms": 0.028015167444139746,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_001",
+        "original noise and bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/contact_2.wav",
+      "sha256": "cc70df222383021ed9bb5d422d7de68dcdeec23d70669bad0dd07f4a368bbd06",
+      "seconds": 0.36,
+      "peak": 0.82,
+      "rms": 0.05640756329685073,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_001",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/land_2.wav",
+      "sha256": "e72954dd3cd040513dfc408fba16143bece65698de9ba8e85009a9b1b540699e",
+      "seconds": 0.36,
+      "peak": 0.7692856321505145,
+      "rms": 0.11882596906983181,
+      "loop": false,
+      "sources": [
+        "Kenney:impactPunch_heavy_001",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/boost_2.wav",
+      "sha256": "d62ea70ed67d3ffb7f6c2b3a22a415e14335425c1e7bb9b2c3ac0a96b4de55f8",
+      "seconds": 0.6,
+      "peak": 0.411306735092402,
+      "rms": 0.14755219329882968,
+      "loop": false,
+      "sources": [
+        "Freesound:152509"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/launch_2.wav",
+      "sha256": "3057ed1f1319f4c7de5c36b857d4308023a25124d55e31cd2442043f2c25ba4b",
+      "seconds": 0.6,
+      "peak": 0.82,
+      "rms": 0.08466478003970754,
+      "loop": false,
+      "sources": [
+        "Freesound:152509",
+        "Kenney:impactMetal_heavy_001",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/rail_2.wav",
+      "sha256": "0fa0fc8941f4f5219026af6ddc1e5388eb9978cc5bf4e7adf4a9e190e75542c0",
+      "seconds": 0.6,
+      "peak": 0.82,
+      "rms": 0.0429634846421797,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_001",
+        "original noise and resonance"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/emp_2.wav",
+      "sha256": "823b395dfce41a0c23db28c6a278ec5ba00599fd72683be8c69331582e647310",
+      "seconds": 0.6,
+      "peak": 0.5737909602950134,
+      "rms": 0.06776518224845587,
+      "loop": false,
+      "sources": [
+        "original filtered noise"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/warp_2.wav",
+      "sha256": "10b4acc6b178ad2f2a36aa55f7a423587a2bdfaff7d6bc773cda1fee167a1da6",
+      "seconds": 0.6,
+      "peak": 0.4782437084425577,
+      "rms": 0.16554922773500838,
+      "loop": false,
+      "sources": [
+        "Freesound:152509",
+        "original resonance"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/pickup_2.wav",
+      "sha256": "ebe254f6715e723b8803d7ef746e14aa928580ce6aa0e9edd0856d37a8a1442a",
+      "seconds": 0.12,
+      "peak": 0.12902690529652883,
+      "rms": 0.03223320810917821,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/lap_2.wav",
+      "sha256": "27a792f0eb60377974ac4e437f37e9b62aca379a6fb8c939d04480a0ad2150e6",
+      "seconds": 0.22,
+      "peak": 0.13476405495491509,
+      "rms": 0.03325043572990079,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/finish_2.wav",
+      "sha256": "2404d3a7bb1254198c976783b9d746dfa041f8fd3982a75ca057cc6f39b53056",
+      "seconds": 0.65,
+      "peak": 0.20447427266443205,
+      "rms": 0.03771177901581566,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/tick_2.wav",
+      "sha256": "6f04f58cb4123e8e4b7e2ff545b0752f8b5de177d9cd3a163fb3ffb9b13a0de3",
+      "seconds": 0.1,
+      "peak": 0.12190877410068883,
+      "rms": 0.03181007803919487,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/go_2.wav",
+      "sha256": "33b0b1baca64ca57610b9048131e4fb51ba2ada0834e8ddd928ca69b7ccaf4ca",
+      "seconds": 0.22,
+      "peak": 0.13552506893509225,
+      "rms": 0.033248221678133856,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/warning_2.wav",
+      "sha256": "c09b81d1c66b98922f865998e0537dee2f9b71aa9a7ab280208d217067edcb9a",
+      "seconds": 0.18,
+      "peak": 0.1328482135449271,
+      "rms": 0.032955811229978677,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/explosion_3.wav",
+      "sha256": "86f094a55f56d2b4311be16b038fa85b9ea88ef225f8c73411bc8bf682537574",
+      "seconds": 1.85,
+      "peak": 0.82,
+      "rms": 0.027530319068299926,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_002",
+        "original noise and bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/contact_3.wav",
+      "sha256": "af5f551127cd9eabf68dff05c9250ccdd5ba0d1d2652db5577edc97428621f3a",
+      "seconds": 0.36,
+      "peak": 0.82,
+      "rms": 0.057740013542453075,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_002",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/land_3.wav",
+      "sha256": "dfa922317b60314cfaec1e779467dd3816f1f9d33adca05ae6f48c751de84100",
+      "seconds": 0.36,
+      "peak": 0.7486693451229568,
+      "rms": 0.12557063164625878,
+      "loop": false,
+      "sources": [
+        "Kenney:impactPunch_heavy_002",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/boost_3.wav",
+      "sha256": "d62ea70ed67d3ffb7f6c2b3a22a415e14335425c1e7bb9b2c3ac0a96b4de55f8",
+      "seconds": 0.6,
+      "peak": 0.411306735092402,
+      "rms": 0.14755219329882968,
+      "loop": false,
+      "sources": [
+        "Freesound:152509"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/launch_3.wav",
+      "sha256": "886f0bc629ac51a2bd159250502dadcfcc29088033ddfcb3447c081bfd4db3d5",
+      "seconds": 0.6,
+      "peak": 0.82,
+      "rms": 0.08833164113886305,
+      "loop": false,
+      "sources": [
+        "Freesound:152509",
+        "Kenney:impactMetal_heavy_002",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/rail_3.wav",
+      "sha256": "5cad4cfa454ee91f9730c89e79fb7aa66f396e30c3bc6cd99566f78696122c14",
+      "seconds": 0.6,
+      "peak": 0.82,
+      "rms": 0.05523511804179697,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_002",
+        "original noise and resonance"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/emp_3.wav",
+      "sha256": "f95c64bfbf21d073e22e42d2b71c5d107bb5b05ac0527c431adc380a22ec1e02",
+      "seconds": 0.6,
+      "peak": 0.5883661879162527,
+      "rms": 0.07309075611585898,
+      "loop": false,
+      "sources": [
+        "original filtered noise"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/warp_3.wav",
+      "sha256": "10b4acc6b178ad2f2a36aa55f7a423587a2bdfaff7d6bc773cda1fee167a1da6",
+      "seconds": 0.6,
+      "peak": 0.4782437084425577,
+      "rms": 0.16554922773500838,
+      "loop": false,
+      "sources": [
+        "Freesound:152509",
+        "original resonance"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/pickup_3.wav",
+      "sha256": "ebe254f6715e723b8803d7ef746e14aa928580ce6aa0e9edd0856d37a8a1442a",
+      "seconds": 0.12,
+      "peak": 0.12902690529652883,
+      "rms": 0.03223320810917821,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/lap_3.wav",
+      "sha256": "27a792f0eb60377974ac4e437f37e9b62aca379a6fb8c939d04480a0ad2150e6",
+      "seconds": 0.22,
+      "peak": 0.13476405495491509,
+      "rms": 0.03325043572990079,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/finish_3.wav",
+      "sha256": "2404d3a7bb1254198c976783b9d746dfa041f8fd3982a75ca057cc6f39b53056",
+      "seconds": 0.65,
+      "peak": 0.20447427266443205,
+      "rms": 0.03771177901581566,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/tick_3.wav",
+      "sha256": "6f04f58cb4123e8e4b7e2ff545b0752f8b5de177d9cd3a163fb3ffb9b13a0de3",
+      "seconds": 0.1,
+      "peak": 0.12190877410068883,
+      "rms": 0.03181007803919487,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/go_3.wav",
+      "sha256": "33b0b1baca64ca57610b9048131e4fb51ba2ada0834e8ddd928ca69b7ccaf4ca",
+      "seconds": 0.22,
+      "peak": 0.13552506893509225,
+      "rms": 0.033248221678133856,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/warning_3.wav",
+      "sha256": "c09b81d1c66b98922f865998e0537dee2f9b71aa9a7ab280208d217067edcb9a",
+      "seconds": 0.18,
+      "peak": 0.1328482135449271,
+      "rms": 0.032955811229978677,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/explosion_4.wav",
+      "sha256": "018ebb1a4fe41caf46499e27510525abffc8c2cd9eecf5586787b6ddd28657e6",
+      "seconds": 1.85,
+      "peak": 0.82,
+      "rms": 0.02789264437259479,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_003",
+        "original noise and bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/contact_4.wav",
+      "sha256": "105ec5db44af48e0b2bd4c3fe6a208acf229adf6db20c3610973fdbd55dfa107",
+      "seconds": 0.36,
+      "peak": 0.82,
+      "rms": 0.055752447036329894,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_003",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/land_4.wav",
+      "sha256": "a36d44df31604a1cc82d26f0ed66f34c65cbc407a73d20545c6f9ccec5d64427",
+      "seconds": 0.36,
+      "peak": 0.7897713245245873,
+      "rms": 0.1255858796296409,
+      "loop": false,
+      "sources": [
+        "Kenney:impactPunch_heavy_003",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/boost_4.wav",
+      "sha256": "d62ea70ed67d3ffb7f6c2b3a22a415e14335425c1e7bb9b2c3ac0a96b4de55f8",
+      "seconds": 0.6,
+      "peak": 0.411306735092402,
+      "rms": 0.14755219329882968,
+      "loop": false,
+      "sources": [
+        "Freesound:152509"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/launch_4.wav",
+      "sha256": "e549b9714926462a0ede9055fba66cfc09b02a87505b58a4be823b80723a79ff",
+      "seconds": 0.6,
+      "peak": 0.82,
+      "rms": 0.08879603624194882,
+      "loop": false,
+      "sources": [
+        "Freesound:152509",
+        "Kenney:impactMetal_heavy_003",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/rail_4.wav",
+      "sha256": "f018a4c39ca61431287f59f40c8b25415df7b8e82c01f3b0da24da8b4d63caf2",
+      "seconds": 0.6,
+      "peak": 0.8200000000000001,
+      "rms": 0.04687578157347737,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_003",
+        "original noise and resonance"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/emp_4.wav",
+      "sha256": "77682363b8de721ef2bdd531a18f2f6de4c800f65e0fe25c78390a0f57c4413e",
+      "seconds": 0.6,
+      "peak": 0.82,
+      "rms": 0.06818782292798979,
+      "loop": false,
+      "sources": [
+        "original filtered noise"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/warp_4.wav",
+      "sha256": "10b4acc6b178ad2f2a36aa55f7a423587a2bdfaff7d6bc773cda1fee167a1da6",
+      "seconds": 0.6,
+      "peak": 0.4782437084425577,
+      "rms": 0.16554922773500838,
+      "loop": false,
+      "sources": [
+        "Freesound:152509",
+        "original resonance"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/pickup_4.wav",
+      "sha256": "ebe254f6715e723b8803d7ef746e14aa928580ce6aa0e9edd0856d37a8a1442a",
+      "seconds": 0.12,
+      "peak": 0.12902690529652883,
+      "rms": 0.03223320810917821,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/lap_4.wav",
+      "sha256": "27a792f0eb60377974ac4e437f37e9b62aca379a6fb8c939d04480a0ad2150e6",
+      "seconds": 0.22,
+      "peak": 0.13476405495491509,
+      "rms": 0.03325043572990079,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/finish_4.wav",
+      "sha256": "2404d3a7bb1254198c976783b9d746dfa041f8fd3982a75ca057cc6f39b53056",
+      "seconds": 0.65,
+      "peak": 0.20447427266443205,
+      "rms": 0.03771177901581566,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/tick_4.wav",
+      "sha256": "6f04f58cb4123e8e4b7e2ff545b0752f8b5de177d9cd3a163fb3ffb9b13a0de3",
+      "seconds": 0.1,
+      "peak": 0.12190877410068883,
+      "rms": 0.03181007803919487,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/go_4.wav",
+      "sha256": "33b0b1baca64ca57610b9048131e4fb51ba2ada0834e8ddd928ca69b7ccaf4ca",
+      "seconds": 0.22,
+      "peak": 0.13552506893509225,
+      "rms": 0.033248221678133856,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/warning_4.wav",
+      "sha256": "c09b81d1c66b98922f865998e0537dee2f9b71aa9a7ab280208d217067edcb9a",
+      "seconds": 0.18,
+      "peak": 0.1328482135449271,
+      "rms": 0.032955811229978677,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/explosion_5.wav",
+      "sha256": "fd6f5a8a1935d3b042b46517a2a1e3f0b70d9da17fa4af984ac6c286ab926a9b",
+      "seconds": 1.85,
+      "peak": 0.82,
+      "rms": 0.03447316743740597,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_004",
+        "original noise and bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/contact_5.wav",
+      "sha256": "c81d5b2d7abb63dbd08ddc46fc13692ed650522b50e1469f62a65057c4063d92",
+      "seconds": 0.36,
+      "peak": 0.82,
+      "rms": 0.05893677642509207,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_004",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/land_5.wav",
+      "sha256": "852e4481b7bef07f8e05bc98fe17f9a20e3fe47fbe971c624efd9c04af0354fe",
+      "seconds": 0.36,
+      "peak": 0.7479430804566433,
+      "rms": 0.11764294825200193,
+      "loop": false,
+      "sources": [
+        "Kenney:impactPunch_heavy_004",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/boost_5.wav",
+      "sha256": "d62ea70ed67d3ffb7f6c2b3a22a415e14335425c1e7bb9b2c3ac0a96b4de55f8",
+      "seconds": 0.6,
+      "peak": 0.411306735092402,
+      "rms": 0.14755219329882968,
+      "loop": false,
+      "sources": [
+        "Freesound:152509"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/launch_5.wav",
+      "sha256": "be3cf47ad4e7dc8191d069d9e3c56d6f7c8973b7107d94870830ea41b99248df",
+      "seconds": 0.6,
+      "peak": 0.82,
+      "rms": 0.09341217736715902,
+      "loop": false,
+      "sources": [
+        "Freesound:152509",
+        "Kenney:impactMetal_heavy_004",
+        "original bass"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/rail_5.wav",
+      "sha256": "3362b4947ddaafa3dd8110c7649c4bbc3bf0eed1bd4f34a675e546e8d513c5c4",
+      "seconds": 0.6,
+      "peak": 0.82,
+      "rms": 0.059097710044566404,
+      "loop": false,
+      "sources": [
+        "Kenney:impactMetal_heavy_004",
+        "original noise and resonance"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/emp_5.wav",
+      "sha256": "df0db00969e0b092a94e976c50514cd11cf41d99b1395e84958a324607180b4d",
+      "seconds": 0.6,
+      "peak": 0.5080043066131934,
+      "rms": 0.06639760203318927,
+      "loop": false,
+      "sources": [
+        "original filtered noise"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/warp_5.wav",
+      "sha256": "10b4acc6b178ad2f2a36aa55f7a423587a2bdfaff7d6bc773cda1fee167a1da6",
+      "seconds": 0.6,
+      "peak": 0.4782437084425577,
+      "rms": 0.16554922773500838,
+      "loop": false,
+      "sources": [
+        "Freesound:152509",
+        "original resonance"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/pickup_5.wav",
+      "sha256": "ebe254f6715e723b8803d7ef746e14aa928580ce6aa0e9edd0856d37a8a1442a",
+      "seconds": 0.12,
+      "peak": 0.12902690529652883,
+      "rms": 0.03223320810917821,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/lap_5.wav",
+      "sha256": "27a792f0eb60377974ac4e437f37e9b62aca379a6fb8c939d04480a0ad2150e6",
+      "seconds": 0.22,
+      "peak": 0.13476405495491509,
+      "rms": 0.03325043572990079,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/finish_5.wav",
+      "sha256": "2404d3a7bb1254198c976783b9d746dfa041f8fd3982a75ca057cc6f39b53056",
+      "seconds": 0.65,
+      "peak": 0.20447427266443205,
+      "rms": 0.03771177901581566,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/tick_5.wav",
+      "sha256": "6f04f58cb4123e8e4b7e2ff545b0752f8b5de177d9cd3a163fb3ffb9b13a0de3",
+      "seconds": 0.1,
+      "peak": 0.12190877410068883,
+      "rms": 0.03181007803919487,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/go_5.wav",
+      "sha256": "33b0b1baca64ca57610b9048131e4fb51ba2ada0834e8ddd928ca69b7ccaf4ca",
+      "seconds": 0.22,
+      "peak": 0.13552506893509225,
+      "rms": 0.033248221678133856,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    },
+    {
+      "file": "assets/audio/racer/warning_5.wav",
+      "sha256": "c09b81d1c66b98922f865998e0537dee2f9b71aa9a7ab280208d217067edcb9a",
+      "seconds": 0.18,
+      "peak": 0.1328482135449271,
+      "rms": 0.032955811229978677,
+      "loop": false,
+      "sources": [
+        "original oscillator and envelope"
+      ]
+    }
+  ]
+}

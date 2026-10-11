@@ -122,7 +122,7 @@ func run()->void:
 	await press(JOY_BUTTON_START)
 	check(game.running and game.views.size()==1,"Start launches solo")
 	check(game.race.track.seed_value==421 and game.race.track.biome=="forest" and game.race.track.difficulty=="hard","All selected settings applied")
-	check(not game.race.racers[0].bot and AudioServer.is_bus_mute(0),"Player control and muted audio preserved")
+	check(not game.race.racers[0].bot and not AudioServer.is_bus_mute(0),"Player control and enabled race audio preserved")
 	var original:RefCounted=game.race
 	await press(JOY_BUTTON_BACK)
 	check(not game.local_paused,"Back ignored")

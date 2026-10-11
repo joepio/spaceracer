@@ -1,0 +1,31 @@
+SpaceRacer audio - turbine-2026-10-06
+
+External source sounds are published under CC0 1.0:
+https://creativecommons.org/publicdomain/zero/1.0/
+Published licenses checked 6 October 2026. Commercial use, processing and
+redistribution are permitted without required attribution. Credits retained.
+
+Sojan - Sci-Fi Engine Loop, Freesound #407540
+https://freesound.org/people/Sojan/sounds/407540/
+Recorded printer cooling down; used for the idle mechanical layer.
+
+minian89 - jet_engine.wav, Freesound #152509
+https://freesound.org/people/minian89/sounds/152509/
+Author-created jet synthesis in Pure Data. Used for drive/boost loops and
+boost, launch and warp effects. This source is synthesized, not a field recording.
+
+Kenney - Impact Sounds 1.0, 19 December 2019
+https://kenney.nl/assets/impact-sounds
+impactMetal_heavy_000..004.ogg: contacts, sentry, launches, railgun, explosions.
+impactPunch_heavy_000..004.ogg: landing transients.
+Original license retained in tools/audio_sources/KENNEY-LICENSE.txt.
+
+Processing: mono conversion, filtering, crossfaded loops, envelope shaping,
+level balancing, layering. Air, scrape, bass, electronics and race signals also
+use original procedural synthesis. No generative audio service was used.
+
+Exact downloaded-source hashes and source URLs: tools/audio_sources/sources.json.
+Per-output hashes and source mapping: assets/audio/racer/manifest.json.
+Rebuild: python tools/render_racer_audio.py (numpy and ffmpeg required).
+Source project code is covered by the repository LICENSE.
+Published licensing has been checked; original ownership is not independently verified.

@@ -38,7 +38,8 @@ var bounce_lighting:=false
 var results_clock := 0.0
 var back_release := 0.0
 var activity_clock := 0.0
-var engine_sound: AudioStreamPlayer
+var engine_sound: Node
+var game_audio: Node
 var missile_sound:Node
 var demo := false
 var capture_path := ""
@@ -50,7 +51,7 @@ var headless := false
 var probe_clock := 0.0
 var preview_u := 0.0
 var show_menu_controls := false
-var sound_enabled := false
+var sound_enabled := true
 var menu_sticks:Dictionary={}
 var menu_direction:=Vector2i.ZERO
 var menu_repeat:=0.0
@@ -367,7 +368,7 @@ func _process(dt: float) -> void:
 		if not local_paused: update_speed_effects(view,dt)
 		view.hud.visible=not in_menu
 		view.hud.queue_redraw()
-	update_audio()
+	update_audio(dt)
 	activity_clock += dt
 	if running and bridge.launched_by_daemon and activity_clock>=1:
 		activity_clock=0
@@ -894,35 +895,16 @@ func setting_changed(key:String,value:Variant)->void:
 		layout_views()
 
 func setup_audio()->void:
+	engine_sound=preload("res://src/engine_audio.gd").new();add_child(engine_sound)
+	game_audio=preload("res://src/game_audio.gd").new();add_child(game_audio)
 	missile_sound=preload("res://src/missile_audio.gd").new();add_child(missile_sound)
 	AudioServer.set_bus_mute(0,not sound_enabled)
-	var data:=PackedByteArray()
-	for i in range(22050):
-		var t:=float(i)/22050
-		var value:=int((sin(TAU*55*t)*.45+sin(TAU*110*t)*.2+sin(TAU*165*t)*.1)*12000)
-		data.append(value&255)
-		data.append((value>>8)&255)
-	var stream:=AudioStreamWAV.new()
-	stream.format=AudioStreamWAV.FORMAT_16_BITS
-	stream.mix_rate=22050
-	stream.data=data
-	stream.loop_mode=AudioStreamWAV.LOOP_FORWARD
-	stream.loop_end=22050
-	engine_sound=AudioStreamPlayer.new()
-	engine_sound.stream=stream
-	engine_sound.volume_db=-80
-	add_child(engine_sound)
-	engine_sound.play()
 
-func update_audio()->void:
-	missile_sound.update(race,views,running and not in_menu,sound_enabled)
-	if race==null or not running or race.over or race.countdown>0:
-		engine_sound.volume_db=-80
-		return
-	var speed:=0.0
-	for view in views: speed=maxf(speed,race.racers[view.index].speed)
-	engine_sound.pitch_scale=.65+speed/130
-	engine_sound.volume_db=-28+speed/80
+func update_audio(dt:float=1.0/60.0)->void:
+	var audible:bool=running and not in_menu and not local_paused
+	game_audio.update(race,views,audible,sound_enabled)
+	missile_sound.update(race,views,audible,sound_enabled)
+	engine_sound.update(race,views,audible,sound_enabled,dt,game_audio.engine_duck())
 
 func write_probe()->void:
 	var path:=OS.get_environment("SPACERACER_PROBE_PATH")
@@ -944,7 +926,7 @@ func write_probe()->void:
 		"difficulty":race.track.difficulty if race else "", "next_difficulty":difficulty,
 		"biome":race.track.biome if race else "", "next_biome":biome,
 		"visible":get_window().mode!=Window.MODE_MINIMIZED and get_window().position.x> -10000,
-		"sound_enabled":sound_enabled,"muted":AudioServer.is_bus_mute(0),"clock":race.clock if race else -1,"countdown":race.countdown if race else -1,"vfx_clock":race.vfx_clock if race else -1,
+		"audio_version":preload("res://src/race_audio_mix.gd").VERSION,"sound_enabled":sound_enabled,"muted":AudioServer.is_bus_mute(0),"clock":race.clock if race else -1,"countdown":race.countdown if race else -1,"vfx_clock":race.vfx_clock if race else -1,
 		"racers":snapshot,"views":views.size(),"session":bridge.session,
 		"city_time":world.scenery.animation_time if race and is_instance_valid(world) else 0.0,
 		"traffic_position":str(world.scenery.air_traffic.car_frame(world.scenery.air_traffic.cars[0]).origin) if race and is_instance_valid(world) and world.scenery.traffic.instance_count>0 else "",
@@ -954,5 +936,4 @@ func write_probe()->void:
 
 func _exit_tree()->void:
 	if is_instance_valid(engine_sound):
-		engine_sound.stop()
-		engine_sound.stream=null
+		engine_sound.silence()

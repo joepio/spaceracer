@@ -960,3 +960,22 @@ Crashes shed the actual hull, wings and engine housings, with current vehicle co
 ## Assistant controls
 
 See [GameNight settings](docs/gamenight-settings.md) for all supported tweaks, their ranges and when they apply. The phone and lobby assistant discover these controls automatically from the running game.
+
+
+## SpaceRacer audio (6 October 2026)
+
+The engine blends a recorded mechanical idle, a designed jet power layer, air
+rush and sustained boost. Throttle lift, EMP shutdown, crashes and pause change
+or silence those layers. One cockpit mix keeps split-screen volume bounded.
+Contacts, landing, weapons, pickups, countdown and missile warnings have distinct
+cues. A shared limiter leaves 2 dB of headroom. Sound is enabled during play.
+
+Source credits: `third_party/SOUND-CREDITS.txt`. Asset generation and hashes:
+`tools/render_racer_audio.py` and `assets/audio/racer/manifest.json`.
+Focused checks: `tests/racer_audio.gd`, `tests/audio_bank.gd`, `tests/missiles.gd`.
+`tests/audio_capture.gd` captures a 21-second runtime comparison (add `-- --before`
+for the previous engine). Use an actual audio driver for capture; Master is muted.
+
+The installed GameNight and Start menu launchers use `build/warp-balance` in this
+Windows checkout. The source probe includes `audio_version` so a running build
+can be checked against the installed pack.

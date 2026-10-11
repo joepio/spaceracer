@@ -78,7 +78,7 @@ func update(race: RefCounted, views: Array, running: bool, enabled: bool, dt: fl
 			player.volume_db = -80
 			continue
 		player.pitch_scale = (.88 + rpm*.48) if layer == "idle" else ((.85 + rpm*.55) if layer == "drive" else (1.0+speed*.12 if layer in ["air","boost_loop"] else 1.0))
-		player.volume_db = linear_to_db(levels[layer])
+		player.volume_db = linear_to_db(levels[layer]) + Mix.ENGINE_TRIM_DB.get(layer, 0.0)
 		if not player.playing: player.play()
 
 func _exit_tree() -> void:

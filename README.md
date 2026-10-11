@@ -970,6 +970,11 @@ or silence those layers. One cockpit mix keeps split-screen volume bounded.
 Contacts, landing, weapons, pickups, countdown and missile warnings have distinct
 cues. A shared limiter leaves 2 dB of headroom. Sound is enabled during play.
 
+The continuous cockpit mix is quieter as of 11 October: drive is trimmed by
+14 dB, idle and sustained boost by 12 dB, and air rush by 10 dB. Throttle
+response and cue ducking remain intact; weapons, impacts and race signals keep
+their existing levels.
+
 Source credits: `third_party/SOUND-CREDITS.txt`. Asset generation and hashes:
 `tools/render_racer_audio.py` and `assets/audio/racer/manifest.json`.
 Focused checks: `tests/racer_audio.gd`, `tests/audio_bank.gd`, `tests/missiles.gd`.

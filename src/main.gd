@@ -24,6 +24,7 @@ var roster: Array = []
 var running := false
 var in_menu := true
 var local_paused := false
+var managed_focus_generation := 0
 var human_count := 1
 const MAX_SEED := 99999
 var next_seed := 0
@@ -109,6 +110,7 @@ func _ready() -> void:
 		touch_controls.pause_requested.connect(pause_local)
 	get_tree().auto_accept_quit=false
 	get_viewport().size_changed.connect(layout_views)
+	get_window().focus_exited.connect(cancel_managed_focus)
 	setup_audio()
 	var args := OS.get_cmdline_user_args()
 	for arg in args:
@@ -206,8 +208,9 @@ func randomize_scenery()->void:
 func new_race(random_scenery:bool=false) -> void:
 	if random_scenery: randomize_scenery()
 	if is_instance_valid(world):
-		remove_child(world)
+		if world.get_parent() == self: remove_child(world)
 		world.queue_free()
+		world=null
 	for view in views:
 		ui.remove_child(view.holder)
 		view.holder.queue_free()
@@ -894,11 +897,33 @@ func start_managed(_session:String)->void:
 	AudioServer.set_bus_mute(0,not sound_enabled)
 	if not headless:
 		var window:=get_window()
+		window.unfocusable=false
 		window.mode=Window.MODE_WINDOWED
 		window.position=DisplayServer.screen_get_position()
 		window.grab_focus()
+		managed_focus_generation+=1
+		claim_managed_focus.call_deferred(_session,managed_focus_generation)
+
+func cancel_managed_focus()->void:
+	managed_focus_generation+=1
+
+func managed_focus_allowed(session:String,generation:int)->bool:
+	return generation==managed_focus_generation and bridge.session==session and bridge.phase=="running"
+
+func managed_focus_should_retry(session:String,generation:int,focused:bool)->bool:
+	return not focused and managed_focus_allowed(session,generation)
+
+func claim_managed_focus(session:String,generation:int)->void:
+	# Restoring a minimized Win32 window and hiding the lobby are asynchronous.
+	# Retry only this explicit lifecycle handoff, never a permanent focus loop.
+	for attempt in 12:
+		if not managed_focus_should_retry(session,generation,get_window().has_focus()): return
+		DisplayServer.window_move_to_foreground(get_window().get_window_id())
+		get_window().grab_focus()
+		await get_tree().create_timer(.05).timeout
 
 func quiet_window()->void:
+	cancel_managed_focus()
 	AudioServer.set_bus_mute(0,true)
 	if not headless:
 		var window:=get_window()
@@ -920,8 +945,9 @@ func dispose_managed(_session:String)->void:
 	pause_managed(_session)
 	race=null
 	if is_instance_valid(world):
-		remove_child(world)
+		if world.get_parent() == self: remove_child(world)
 		world.queue_free()
+		world=null
 	for view in views:
 		ui.remove_child(view.holder)
 		view.holder.queue_free()
@@ -985,6 +1011,7 @@ func write_probe()->void:
 		"difficulty":race.track.difficulty if race else "", "next_difficulty":difficulty,
 		"biome":race.track.biome if race else "", "next_biome":biome,
 		"visible":get_window().mode!=Window.MODE_MINIMIZED and get_window().position.x> -10000,
+		"focused":get_window().has_focus(),"focus_generation":managed_focus_generation,
 		"audio_version":preload("res://src/race_audio_mix.gd").VERSION,"sound_enabled":sound_enabled,"muted":AudioServer.is_bus_mute(0),"clock":race.clock if race else -1,"countdown":race.countdown if race else -1,"vfx_clock":race.vfx_clock if race else -1,
 		"racers":snapshot,"views":views.size(),"session":bridge.session,
 		"city_time":world.scenery.animation_time if race and is_instance_valid(world) else 0.0,

@@ -911,6 +911,10 @@ actual managed launch route with `tests/integration.py --godot BUILD/SpaceRacer.
 --packed --headless --launcher-script tools/launch_debug.ps1 --host-launcher
 PATH/gamenight-daemon.exe`. This runs an isolated test host without opening a window.
 
+Host Start/Resume restores the parked window and briefly retries foreground focus
+while that session is running. Success, native focus loss, Pause or Dispose stops
+the retries. It never polls continuously to reclaim focus after Alt-Tab.
+
 Player artwork is composited with their skin/accent colours and painted on both
 outer engine housings. It uses the hull lighting, preserves transparent artwork
 and hats, and updates by player identity. Cached textures rebuild only when the

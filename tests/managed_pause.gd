@@ -107,6 +107,21 @@ func run()->void:
 	bridge.frame_at=Time.get_ticks_msec()-300
 	game.process_managed_menu()
 	check(game.menu_sticks.is_empty(),"Expired host input cannot keep navigating the pause menu")
+	var focus_generation:int=game.managed_focus_generation
+	check(game.managed_focus_allowed(bridge.session,focus_generation),"Current running host session may claim focus")
+	check(game.managed_focus_should_retry(bridge.session,focus_generation,false),"An active restored window may retry focus")
+	check(not game.managed_focus_should_retry(bridge.session,focus_generation,true),"Native focus success immediately stops retries")
+	game.cancel_managed_focus()
+	check(not game.managed_focus_allowed(bridge.session,focus_generation),"Native focus loss cancels outstanding focus attempts")
+	check(not game.managed_focus_allowed("old-session",game.managed_focus_generation),"A stale session cannot reclaim focus")
+	bridge.phase="paused"
+	check(not game.managed_focus_allowed(bridge.session,game.managed_focus_generation),"Paused games cannot reclaim focus")
+	focus_generation=game.managed_focus_generation
+	game.pause_managed(bridge.session)
+	check(game.managed_focus_generation!=focus_generation,"Pause invalidates an outstanding restore attempt")
+	focus_generation=game.managed_focus_generation
+	game.dispose_managed(bridge.session)
+	check(game.managed_focus_generation!=focus_generation,"Dispose invalidates an outstanding restore attempt")
 	print("MANAGED_PAUSE_TESTS %d checks, %d failures"%[checks,failures])
 	game.queue_free()
 	await process_frame

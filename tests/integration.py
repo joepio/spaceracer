@@ -95,6 +95,8 @@ def main():
     parser.add_argument("--godot", required=True)
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--packed", action="store_true", help="Run the PCK beside the executable, not project sources")
+    parser.add_argument("--launcher-script", help="Exercise the Windows debug wrapper instead of launching the game directly")
+    parser.add_argument("--host-launcher", help="Exercise the daemon's --launch-hidden process/job wrapper too")
     args = parser.parse_args()
     project = Path(__file__).resolve().parents[1]
     # The Windows console wrapper starts another process; use the actual engine
@@ -114,6 +116,14 @@ def main():
             command = [executable, "--position", "-20000,-20000", "--audio-driver", "Dummy"]
             if not args.packed: command += ["--path", str(project)]
             if args.headless: command.append("--headless")
+            if args.launcher_script:
+                assert args.packed, "The debug launcher requires a packaged build"
+                command = [str(Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"),
+                           "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", args.launcher_script,
+                           "-BuildDirectory", str(Path(executable).parent), "-Managed"]
+                if args.headless: command.append("-Headless")
+            if args.host_launcher:
+                command = [args.host_launcher, "--launch-hidden", *command]
             child = subprocess.Popen(command, env=env, stdout=log, stderr=log)
             host.connect()
             hello = wait(lambda: host.messages, lambda messages: any(m["type"] == "hello" for m in messages))

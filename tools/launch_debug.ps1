@@ -1,10 +1,10 @@
 param(
     [string]$BuildDirectory = (Join-Path $PSScriptRoot '../build/warp-balance'),
     [switch]$PrepareOnly,
-    [switch]$Managed
+    [switch]$Managed,
+    [switch]$Headless
 )
 $ErrorActionPreference = 'Stop'
-$spaceRacerRepo = Split-Path -Parent $PSScriptRoot
 $spaceRacerExecutable = (Resolve-Path -LiteralPath (Join-Path $BuildDirectory 'SpaceRacer.exe')).Path
 $spaceRacerPack = (Resolve-Path -LiteralPath (Join-Path $BuildDirectory 'SpaceRacer.pck')).Path
 $spaceRacerSessions = Join-Path $BuildDirectory 'debug-sessions'
@@ -17,22 +17,34 @@ function Get-SpaceRacerDigest([string]$Path) {
     try { return [System.BitConverter]::ToString($spaceRacerHasher.ComputeHash($spaceRacerStream)).Replace('-','').ToLowerInvariant() }
     finally { $spaceRacerStream.Dispose(); $spaceRacerHasher.Dispose() }
 }
-$spaceRacerDigest = Get-SpaceRacerDigest $spaceRacerPack
-$spaceRacerSnapshot = Join-Path $spaceRacerSessions "$spaceRacerDigest.pck"
-if (-not (Test-Path -LiteralPath $spaceRacerSnapshot)) {
-    $spaceRacerTemporary = Join-Path $spaceRacerSessions ([Guid]::NewGuid().ToString() + '.tmp')
-    Copy-Item -LiteralPath $spaceRacerPack -Destination $spaceRacerTemporary
-    if ((Get-SpaceRacerDigest $spaceRacerTemporary) -ne $spaceRacerDigest) {
+function Copy-SpaceRacerSnapshot([string]$Source, [string]$Destination, [string]$Digest) {
+    if (Test-Path -LiteralPath $Destination) { return }
+    $spaceRacerTemporary = Join-Path (Split-Path -Parent $Destination) ([Guid]::NewGuid().ToString() + '.tmp')
+    Copy-Item -LiteralPath $Source -Destination $spaceRacerTemporary
+    if ((Get-SpaceRacerDigest $spaceRacerTemporary) -ne $Digest) {
         Remove-Item -LiteralPath $spaceRacerTemporary
         throw 'The debug build changed while preparing launch. Please start it again.'
     }
-    if (Test-Path -LiteralPath $spaceRacerSnapshot) { Remove-Item -LiteralPath $spaceRacerTemporary }
-    else { Move-Item -LiteralPath $spaceRacerTemporary -Destination $spaceRacerSnapshot }
+    if (Test-Path -LiteralPath $Destination) { Remove-Item -LiteralPath $spaceRacerTemporary }
+    else { Move-Item -LiteralPath $spaceRacerTemporary -Destination $Destination }
 }
+$spaceRacerDigest = Get-SpaceRacerDigest $spaceRacerPack
+$spaceRacerExecutableDigest = Get-SpaceRacerDigest $spaceRacerExecutable
+# Export templates can disable --main-pack. Keep the executable and its normal
+# sibling pack together; hash both so an engine update cannot reuse an old EXE.
+$spaceRacerSnapshotDirectory = Join-Path $spaceRacerSessions ($spaceRacerExecutableDigest.Substring(0,12) + '-' + $spaceRacerDigest)
+[void](New-Item -ItemType Directory -Force -Path $spaceRacerSnapshotDirectory)
+$spaceRacerSnapshot = Join-Path $spaceRacerSnapshotDirectory 'SpaceRacer.pck'
+$spaceRacerSnapshotExecutable = Join-Path $spaceRacerSnapshotDirectory 'SpaceRacer.exe'
+Copy-SpaceRacerSnapshot $spaceRacerExecutable $spaceRacerSnapshotExecutable $spaceRacerExecutableDigest
+Copy-SpaceRacerSnapshot $spaceRacerPack $spaceRacerSnapshot $spaceRacerDigest
 if ($PrepareOnly) { Write-Output $spaceRacerSnapshot; return }
+$spaceRacerArguments = @('--position','-20000,-20000')
+if ($Headless) { $spaceRacerArguments += '--headless' }
 if ($Managed) {
     # Stay alive for the host's process/job lifetime and inherit its session env.
-    $spaceRacerChild = Start-Process -FilePath $spaceRacerExecutable -WorkingDirectory (Split-Path -Parent $spaceRacerExecutable) -ArgumentList '--main-pack',('"{0}"' -f $spaceRacerSnapshot),'--position','-20000,-20000' -WindowStyle Hidden -PassThru -Wait
+    $spaceRacerChild = Start-Process -FilePath $spaceRacerSnapshotExecutable -WorkingDirectory $spaceRacerSnapshotDirectory -ArgumentList $spaceRacerArguments -WindowStyle Hidden -PassThru -Wait
     exit $spaceRacerChild.ExitCode
 }
-Start-Process -WindowStyle Hidden -FilePath $spaceRacerExecutable -WorkingDirectory (Split-Path -Parent $spaceRacerExecutable) -ArgumentList '--main-pack',('"{0}"' -f $spaceRacerSnapshot),'--fullscreen'
+if (-not $Headless) { $spaceRacerArguments = @('--fullscreen') }
+Start-Process -WindowStyle Hidden -FilePath $spaceRacerSnapshotExecutable -WorkingDirectory $spaceRacerSnapshotDirectory -ArgumentList $spaceRacerArguments

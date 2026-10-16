@@ -42,8 +42,8 @@ godot --path .
 The portable Windows build runs by opening `SpaceRacer.exe`. Start/Enter starts a race.
 For local development, run `tools/install_start_menu.ps1` to install
 **SpaceRacer (Latest Debug)** in the Windows Start menu with the game's icon.
-It opens fullscreen from `build/warp-balance/SpaceRacer.exe` with an immutable copy
-of its current PCK in the build directory's `debug-sessions` folder. New builds cannot corrupt assets
+It opens fullscreen from an immutable copy of the staged executable and its
+matching PCK in the build directory's `debug-sessions` folder. New builds cannot corrupt assets
 being read by an ongoing playtest. Keep updating the staged executable/PCK so
 the next launch uses the latest build. The installer accepts `-BuildDirectory`.
 
@@ -901,9 +901,15 @@ controllers continue normally. Cheats stay off by default, including GameNight.
 `%LOCALAPPDATA%/GameNight/local-games.json`, preserving other local entries.
 The desktop launcher merges that file into its regenerated shelf on every start;
 local IDs take priority over catalogue builds. The managed launch script takes
-an immutable snapshot of the latest staged Windows PCK and waits for the game,
+an immutable snapshot of the latest staged Windows executable and PCK and waits for the game,
 so the host owns the entire process lifetime. Rebuild the staged PCK and the next
 GameNight launch uses it automatically.
+
+The executable loads its sibling `SpaceRacer.pck` normally. Do not use
+`--main-pack`: official export templates may disable path overrides. Test the
+actual managed launch route with `tests/integration.py --godot BUILD/SpaceRacer.exe
+--packed --headless --launcher-script tools/launch_debug.ps1 --host-launcher
+PATH/gamenight-daemon.exe`. This runs an isolated test host without opening a window.
 
 Player artwork is composited with their skin/accent colours and painted on both
 outer engine housings. It uses the hull lighting, preserves transparent artwork

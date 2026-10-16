@@ -197,15 +197,24 @@ def main():
             before = read()["racers"][0]["speed"]
             time.sleep(.4)
             assert read()["racers"][0]["speed"] < before, "Lost host stream must release throttle"
-            # Back is ignored; Start accepts one press after release, even when held.
-            time.sleep(1.1)
-            for _ in range(8):
-                host.send("controller_frame", controllers=[dict(controller="ordinal:7",axes=[0]*6,buttons=64)])
-                time.sleep(.025)
+            # Start pauses locally; only Back returns to GameNight. Held buttons
+            # act once, and returning to a managed race preserves its players.
+            def button_frames(buttons, count=8):
+                for _ in range(count):
+                    host.send("controller_frame", controllers=[dict(controller="ordinal:7",axes=[0]*6,buttons=buttons)])
+                    time.sleep(.025)
+            button_frames(0)
+            button_frames(128, 20)
+            local_pause = wait(read, lambda s: s["phase"] == "running" and not s["running"])
             assert sum(m["type"] == "request_overlay" for m in host.messages) == 0
-            for _ in range(20):
-                host.send("controller_frame", controllers=[dict(controller="ordinal:7",axes=[0]*6,buttons=128)])
-                time.sleep(.025)
+            time.sleep(.15)
+            assert read()["clock"] == local_pause["clock"], "Start freezes the current race"
+            button_frames(0)
+            button_frames(128)
+            wait(read, lambda s: s["running"] and s["clock"] > local_pause["clock"])
+            assert read()["racers"][0]["name"] == "Azure Updated"
+            button_frames(0)
+            button_frames(64, 20)
             assert sum(m["type"] == "request_overlay" for m in host.messages) == 1
             host.send("dispose", session=session)
             wait(read, lambda s: s["phase"] == "idle" and s["racers"] == [])
@@ -233,7 +242,7 @@ def main():
             log.flush(); log.seek(0)
             output = log.read()
             assert "SCRIPT ERROR" not in output and "ERROR:" not in output, output
-            print("PASS native WebSocket authentication, hidden prepare, sparse controller ownership, weapon input, pause/resume, stale input, live profiles, Start gate, dispose/reprepare, disconnect exit")
+            print("PASS native WebSocket authentication, hidden prepare, sparse controller ownership, weapon input, pause/resume, stale input, live profiles, Start pause / Back lobby, dispose/reprepare, disconnect exit")
         except BaseException:
             log.flush(); log.seek(0)
             print(log.read())

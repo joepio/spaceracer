@@ -37,6 +37,7 @@ var quality := 1.0
 var bounce_lighting:=false
 var results_clock := 0.0
 var back_release := 0.0
+var managed_buttons:Dictionary={}
 var activity_clock := 0.0
 var engine_sound: Node
 var game_audio: Node
@@ -152,7 +153,7 @@ func local_roster(count: int, bots_only: bool = false) -> Array:
 	return out
 
 func start_selected() -> void:
-	if local_paused and not menu_race_changed():
+	if local_paused and (bridge.launched_by_daemon or not menu_race_changed()):
 		resume_local()
 		return
 	finish_seed_edit()
@@ -419,18 +420,53 @@ func capture() -> void:
 	get_tree().quit()
 
 func process_pause(dt:float)->void:
-	var held:=Input.is_physical_key_pressed(KEY_ESCAPE)
 	if bridge.launched_by_daemon:
-		for token in bridge.frames:
-			held=held or Bridge.pressed(bridge.frame(token),7)
+		process_managed_menu()
+	var held:=Input.is_physical_key_pressed(KEY_ESCAPE)
 	if not held:
 		back_release=minf(1,back_release+dt)
 	elif back_release>=1:
 		back_release=0
-		if bridge.launched_by_daemon:
-			if running: bridge.request_overlay()
-		elif local_paused: start_selected()
+		if bridge.launched_by_daemon and bridge.phase!="running": return
+		if local_paused: start_selected()
 		elif not in_menu: pause_local()
+
+func process_managed_menu()->void:
+	if bridge.phase!="running":
+		managed_buttons.clear()
+		menu_sticks.clear()
+		return
+	var previous:=managed_buttons.duplicate()
+	managed_buttons.clear()
+	menu_sticks.clear()
+	var action_taken:=false
+	for player in roster:
+		if player.get("bot",false): continue
+		var token:String=player.get("controller","")
+		var frame:Dictionary=bridge.frame(token)
+		if frame.is_empty(): continue
+		var buttons:int=int(frame.get("buttons",0))
+		managed_buttons[token]=buttons
+		# A held button at launch/resume must be released before it can act.
+		var pressed:int=buttons & ~int(previous.get(token,buttons))
+		if not action_taken and pressed & (1 << 6):
+			bridge.request_overlay()
+			action_taken=true
+		elif not action_taken and pressed & (1 << 7):
+			if local_paused: resume_local()
+			elif not in_menu: pause_local()
+			action_taken=true
+		elif not action_taken and local_paused and pressed & 1:
+			var focused:=get_viewport().gui_get_focus_owner()
+			if focused is Button and menu.is_ancestor_of(focused): focused.pressed.emit()
+			action_taken=true
+		if local_paused:
+			var stick:=Vector2(Bridge.axis(frame,0),Bridge.axis(frame,1))
+			if Bridge.pressed(frame,10): stick.y=-1
+			if Bridge.pressed(frame,11): stick.y=1
+			if Bridge.pressed(frame,12): stick.x=-1
+			if Bridge.pressed(frame,13): stick.x=1
+			menu_sticks[token]=stick
 
 func resume_local()->void:
 	local_paused=false
@@ -440,6 +476,7 @@ func resume_local()->void:
 	if is_instance_valid(menu):
 		ui.remove_child(menu)
 		menu.queue_free()
+		menu=null
 	menu_sticks.clear()
 	menu_holds.clear()
 
@@ -457,7 +494,7 @@ func pause_local()->void:
 	make_menu()
 
 func menu_race_changed()->bool:
-	return local_paused and pause_settings!={"players":human_count,"biome":biome,"difficulty":difficulty,"seed":selected_seed}
+	return local_paused and not bridge.launched_by_daemon and pause_settings!={"players":human_count,"biome":biome,"difficulty":difficulty,"seed":selected_seed}
 
 func assign_local_controllers()->void:
 	if bridge==null or bridge.launched_by_daemon or race==null: return
@@ -486,6 +523,11 @@ func _notification(what:int)->void:
 		get_tree().quit()
 
 func _input(event:InputEvent)->void:
+	# GameNight frames are authoritative, including pause-menu actions. Prevent
+	# native joypad events from also activating Godot's focused GUI buttons.
+	if bridge.launched_by_daemon and (event is InputEventJoypadButton or event is InputEventJoypadMotion):
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode==KEY_F8:
 			cheats.enabled=not cheats.enabled;dev_label.visible=cheats.enabled
@@ -553,6 +595,9 @@ func navigate_menu(dt:float)->void:
 
 func update_menu_holds(dt:float)->void:
 	if is_instance_valid(menu_hold_bar): menu_hold_bar.modulate.a=0.
+	if bridge.launched_by_daemon:
+		if is_instance_valid(menu_hold_hint): menu_hold_hint.text=""
+		return
 	if is_instance_valid(menu_hold_hint): menu_hold_hint.text="Hold 1s · X Random race · D-pad ← → Track / ↑ ↓ Level"
 	# Conflicting holds never combine, and each press can act only once.
 	if menu_holds.size()!=1:
@@ -591,6 +636,9 @@ func adjust_menu(id:String,step:int)->void:
 	finish_seed_edit()
 	if id in ["biome","difficulty","seed"]: preview_refresh=.4
 	match id:
+		"sound":
+			sound_enabled=not sound_enabled
+			AudioServer.set_bus_mute(0,not sound_enabled)
 		"players": human_count=posmod(human_count-1+step,4)+1
 		"biome": biome=Race.Track.BIOMES[posmod(Race.Track.BIOMES.find(biome)+step,Race.Track.BIOMES.size())]
 		"difficulty": difficulty=Race.Track.DIFFICULTIES[posmod(Race.Track.DIFFICULTIES.find(difficulty)+step,3)]
@@ -614,6 +662,7 @@ func refresh_menu_values()->void:
 	for row in menu_rows:
 		if not is_instance_valid(row) or not row is Button: continue
 		match str(row.get_meta("menu_id","")):
+			"sound": row.text="Sound                            %s"%("On" if sound_enabled else "Off")
 			"race": row.text=("Restart" if menu_race_changed() else "Resume") if local_paused else "Race"
 			"players": row.text="Players                         %d"%human_count
 			"biome": row.text="World                           %s"%("The Cell" if biome=="cell" else biome.capitalize())
@@ -683,8 +732,8 @@ func make_menu()->void:
 	menu.add_child(content)
 	menu_label(content,"SPACERACER",58,Color("edf7ff"))
 	var start:=menu_button(content,"race","Race",start_selected,true)
-	menu_button(content,"random_race","New random race",start_random_race)
-	var settings:=["players","biome","difficulty","seed","graphics"]
+	if not bridge.launched_by_daemon: menu_button(content,"random_race","New random race",start_random_race)
+	var settings:=["sound","graphics"] if bridge.launched_by_daemon else ["players","biome","difficulty","seed","sound","graphics"]
 	if world.advanced_renderer: settings.append("lighting")
 	for id in settings:
 		var row:=HBoxContainer.new()
@@ -730,7 +779,7 @@ func make_menu()->void:
 			track_character.add_theme_color_override("font_color",Color("7de9d6"))
 			content.add_child(track_character)
 	menu_button(content,"controls","Controls & credits",func(): show_menu_controls=not show_menu_controls;make_menu())
-	if local_paused:
+	if local_paused and not bridge.launched_by_daemon:
 		menu_button(content,"restart","Restart race",func(): finish_seed_edit();next_seed=selected_seed;start_local())
 	if show_menu_controls:
 		var reference:=PanelContainer.new()
@@ -749,7 +798,7 @@ func make_menu()->void:
 		credits.text="\nFOREST ART · [url=https://creativecommons.org/licenses/by/4.0/]CC BY 4.0[/url]\n[url=https://sketchfab.com/3d-models/pine-tree-d45218a3fab349e5b1de040f29e7b6f9]Pine Tree[/url] — evolveduk\n[url=https://sketchfab.com/3d-models/tree-bake-upload-4e78d13152cf4214a256230765f6d6d3]Tree Bake Upload[/url] — restlessmonkey\n[url=https://github.com/GamesNotDeveloped/godot-forest-demo]Godot forest demo[/url] — GamesNotDeveloped\nAdapted materials, textures and scale for SpaceRacer."
 		credits.meta_clicked.connect(func(url:Variant): OS.shell_open(str(url)))
 		help.add_child(credits)
-	menu_label(content,"Stick  Select / adjust     Start  Play / resume",14,Color("91a8b7"))
+	menu_label(content,"Stick  Select / adjust     Start  Resume     Back  Lobby" if bridge.launched_by_daemon else "Stick  Select / adjust     Start  Play / resume",14,Color("91a8b7"))
 	menu_hold_hint=Label.new();menu_hold_hint.add_theme_font_size_override("font_size",14)
 	menu_hold_hint.add_theme_color_override("font_color",Color("91a8b7"));content.add_child(menu_hold_hint)
 	menu_hold_bar=ProgressBar.new();menu_hold_bar.max_value=1.;menu_hold_bar.show_percentage=false
@@ -804,6 +853,13 @@ func managed_roster(seats:Array,players:Array)->Array:
 
 func prepare(session:String,seats:Array,players:Array)->void:
 	running=false
+	local_paused=false
+	in_menu=false
+	managed_buttons.clear()
+	if is_instance_valid(menu):
+		ui.remove_child(menu)
+		menu.queue_free()
+		menu=null
 	quiet_window()
 	roster=managed_roster(seats,players)
 	bridge.notify_progress(session,5,"Building track")
@@ -829,6 +885,8 @@ func managed_rendering(enabled:bool)->void:
 		view.visor.sync_visibility()
 
 func start_managed(_session:String)->void:
+	if local_paused: resume_local()
+	managed_buttons.clear()
 	managed_rendering(true)
 	back_release=0
 	running=true
@@ -851,6 +909,7 @@ func quiet_window()->void:
 		window.mode=Window.MODE_MINIMIZED
 
 func pause_managed(_session:String)->void:
+	managed_buttons.clear()
 	managed_rendering(false)
 	running=false
 	back_release=0

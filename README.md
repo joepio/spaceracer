@@ -78,6 +78,13 @@ setting changes the primary action to **Restart**. Graphics never resets progres
 The paused track keeps its last rendered frame behind a dark menu gradient until
 resuming or restarting. Back no longer pauses.
 
+In GameNight, **Start** opens the in-game pause menu and resumes the race.
+**Back/Select** returns to the GameNight lobby, including from the pause menu.
+Use the stick or D-pad to select a setting, and A to activate it. **Sound**
+turns game audio on or off. The managed menu keeps the host's player assignments;
+race setup stays with GameNight. Held buttons on launch or return must be released
+before they can act again.
+
 Desktop Forward+ also has a **Lighting** row: **Direct** or experimental **SDFGI**.
 Switch it in the pause menu to compare the same view without restarting the race.
 SDFGI adds environmental bounce light and is opt-in; selecting it raises Performance

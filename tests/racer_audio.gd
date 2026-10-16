@@ -19,19 +19,19 @@ func run() -> void:
 	p.speed = 280.0; p.engine_power = 1.0
 	for i in 120: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.voices.drive.playing and engine.levels.drive > .4,"Throttle produces the loaded power layer")
-	check(absf(engine.voices.drive.volume_db - linear_to_db(engine.levels.drive) + 14.0) < .01,"Loaded motor is 14 dB below its original envelope")
-	check(absf(engine.voices.idle.volume_db - linear_to_db(engine.levels.idle) + 12.0) < .01,"Idle bed is reduced by 12 dB")
+	check(absf(engine.voices.drive.volume_db - linear_to_db(engine.levels.drive) + 20.0) < .01,"Loaded motor is 20 dB below its original envelope")
+	check(absf(engine.voices.idle.volume_db - linear_to_db(engine.levels.idle) + 18.0) < .01,"Idle bed is reduced by 18 dB")
 	check(engine.voices.drive.pitch_scale >= .85 and engine.voices.drive.pitch_scale <= 1.4,"High speed stays within a restrained pitch range")
 	var loaded: float = engine.levels.drive
 	p.engine_power = 0.0
 	for i in 120: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.levels.drive < loaded*.3,"Throttle lift changes timbre and power at identical road speed")
 	check(engine.levels.air > .1,"Coasting retains air rush")
-	check(absf(engine.voices.air.volume_db - linear_to_db(engine.levels.air) + 10.0) < .01,"Coasting air rush is reduced by 10 dB")
+	check(absf(engine.voices.air.volume_db - linear_to_db(engine.levels.air) + 16.0) < .01,"Coasting air rush is reduced by 16 dB")
 	p.boost = 1.0
 	for i in 60: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.levels.boost_loop > .4,"Boost has a sustained layer")
-	check(absf(engine.voices.boost_loop.volume_db - linear_to_db(engine.levels.boost_loop) + 12.0) < .01,"Sustained boost is reduced by 12 dB")
+	check(absf(engine.voices.boost_loop.volume_db - linear_to_db(engine.levels.boost_loop) + 18.0) < .01,"Sustained boost is reduced by 18 dB")
 	p.emp_time = 1.0
 	for i in 60: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.levels.boost_loop < .001 and engine.levels.drive < .001 and engine.levels.idle < .001,"EMP cuts the motor and booster")

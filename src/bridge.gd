@@ -50,6 +50,7 @@ func _handle(msg: Variant) -> void:
 		frames.clear()
 		frame_at = -10000
 		phase = "preparing"
+		_reset_performance(session) # the SDK's frame-time reports, see _sample_performance
 		prepared.emit(session, msg.get("seats", []), msg.get("players", []))
 	elif kind == "setting_changed" or kind == "error":
 		super._handle(msg)
@@ -58,16 +59,20 @@ func _handle(msg: Variant) -> void:
 			"start":
 				if phase == "ready":
 					phase = "running"
+					_performance_running = true
 					started.emit(session)
 			"pause":
 				if phase == "running":
 					phase = "paused"
+					_performance_running = false
 					paused.emit(session)
 			"resume":
 				if phase == "paused":
 					phase = "running"
+					_performance_running = true
 					resumed.emit(session)
 			"dispose":
+				_performance_running = false
 				disposed.emit(session)
 				session = ""
 				phase = "idle"
@@ -78,7 +83,7 @@ func _handle(msg: Variant) -> void:
 func ready_for_session(value: String) -> void:
 	if session != value or phase != "preparing":
 		return
-	_send({"type": "participation", "session": session, "instant_join": false})
+	notify_participation(session, false)
 	notify_ready(session) # moves phase to "ready"
 
 func frame(token: String) -> Dictionary:

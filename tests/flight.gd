@@ -147,7 +147,8 @@ func run()->void:
 	var race:=Race.new([{"slot":0,"bot":false}],31)
 	race.countdown=0
 	var p:Dictionary=race.racers[0]
-	p.distance=500.0
+	# Take off on straight road so the craft carries no road turn rate.
+	p.distance=550.0
 	p.speed=250.0
 	for tick in range(240):
 		race.step(1.0/120,[{"throttle":1.0,"trim":-1.0}])
@@ -199,7 +200,7 @@ func run()->void:
 	race.step(1.,[{}])
 	check(p.crashed and p.wreck_wait and p.recovery==0,"Wreck stays visible during the automatic recovery delay")
 	race.step(1.01,[{}])
-	check(p.recovery==0 and not p.crashed and p.speed==90 and p.x==0,"Crash respawns on last safe track position")
+	check(p.recovery==0 and not p.crashed and p.speed==Race.RESPAWN_SPEED and p.x==0,"Crash respawns on last safe track position")
 	check(p.launch_cooldown>0,"Respawn cannot immediately relaunch from a held stick")
 	var beyond:Dictionary=race.track.sample(race.track.length+20)
 	var projection:Dictionary=race.track.project(Track.point(beyond,0,2),race.track.length-50,150)

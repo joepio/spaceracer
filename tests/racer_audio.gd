@@ -19,19 +19,19 @@ func run() -> void:
 	p.speed = 280.0; p.engine_power = 1.0
 	for i in 120: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.voices.drive.playing and engine.levels.drive > .4,"Throttle produces the loaded power layer")
-	check(absf(engine.voices.drive.volume_db - linear_to_db(engine.levels.drive) + 20.0) < .01,"Loaded motor is 20 dB below its original envelope")
-	check(absf(engine.voices.idle.volume_db - linear_to_db(engine.levels.idle) + 18.0) < .01,"Idle bed is reduced by 18 dB")
+	check(absf(engine.voices.drive.volume_db - linear_to_db(engine.levels.drive) + 28.0) < .01,"Loaded motor is 28 dB below its original envelope")
+	check(absf(engine.voices.idle.volume_db - linear_to_db(engine.levels.idle) + 26.0) < .01,"Idle bed is reduced by 26 dB")
 	check(engine.voices.drive.pitch_scale >= .85 and engine.voices.drive.pitch_scale <= 1.4,"High speed stays within a restrained pitch range")
 	var loaded: float = engine.levels.drive
 	p.engine_power = 0.0
 	for i in 120: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.levels.drive < loaded*.3,"Throttle lift changes timbre and power at identical road speed")
 	check(engine.levels.air > .1,"Coasting retains air rush")
-	check(absf(engine.voices.air.volume_db - linear_to_db(engine.levels.air) + 16.0) < .01,"Coasting air rush is reduced by 16 dB")
+	check(absf(engine.voices.air.volume_db - linear_to_db(engine.levels.air) + 24.0) < .01,"Coasting air rush is reduced by 24 dB")
 	p.boost = 1.0
 	for i in 60: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.levels.boost_loop > .4,"Boost has a sustained layer")
-	check(absf(engine.voices.boost_loop.volume_db - linear_to_db(engine.levels.boost_loop) + 18.0) < .01,"Sustained boost is reduced by 18 dB")
+	check(absf(engine.voices.boost_loop.volume_db - linear_to_db(engine.levels.boost_loop) + 26.0) < .01,"Sustained boost is reduced by 26 dB")
 	p.emp_time = 1.0
 	for i in 60: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.levels.boost_loop < .001 and engine.levels.drive < .001 and engine.levels.idle < .001,"EMP cuts the motor and booster")
@@ -58,7 +58,7 @@ func run() -> void:
 	for i in 120: engine.update(race,four,true,true,1.0/60.0)
 	check(absf(engine.levels.drive-solo)<.001,"Four players do not quadruple engine volume")
 	check(engine.get_child_count()==6,"Continuous voice count stays fixed")
-	check(engine.voices.drive.volume_db < -18.0,"Full split-screen motor remains below -18 dB")
+	check(engine.voices.drive.volume_db < -26.0,"Full split-screen motor remains below -26 dB")
 	cues.update(race,views,true,true)
 	var before: int = cues.serial
 	p.flash=.18; p.energy-=8

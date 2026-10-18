@@ -9,7 +9,7 @@ func _ready() -> void:
 	configure({
 		"contact": ["contact", -5.0, .12, 1.0, false],
 		"crash": ["explosion", -2.0, .3, .92, false],
-		"boost": ["boost", -7.0, .45, 1.0, false],
+		"boost": ["boost", -15.0, .45, 1.0, false],
 		"land": ["land", -4.0, .2, 1.0, false],
 		"pickup": ["pickup", -4.0, .25, 1.0, true],
 		"lap": ["lap", -2.0, 1.0, 1.0, true],

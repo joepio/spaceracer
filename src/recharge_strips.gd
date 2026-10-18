@@ -1,6 +1,6 @@
 extends RefCounted
 ## Shared road charging: unlimited supply, with no collection order or cooldown.
-const RATE:=34.
+const RATE:=40. # Per second; scaled with the 315 m/s cruise so a strip still refills as much.
 const LEFT:=-.88
 const RIGHT:=.30
 const CENTER:=(LEFT+RIGHT)*.5

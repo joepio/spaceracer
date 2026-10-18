@@ -50,7 +50,7 @@ being read by an ongoing playtest. Keep updating the staged executable/PCK so
 the next launch uses the latest build. The installer accepts `-BuildDirectory`.
 
 The title and pause screens share the same menu: up/down selects a row; left/right
-immediately adjusts players, world, level, seed or graphics. Use the analog stick,
+immediately adjusts players, world, level, seed, AI racers or graphics. Use the analog stick,
 keyboard arrows or on-screen arrows. A/click activates actions.
 **New random race**, directly below Play/Resume, launches a different seed and
 randomly chooses City, Forest, The Cell, Desert or Ocean, preserving players, difficulty and lap count. In either menu, **hold X
@@ -80,13 +80,13 @@ setting changes the primary action to **Restart**. Graphics never resets progres
 The paused track keeps its last rendered frame behind a dark menu gradient until
 resuming or restarting. Back no longer pauses.
 
-In GameNight, every session opens on the start menu over the prepared track:
-pick the **World**, **Level** and **Laps**, turn **Sound** on or off, set
-**Graphics**, then press **Race** (or Start). During the race **Start** opens the
-same menu as a pause menu, with **Resume** and **Restart race**.
+In GameNight, a session starts straight in the race, without a start menu.
+During the race **Start** opens the pause menu: pick the **World**, **Level**,
+**Laps** and **AI racers**, turn **Sound** on or off, set **Graphics**, then
+**Resume** or **Restart race** to race with the new settings.
 **Back/Select** returns to the GameNight lobby, including from the menu.
 Use the stick or D-pad to select a setting, and A to activate it. World, Level,
-Laps and Graphics are the game's GameNight settings: changing them in the menu
+Laps, AI racers and Graphics are the game's GameNight settings: changing them in the menu
 writes them back, so the party's apps show the same values, and a change in an
 app shows in the open menu. The menu keeps the host's player assignments; Resume
 never rebuilds the race. Held buttons on launch or return must be released
@@ -282,7 +282,7 @@ Standalone assigns connected controllers at race start and fills disconnected se
 without spending energy. Stay directly behind them, ideally 20–45 metres back;
 the wake fades out by 145 metres and outside its narrow corridor. Full drafting
 reduces aerodynamic drag by 26%, bringing level-road full-throttle cruise from
-about 954 to 1,109 km/h. It builds over half a second and fades when pulling out
+about 1,134 to 1,318 km/h. It builds over half a second and fades when pulling out
 to pass; braking remains fully effective. Boost gains a smaller 12% drag reduction.
 The visor shows `SLIPSTREAM` while active. Flying, warp, crashed/recovering and
 EMP-disabled craft cannot draft or provide a wake. The same rules apply to bots,
@@ -337,7 +337,7 @@ mount while the queued item remains in the HUD; it mounts when the active item e
   the craft's motion, then ignites with a growing exhaust plume, white-hot core,
   warm lens streak and stronger dynamic light. The flare is depth-occluded and
   faces each split-screen camera independently; EMP cuts all motor effects.
-  It accelerates into track-following cruise over roughly one second at **1,500 km/h**,
+  It accelerates into track-following cruise over roughly one second at **1,800 km/h**,
   including banks, loops and jump routes. It follows the highest-ranked active opponent, updating when the lead changes,
   marking the plane with four blinking red corners. The targeting laser appears
   only in the estimated final 0.75 seconds, fading in and brightening rapidly
@@ -561,7 +561,7 @@ Lift falls sharply at low forward airspeed. Slow flight sinks under gravity;
 use throttle to regain speed and a moderate nose-up attitude to arrest the sink.
 Pulling too far still stalls, and even full throttle cannot hover vertically.
 Fast powered flight can remain nearly level. Control surfaces show pitch, roll and yaw.
-Sustained flight tops out at 846 km/h, below the 954 km/h road cruise speed.
+Sustained flight tops out at 846 km/h, below the 1,134 km/h road cruise speed.
 Extra launch momentum decays smoothly instead of disappearing at takeoff.
 
 One vehicle-relative chase camera follows road, lift-off, flight and touchdown.
@@ -626,7 +626,7 @@ even while the starting grid remains locked. This startup is cosmetic: pressing
 throttle exactly at GO has the same acceleration as warming up beforehand.
 Sound is temporarily disabled for playtesting, including managed pause/resume.
 
-Cruising speed is roughly 950 km/h; boost reaches roughly 1,400 km/h. Boost
+Cruising speed is roughly 1,130 km/h; boost reaches roughly 1,670 km/h. Boost
 unlocks on lap two, costs 22 energy, and lasts 1.25 seconds. Release and press
 again to retrigger. Wall impacts also consume energy. Green lanes repair;
 amber chevrons give a free boost. Empty energy crashes the craft and starts its automatic
@@ -778,7 +778,8 @@ transport (`addons/gamenight/gamenight.gd`) and adapts it to the current contrac
 The old SDK's automatic screen helper and local controller enumeration are not
 used. Managed games consume opaque controller tokens from `controller_frame`;
 missing or 250 ms stale input becomes neutral. Empty seats create no craft;
-AI seats use bots. No online network race synchronization is implemented.
+AI seats use bots, and the **AI racers** setting (0 to 5, default 3) sets how
+many bots race: host AI seats count first, CPU racers fill up the rest. No online network race synchronization is implemented.
 
 Prepare builds the world and renders 60 warm frames off-screen before Ready.
 Start/Resume explicitly show the borderless window. Pause freezes the race,

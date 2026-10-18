@@ -3,7 +3,7 @@ extends RefCounted
 const Track=preload("res://src/track.gd")
 const GRAVITY:=Vector3(0,-14,0)
 const TURN_RATE:=1.15 # 66 degrees/sec; strong course correction, still a finite turn radius.
-const BOOST_SPEED:=360. # 1296 km/h, below the cruise missile's 1500 km/h.
+const BOOST_SPEED:=360. # 1296 km/h, below the cruise missile's 1800 km/h.
 const BOOST_TIME:=1.25
 const BOOST_ACCEL:=200.
 const EJECT_SPEED:=55.

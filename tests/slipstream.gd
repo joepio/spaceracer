@@ -18,7 +18,7 @@ func fresh()->RefCounted:
 	race.weapons.pickups.clear()
 	for i in range(3):
 		var p:Dictionary=race.racers[i]
-		p.distance=100.+i*30.;p.x=0.;p.speed=265.;p.startup=1.;p.ignited=true;p.engine_power=1.
+		p.distance=100.+i*30.;p.x=0.;p.speed=Race.TOP_SPEED;p.startup=1.;p.ignited=true;p.engine_power=1.
 	return race
 func _initialize()->void: call_deferred("run")
 func run()->void:
@@ -66,18 +66,18 @@ func run()->void:
 	for hz in [30,60,120]:
 		race=fresh();p=race.racers[0]
 		for tick in range(hz*8):
-			race.racers[1].distance=p.distance+30.;race.racers[1].speed=320.
+			race.racers[1].distance=p.distance+30.;race.racers[1].speed=380.
 			race.racers[2].distance=p.distance+1000.
 			race.step(1./hz,[{"throttle":1.},{"throttle":1.},{"throttle":1.}])
-		check(p.speed>303. and p.speed<309.,"Draft raises terminal speed to about 308 m/s, Hz=%d"%hz)
+		check(p.speed>359. and p.speed<370.,"Draft raises terminal speed to about 366 m/s, Hz=%d"%hz)
 		check(p.energy==100. and not p.airborne,"Draft spends no energy and remains grounded")
 		var before:float=p.speed
 		race.step(.05,[{"brake":1.},{},{}])
 		check(p.speed<before-11.,"Brakes remain strong while drafting")
 		for tick in range(hz*3):
-			race.racers[1].x=30.
+			race.racers[1].x=30.;race.racers[2].distance=p.distance+1000.
 			race.step(1./hz,[{"throttle":1.},{"throttle":1.},{"throttle":1.}])
-		check(p.slipstream==0. and p.speed<275.,"After passing/leaving wake speed settles toward normal")
+		check(p.slipstream==0. and p.speed<325.,"After passing/leaving wake speed settles toward normal")
 	print("SLIPSTREAM_TESTS %d checks, %d failures"%[checks,failures])
 	if "--render" in OS.get_cmdline_user_args(): await render_sample()
 	quit(1 if failures else 0)

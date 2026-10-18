@@ -28,7 +28,7 @@ func run()->void:
 			p.x=race.track.sample(p.distance).width*Recharge.CENTER;p.energy=10.;p.energy_previous=10.;p.weapon="railgun"
 		for tick in range(hz): race.step(1./hz,[{"brake":1.},{"brake":1.}])
 		for p in race.racers:
-			check(absf(p.energy-44.)<.01,"Both players charge at full rate, without consuming shared supply")
+			check(absf(p.energy-10.-Recharge.RATE)<.01,"Both players charge at full rate, without consuming shared supply")
 			check(p.weapon=="railgun" and p.energy_fx>0.,"Charging gives feedback without changing inventory")
 		for tick in range(hz*3): race.step(1./hz,[{"brake":1.},{"brake":1.}])
 		check(race.racers.all(func(p):return p.energy==100.),"Waiting on a strip can refill all the way: no per-pass cap")

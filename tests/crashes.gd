@@ -49,7 +49,7 @@ func run()->void:
 	race.step(.51,[{}])
 	check(not p.crashed and not p.wreck_wait and p.recovery==0 and p.energy==75.,"Crash returns to track automatically after two seconds without charging twice")
 	check(p.distance<=500. and Race.Track.supported(race.track.sample(p.distance),p.x),"Recovery cannot advance race progress")
-	check(p.speed==90. and p.weapon_guard==2. and p.crash_id==id,"Automatic recovery restores momentum and protection without another explosion")
+	check(p.speed==Race.RESPAWN_SPEED and p.weapon_guard==2. and p.crash_id==id,"Automatic recovery restores momentum and protection without another explosion")
 	effect.update(p,race.vfx_clock)
 	check(not effect.fire_mesh.visible and effect.blast.visible,"Recovery hides debris while the impact smoke finishes fading")
 	effect.update(p,4.)

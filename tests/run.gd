@@ -83,8 +83,8 @@ func run() -> void:
 	race.step(1.0,[{"throttle":1.0}])
 	check(p.distance==0 and p.speed==0,"Countdown freezes launch")
 	race.countdown=0
-	for i in range(600): race.step(1.0/120,[race.bot(p)])
-	check(p.speed>220 and p.speed<280,"Top speed and acceleration")
+	for i in range(480): race.step(1.0/120,[race.bot(p)])
+	check(p.speed>270 and p.speed<335,"Top speed and acceleration")
 	var speed: float=p.speed
 	for i in range(60): race.step(1.0/120,[{"brake":true}])
 	check(p.speed<speed-75,"Brake rapidly reduces speed")

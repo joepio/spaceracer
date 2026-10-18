@@ -10,6 +10,14 @@ const SPECS = [
     "max": 5
   },
   {
+    "key": "bots",
+    "label": "AI racers (next race)",
+    "kind": "number",
+    "default": 3,
+    "min": 0,
+    "max": 5
+  },
+  {
     "key": "difficulty",
     "label": "Track difficulty (next race)",
     "kind": "choice",

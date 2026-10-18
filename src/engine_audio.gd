@@ -48,7 +48,7 @@ func update(race: RefCounted, views: Array, running: bool, enabled: bool, dt: fl
 		var p: Dictionary = race.racers[view.index]
 		if p.crashed or p.recovery > 0.0 or p.finished: continue
 		alive = true
-		speed = maxf(speed, clampf(p.speed / 430.0, 0.0, 1.0))
+		speed = maxf(speed, clampf(p.speed / 510.0, 0.0, 1.0))
 		airborne = maxf(airborne, 1.0 if p.airborne else 0.0)
 		if p.emp_time <= 0:
 			powered = true

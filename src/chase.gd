@@ -9,7 +9,7 @@ static func fitted_fov(camera:Camera3D,reference:float)->float:
 static func update(camera:Camera3D,pose:Transform3D,speed:float,boosting:bool,dt:float,snap:bool=false,acceleration:float=0.,effects_enabled:bool=true)->void:
 	var previous:=camera.position
 	camera.set_meta("crash_serial",-1)
-	var rush:=smoothstep(70.,390.,speed) if effects_enabled else 0.
+	var rush:=smoothstep(80.,465.,speed) if effects_enabled else 0.
 	var boost_target:=smoothstep(180.,350.,speed) if boosting and effects_enabled else 0.
 	var surge_target:=smoothstep(15.,180.,acceleration)*smoothstep(0.,90.,speed) if effects_enabled else 0.
 	var boost:float=camera.get_meta("speed_boost",0.)
@@ -35,7 +35,7 @@ static func update(camera:Camera3D,pose:Transform3D,speed:float,boosting:bool,dt
 	camera.look_at(pose.origin+frame.z*24+frame.y*1.5,frame.y)
 	# Optical pull-back follows acceleration as well as speed, then settles as
 	# thrust stops changing velocity. Boost opens the lens further, without cuts.
-	var extreme:=smoothstep(390.,510.,speed) if effects_enabled else 0.
+	var extreme:=smoothstep(465.,605.,speed) if effects_enabled else 0.
 	var fov:=fitted_fov(camera,clampf(72+rush*10+surge*5.+boost*9.+extreme*4.,72,100))
 	camera.fov=fov if snap else lerpf(camera.fov,fov,1-exp(-dt*5))
 	var clock:float=camera.get_meta("speed_clock",0.)

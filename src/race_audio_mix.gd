@@ -1,9 +1,9 @@
 extends RefCounted
 const BUS := &"RaceSound"
-const VERSION := "turbine-quiet-2026-10-16"
+const VERSION := "turbine-quiet-2026-10-18"
 # Continuous cockpit beds sit below weapon, impact and race cues. Keep these
 # trims separate from throttle envelopes so the motor still responds naturally.
-const ENGINE_TRIM_DB := {"idle": -18.0, "drive": -20.0, "air": -16.0, "boost_loop": -18.0}
+const ENGINE_TRIM_DB := {"idle": -26.0, "drive": -28.0, "air": -24.0, "boost_loop": -26.0}
 static func ensure_bus() -> void:
 	if AudioServer.get_bus_index(BUS) >= 0: return
 	AudioServer.add_bus()

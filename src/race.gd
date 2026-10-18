@@ -7,10 +7,15 @@ const Bump=preload("res://src/bump.gd")
 const Victory=preload("res://src/victory.gd")
 const Slipstream=preload("res://src/slipstream.gd")
 const Checkpoints=preload("res://src/checkpoints.gd")
-const TOP_SPEED := 265.0
-const BOOST_SPEED := 390.0
-const STACK_BOOST_SPEED := 475.0
-const MAX_SPEED := 520.0
+const TOP_SPEED := 315.0
+const BOOST_SPEED := 465.0
+const STACK_BOOST_SPEED := 565.0
+const MAX_SPEED := 620.0
+# Crest unloading was tuned at the original 265 m/s cruise; keep the same
+# crests launching the same way now that the whole field runs faster.
+const CREST_SPEED_SCALE := (265.0/TOP_SPEED)*(265.0/TOP_SPEED)
+const ACCELERATION := 160.0
+const RESPAWN_SPEED := 110.0
 const CRASH_RESPAWN_DELAY := 2.0
 const ENERGY_REFILL_RATE := 1.5
 const ENERGY_REFILL_DELAY := 2.0
@@ -57,7 +62,7 @@ func _init(roster: Array, track_seed: int, lap_count: int = 3, difficulty:String
 
 static func speed_instability(speed:float,planted:float)->float:
 	# Progressive loss of magnetic adhesion, controllable with nose-down trim.
-	return smoothstep(365.,510.,speed)*(1.-clampf(planted,0.,1.)*.72)
+	return smoothstep(435.,605.,speed)*(1.-clampf(planted,0.,1.)*.72)
 
 func bot(p: Dictionary) -> Dictionary:
 	if p.crashed or p.finished: return {}
@@ -148,7 +153,8 @@ func air_bot(p:Dictionary)->Dictionary:
 	var desired:Vector3=(target-p.air_position).normalized()*220.
 	var goal:Vector3=desired+(desired-p.air_velocity)*.8
 	return {"reset":p.air_time>7. and p.air_position.distance_to(target)>100.,"fire":Weapons.Railgun.opportunity(self,p) if p.weapon=="railgun" else Weapons.DiveBomb.opportunity(self,p),"throttle":.85,"brake":clampf((p.speed-235.)/100.,0.,.25),
-		"trim":clampf(-atan2(goal.dot(frame.y),maxf(20.,goal.dot(frame.z)))*1.6,-1.,1.),
+		# Ease off the nose-down push once sinking fast, so overshoots land level.
+		"trim":clampf(-atan2(goal.dot(frame.y),maxf(20.,goal.dot(frame.z)))*1.6,-1.,.3 if p.air_velocity.dot(aim.frame.y)<-150. else 1.),
 		"steer":clampf(-atan2(goal.dot(frame.x),maxf(20.,goal.dot(frame.z)))*3.,-1.,1.),
 		"strafe":clampf(-atan2(aim.frame.y.dot(frame.x),aim.frame.y.dot(frame.y))*1.37,-1.,1.)}
 
@@ -300,7 +306,7 @@ func step(dt: float, inputs: Array) -> void:
 				p.rebuild_time=.7
 				p.heading = 0.0
 				p.slip = 0.0
-				p.speed = 90.0
+				p.speed = RESPAWN_SPEED
 			continue
 		if p.airborne:
 			var previous_speed:float=p.speed
@@ -315,7 +321,7 @@ func step(dt: float, inputs: Array) -> void:
 		var stacked:bool=fast and p.boost>0. and p.on_pad
 		var target:float=(STACK_BOOST_SPEED if stacked else (BOOST_SPEED if fast else TOP_SPEED))+loose*60-planted*35
 		var drag:float=Slipstream.drag_multiplier(p,fast)
-		var acceleration: float = throttle * (1-brake*.9) * 125 * (1 - pow(p.speed / target, 2)*drag)
+		var acceleration: float = throttle * (1-brake*.9) * ACCELERATION * (1 - pow(p.speed / target, 2)*drag)
 		if fast:
 			acceleration += maxf(0, target - p.speed) * (4.2 if stacked else 3.)
 		if throttle == 0:
@@ -337,7 +343,7 @@ func step(dt: float, inputs: Array) -> void:
 		p.slip-=n.curve*forward_speed*forward_speed*lerpf(.25,1,p.slide)*(1.+instability*.5)*dt
 		var grip:float=lerpf(14,1.8,p.slide)*(1+planted*.75-loose*.48)*(1-p.unload*.35)*(1.-instability*.58)
 		p.slip=lerpf(p.slip,lateral,1-exp(-grip*dt))
-		var crest_force:float=maxf(0,-n.crest)*forward_speed*forward_speed
+		var crest_force:float=maxf(0,-n.crest)*forward_speed*forward_speed*CREST_SPEED_SCALE
 		var hold_force:float=230*(1-loose*.82)+planted*180+brake*80
 		var launch:=Flight.unload(p,dt,crest_force,hold_force)
 		p.x += p.slip * dt

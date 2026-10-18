@@ -112,7 +112,7 @@ func run()->void:
 		race.step(.01,neutral())
 		if owner.warp_time<=0.: break
 	check(owner.distance-distance>1000.,"Warp drives forward for a few seconds and gains ground")
-	check(not owner.airborne and not owner.crashed and owner.speed<=280.,"Warp returns stable control near normal speed")
+	check(not owner.airborne and not owner.crashed and owner.speed<=Race.TOP_SPEED+15.,"Warp returns stable control near normal speed")
 	check(owner.energy==100.,"Warp does not spend ordinary shield/boost energy")
 	race=fresh();owner=race.racers[2];owner.lap=2;owner.distance=race.track.length+700.;owner.weapon="warp"
 	race.weapons.activate(race,2)

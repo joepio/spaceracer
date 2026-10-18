@@ -54,20 +54,14 @@ func run()->void:
 	game.bridge=bridge
 	game.add_child(bridge)
 	game.roster[0].controller="pad-one"
-	game.managed_start_menu=true
 	game.running=false
 	game.start_managed("")
-	check(game.local_paused and not game.running and row("race").text=="Race" and row("restart")==null,"A GameNight session opens on the start menu")
-	check(row("biome")!=null and row("difficulty")!=null and row("sound")!=null,"The start menu offers world, level and sound")
-	var menu_race:RefCounted=game.race
+	check(game.running and not game.local_paused and not game.in_menu,"A GameNight session starts straight in the race, without a start menu")
 	press(7)
-	check(game.running and not game.local_paused and game.race==menu_race,"Start begins the prepared race when nothing changed")
+	game.adjust_menu("bots",1)
+	check(row("bots")!=null and bridge.written.get("bots")==game.settings.values.bots,"Changing the AI racers writes it back to the party")
+	game.adjust_menu("bots",-1)
 	press(7)
-	game.managed_start_menu=true
-	game.adjust_menu("difficulty",1)
-	var picked:String=game.difficulty
-	game.start_selected()
-	check(game.running and game.race!=menu_race and game.race.track.difficulty==picked and not game.managed_start_menu,"A changed level builds the race it names")
 	game.managed_buttons.clear() # as after a fresh launch
 	var original:RefCounted=game.race
 	frame(1 << 7)

@@ -23,7 +23,7 @@ func run()->void:
 			var n:Dictionary=race.track.sample(m.distance)
 			features[n.feature]=true
 			if m.age>=race.Weapons.MISSILE_LAUNCH_TIME:
-				check(absf(m.launch_speed-1500./3.6)<.001,"Cruise reaches 1500 km/h independent of lead gap")
+				check(absf(m.launch_speed-race.Weapons.MISSILE_SPEED)<.001,"Cruise reaches 1800 km/h independent of lead gap")
 				check(m.position.distance_to(Race.Track.point(n,m.x,10.))<.001,"Cruise follows banked road, loops and gaps without corner cutting")
 		check(m.terminal<0. and race.weapons.missiles.size()==1,"Far-away leader does not force an early terminal dive or timeout")
 		check(m.trail.size()<=race.Weapons.MISSILE_TRAIL_POINTS and features.size()>1,"Trail stays bounded through varied track features")

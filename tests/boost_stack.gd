@@ -26,12 +26,12 @@ func run()->void:
 		speeds.append(p.speed);print("BOOST_MODE ",mode," kmh=",p.speed*3.6)
 		check(not p.crashed and not p.airborne,"Stacked boost stays controllable on straight road")
 	check(speeds[2]>speeds[0]+60. and speeds[2]>speeds[1]+60.,"Boost plus strip is substantially faster than either alone")
-	check(Race.speed_instability(330.,0.)==0. and Race.speed_instability(490.,0.)>.9,"Ordinary racing retains grip; extreme speed loses grip")
-	check(Race.speed_instability(490.,1.)<Race.speed_instability(490.,0.)*.3,"Nose-down trim restores high-speed stability")
+	check(Race.speed_instability(390.,0.)==0. and Race.speed_instability(585.,0.)>.9,"Ordinary racing retains grip; extreme speed loses grip")
+	check(Race.speed_instability(585.,1.)<Race.speed_instability(585.,0.)*.3,"Nose-down trim restores high-speed stability")
 	var residual:Array[float]=[]
 	for mode in ["cruise","extreme","planted"]:
 		var race:=fresh(mode!="cruise");var p:Dictionary=race.racers[0]
-		p.speed=265. if mode=="cruise" else 475.;p.slip=70.;p.boost=1. if mode!="cruise" else 0.
+		p.speed=Race.TOP_SPEED if mode=="cruise" else Race.STACK_BOOST_SPEED;p.slip=70.;p.boost=1. if mode!="cruise" else 0.
 		for i in range(12): race.step(1./120.,[{"throttle":1.,"trim":1. if mode=="planted" else 0.}])
 		residual.append(absf(p.slip))
 	check(residual[1]>residual[0]*1.5 and residual[2]<residual[1],"Extreme speed carries more sideways momentum; grip input counters it")

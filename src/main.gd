@@ -25,11 +25,9 @@ var running := false
 var in_menu := true
 var local_paused := false
 var managed_focus_generation := 0
-## Under GameNight each session opens on the start menu; the race begins from it.
-var managed_start_menu := false
-var start_menu_track:Dictionary={}
 var human_count := 1
 const MAX_SEED := 99999
+const CPU_NAMES := ["NOVA","FLUX","COMET","VECTOR","ECHO","PULSE","ORBIT","BLAZE","QUARK"]
 var next_seed := 0
 var selected_seed := 1
 var seed_input:LineEdit
@@ -151,18 +149,29 @@ func _ready() -> void:
 func local_roster(count: int, bots_only: bool = false) -> Array:
 	var out: Array = []
 	var pads := Input.get_connected_joypads()
-	for i in range(maxi(count,6)):
-		out.append({"slot":i,"id":str(i),"name":["NOVA","FLUX","COMET","VECTOR","ECHO","PULSE"][i],
+	var total:int=6 if bots_only else maxi(count+int(settings.values.bots),1)
+	for i in range(total):
+		out.append({"slot":i,"id":str(i),"name":CPU_NAMES[i%CPU_NAMES.size()],
 			"bot":bots_only or i>=count,"device":int(pads[i]) if i<pads.size() else -1,
 			"view":i<count,"color":World.PALETTE[i].to_html()})
 	return out
 
+## Humans keep their seats; AI racers follow the "bots" setting. Host AI
+## seats are used first so their names stay, then CPU racers fill up.
+func fit_bots(racers:Array)->Array:
+	if racers.all(func(p:Dictionary)->bool: return p.bot): return racers
+	var wanted:int=settings.values.bots
+	var out:Array=[]
+	var slot:=0
+	for p in racers:
+		if p.bot and wanted<=0: continue
+		if p.bot: wanted-=1
+		out.append(p);slot=maxi(slot,int(p.slot)+1)
+	for i in range(wanted):
+		out.append({"slot":slot+i,"id":"cpu-%d"%(slot+i),"name":CPU_NAMES[(slot+i)%CPU_NAMES.size()],"bot":true,"view":false,"controller":""})
+	return out
+
 func start_selected() -> void:
-	if local_paused and managed_start_menu:
-		managed_start_menu=false
-		if start_menu_track!={"biome":biome,"difficulty":difficulty,"laps":laps}: new_race()
-		resume_local()
-		return
 	if local_paused and (bridge.launched_by_daemon or not menu_race_changed()):
 		resume_local()
 		return
@@ -223,6 +232,7 @@ func new_race(random_scenery:bool=false) -> void:
 		ui.remove_child(view.holder)
 		view.holder.queue_free()
 	views.clear()
+	roster=fit_bots(roster)
 	if next_seed == 0: next_seed = randi_range(1,MAX_SEED)
 	next_seed=clampi(next_seed,1,MAX_SEED)
 	race = Race.new(roster,next_seed,laps,difficulty,biome,randi_range(1,10000000))
@@ -501,11 +511,11 @@ func pause_local()->void:
 	menu_holds.clear()
 	if is_instance_valid(touch_controls): touch_controls.clear_input()
 	selected_seed=race.track.seed_value
-	pause_settings={"players":human_count,"biome":race.track.biome,"difficulty":race.track.difficulty,"seed":selected_seed}
+	pause_settings={"players":human_count,"bots":settings.values.bots,"biome":race.track.biome,"difficulty":race.track.difficulty,"seed":selected_seed}
 	make_menu()
 
 func menu_race_changed()->bool:
-	return local_paused and not bridge.launched_by_daemon and pause_settings!={"players":human_count,"biome":biome,"difficulty":difficulty,"seed":selected_seed}
+	return local_paused and not bridge.launched_by_daemon and pause_settings!={"players":human_count,"bots":settings.values.bots,"biome":biome,"difficulty":difficulty,"seed":selected_seed}
 
 func assign_local_controllers()->void:
 	if bridge==null or bridge.launched_by_daemon or race==null: return
@@ -655,6 +665,7 @@ func adjust_menu(id:String,step:int)->void:
 		"difficulty": difficulty=Race.Track.DIFFICULTIES[posmod(Race.Track.DIFFICULTIES.find(difficulty)+step,3)]
 		"seed": selected_seed=posmod(selected_seed-1+step,MAX_SEED)+1;finish_seed_edit()
 		"laps": laps=posmod(laps-1+step,5)+1
+		"bots": settings.values.bots=posmod(int(settings.values.bots)+step,6)
 		"graphics":
 			var levels:=[.6,.8,1.0]
 			quality=levels[posmod(levels.find(quality)+step,3)]
@@ -670,13 +681,12 @@ func adjust_menu(id:String,step:int)->void:
 			layout_views()
 	# Under GameNight the race settings belong to the party: write them back so
 	# the apps show the same value. They apply from the next race or a restart.
-	if bridge.launched_by_daemon and id in ["biome","difficulty","laps"]:
-		bridge.set_setting(id,{"biome":biome,"difficulty":difficulty,"laps":laps}[id])
+	if bridge.launched_by_daemon and id in ["biome","difficulty","laps","bots"]:
+		bridge.set_setting(id,{"biome":biome,"difficulty":difficulty,"laps":laps,"bots":settings.values.bots}[id])
 	refresh_menu_values()
 
 func restart_managed_race()->void:
-	# Same roster and controllers; only the track follows the settings.
-	managed_start_menu=false
+	# Same humans and controllers; the track and AI racers follow the settings.
 	new_race()
 	resume_local()
 
@@ -686,11 +696,12 @@ func refresh_menu_values()->void:
 		if not is_instance_valid(row) or not row is Button: continue
 		match str(row.get_meta("menu_id","")):
 			"sound": row.text="Sound                            %s"%("On" if sound_enabled else "Off")
-			"race": row.text=("Restart" if menu_race_changed() else "Resume") if local_paused and not managed_start_menu else "Race"
+			"race": row.text=("Restart" if menu_race_changed() else "Resume") if local_paused else "Race"
 			"players": row.text="Players                         %d"%human_count
 			"biome": row.text="World                           %s"%("The Cell" if biome=="cell" else biome.capitalize())
 			"difficulty": row.text="Level                            %s"%difficulty.capitalize()
 			"laps": row.text="Laps                             %d"%laps
+			"bots": row.text="AI racers                     %d"%settings.values.bots
 			"graphics": row.text="Graphics                       %s"%{.6:"Performance",.8:"Balanced",1.0:"High"}.get(quality,"Balanced")
 			"lighting": row.text="Lighting                         %s"%("SDFGI" if bounce_lighting else "Direct")
 
@@ -757,7 +768,7 @@ func make_menu()->void:
 	menu_label(content,"SPACERACER",58,Color("edf7ff"))
 	var start:=menu_button(content,"race","Race",start_selected,true)
 	if not bridge.launched_by_daemon: menu_button(content,"random_race","New random race",start_random_race)
-	var settings:=["biome","difficulty","laps","sound","graphics"] if bridge.launched_by_daemon else ["players","biome","difficulty","seed","sound","graphics"]
+	var settings:=["biome","difficulty","laps","bots","sound","graphics"] if bridge.launched_by_daemon else ["players","biome","difficulty","seed","bots","sound","graphics"]
 	if world.advanced_renderer: settings.append("lighting")
 	for id in settings:
 		var row:=HBoxContainer.new()
@@ -803,7 +814,7 @@ func make_menu()->void:
 			track_character.add_theme_color_override("font_color",Color("7de9d6"))
 			content.add_child(track_character)
 	menu_button(content,"controls","Controls & credits",func(): show_menu_controls=not show_menu_controls;make_menu())
-	if local_paused and bridge.launched_by_daemon and not managed_start_menu:
+	if local_paused and bridge.launched_by_daemon:
 		menu_button(content,"restart","Restart race",restart_managed_race)
 	elif local_paused and not bridge.launched_by_daemon:
 		menu_button(content,"restart","Restart race",func(): finish_seed_edit();next_seed=selected_seed;start_local())
@@ -824,7 +835,7 @@ func make_menu()->void:
 		credits.text="\nFOREST ART · [url=https://creativecommons.org/licenses/by/4.0/]CC BY 4.0[/url]\n[url=https://sketchfab.com/3d-models/pine-tree-d45218a3fab349e5b1de040f29e7b6f9]Pine Tree[/url] — evolveduk\n[url=https://sketchfab.com/3d-models/tree-bake-upload-4e78d13152cf4214a256230765f6d6d3]Tree Bake Upload[/url] — restlessmonkey\n[url=https://github.com/GamesNotDeveloped/godot-forest-demo]Godot forest demo[/url] — GamesNotDeveloped\nAdapted materials, textures and scale for SpaceRacer."
 		credits.meta_clicked.connect(func(url:Variant): OS.shell_open(str(url)))
 		help.add_child(credits)
-	menu_label(content,"Stick  Select / adjust     Start  Race     Back  Lobby" if managed_start_menu else "Stick  Select / adjust     Start  Resume     Back  Lobby" if bridge.launched_by_daemon else "Stick  Select / adjust     Start  Play / resume",14,Color("91a8b7"))
+	menu_label(content,"Stick  Select / adjust     Start  Resume     Back  Lobby" if bridge.launched_by_daemon else "Stick  Select / adjust     Start  Play / resume",14,Color("91a8b7"))
 	menu_hold_hint=Label.new();menu_hold_hint.add_theme_font_size_override("font_size",14)
 	menu_hold_hint.add_theme_color_override("font_color",Color("91a8b7"));content.add_child(menu_hold_hint)
 	menu_hold_bar=ProgressBar.new();menu_hold_bar.max_value=1.;menu_hold_bar.show_percentage=false
@@ -888,7 +899,6 @@ func prepare(session:String,seats:Array,players:Array)->void:
 		menu=null
 	quiet_window()
 	roster=managed_roster(seats,players)
-	managed_start_menu=true
 	bridge.notify_progress(session,5,"Building track")
 	new_race()
 	bridge.notify_progress(session,65,"Warming renderer")
@@ -927,13 +937,6 @@ func start_managed(_session:String)->void:
 		window.grab_focus()
 		managed_focus_generation+=1
 		claim_managed_focus.call_deferred(_session,managed_focus_generation)
-	if managed_start_menu: open_start_menu()
-
-func open_start_menu()->void:
-	pause_local()
-	start_menu_track={"biome":biome,"difficulty":difficulty,"laps":laps}
-	# The track keeps drawing behind the menu as a preview.
-	for view in views: view.viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS
 
 func cancel_managed_focus()->void:
 	managed_focus_generation+=1

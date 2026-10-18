@@ -1,0 +1,36 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ontola/gamenight/main/catalog/schema.json",
+  "id": "spaceracer",
+  "title": "SpaceRacer",
+  "tagline": "High-speed hover racing, airborne shortcuts and weapons across three procedural worlds.",
+  "developer": "Joep Meindertsma",
+  "players": {
+    "min": 1,
+    "max": 4,
+    "best": 4
+  },
+  "match_minutes": 5,
+  "price": "free",
+  "tags": [
+    "racing",
+    "versus",
+    "splitscreen",
+    "godot"
+  ],
+  "color": "#53ffe0",
+  "integration": {
+    "level": "integrated",
+    "protocol": 1
+  },
+  "requirements": {
+    "disk_mb": 182,
+    "ram_mb": 4096,
+    "cpu": "Modern quad-core; split-screen is more demanding",
+    "gpu": "Vulkan-capable GPU; dedicated graphics recommended for High and split-screen"
+  },
+  "links": {
+    "source": "https://github.com/joepio/spaceracer",
+    "homepage": "https://github.com/joepio/spaceracer",
+    "releases": "https://github.com/joepio/spaceracer/releases"
+  }
+}

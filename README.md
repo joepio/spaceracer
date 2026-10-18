@@ -27,9 +27,11 @@ Pull requests and ordinary pushes to `main` produce downloadable build artifacts
 Release publication requires all checks to pass, and existing release assets are
 never overwritten. Android is not built by this workflow.
 
-Each release includes `release-sha256.txt` and `spaceracer.catalog.json`. Copy the
-latter to GameNight's `catalog/games/spaceracer.json` to update its pinned download
-URL and checksum together. The GameNight protocol ID is `spaceracer`.
+Each release includes `release-sha256.txt` and `spaceracer.catalog.json`. Copy only
+its `downloads` block into GameNight's `catalog/games/spaceracer.json` to update the
+pinned download URL and checksum together. The game's metadata and store artwork live
+in `gamenight.json` and `assets/gamenight/` here; GameNight's catalog sync copies them.
+The GameNight protocol ID is `spaceracer`.
 
 ## Play
 

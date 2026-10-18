@@ -18,8 +18,8 @@ func _ready() -> void:
 		"rail": ["rail", -3.0, .12, 1.0, false],
 		"emp": ["emp", -4.0, .35, 1.0, false],
 		"warp": ["warp", -6.0, .5, 1.0, false],
-		"tick": ["tick", -1.0, .5, 1.0, true],
-		"go": ["go", -1.0, 1.0, 1.0, true],
+		"tick": ["tick", -9.0, .5, 1.0, true],
+		"go": ["go", -7.0, 1.0, 1.0, true],
 		"warning": ["warning", -6.0, 1.2, 1.0, true],
 	})
 

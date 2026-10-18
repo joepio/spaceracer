@@ -1,0 +1,105 @@
+{
+ "air": {
+  "bright": 3.0,
+  "gust": 0.5,
+  "hi": 18000.0,
+  "lo": 2000.0,
+  "whistle": 0.0631,
+  "whistle_hz": 7974.4975
+ },
+ "boost": {
+  "decay": 1.9965,
+  "drop_hz": 123.5053,
+  "jet": 0.0183,
+  "length": 0.7684,
+  "open": 0.4701,
+  "rise_hz": 558.0118,
+  "sub": 0.2971,
+  "tone": 0.2529
+ },
+ "boost_loop": {
+  "jet": 0.3,
+  "noise": 0.4,
+  "up": 1.5
+ },
+ "drive": {
+  "f0": 45.0,
+  "f1": 563.0525,
+  "f1g": 2.3971,
+  "f2": 4964.1759,
+  "f2g": 0.2127,
+  "jet": 0.6698,
+  "nhi": 18000.0,
+  "nlo": 45.8337,
+  "noise": 0.272,
+  "pulse": 0.5989,
+  "roll": 1.159,
+  "sub": 4.0,
+  "vib": 4.0,
+  "whine": 4.0
+ },
+ "explosion": {
+  "bright": 3098.0598,
+  "debris": 0.0658,
+  "decay": 5.3216,
+  "fall": 1.6924,
+  "kick": 2.9174,
+  "kick_hz": 42.1803,
+  "metal": 0.6144
+ },
+ "go": {
+  "arp": 0,
+  "cutoff": 5954.5493,
+  "decay": 0.8,
+  "detune": 0.0015,
+  "odd": 5,
+  "pitch": 1.7422
+ },
+ "idle": {
+  "buzz": 0.0814,
+  "f0": 62.0944,
+  "hiss": 0.0,
+  "jet": 0.0712,
+  "wobble": 0.4466
+ },
+ "launch": {
+  "bright": 3000.0,
+  "decay": 4.0,
+  "fall": 1.5965,
+  "ignite": 0.343,
+  "jet": 0.4305,
+  "thump": 0.2661
+ },
+ "rail": {
+  "bolt_end_hz": 183.5946,
+  "bolt_hz": 3611.9337,
+  "boom": 0.0,
+  "curve": 0.3285,
+  "decay": 0.8,
+  "echo": 0.7,
+  "ring": 0.885,
+  "zap": 0.0
+ },
+ "tick": {
+  "cutoff": 4404.083,
+  "decay": 0.8,
+  "detune": 0.004,
+  "odd": 5,
+  "pitch": 1.4054
+ },
+ "warning": {
+  "cutoff": 7516.7482,
+  "decay": 0.8694,
+  "detune": 0.02,
+  "odd": 5,
+  "pitch": 1.889
+ },
+ "warp": {
+  "curve": 2.3455,
+  "from_hz": 69.0064,
+  "jet": 0.1886,
+  "pop": 0.1798,
+  "to_hz": 1526.5643,
+  "tone": 2.4165
+ }
+}

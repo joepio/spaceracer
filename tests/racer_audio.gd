@@ -1,4 +1,5 @@
 extends SceneTree
+const Mix := preload("res://src/race_audio_mix.gd")
 const Race = preload("res://src/race.gd")
 const EngineAudio = preload("res://src/engine_audio.gd")
 const GameAudio = preload("res://src/game_audio.gd")
@@ -19,26 +20,26 @@ func run() -> void:
 	p.speed = 280.0; p.engine_power = 1.0
 	for i in 120: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.voices.drive.playing and engine.levels.drive > .4,"Throttle produces the loaded power layer")
-	check(absf(engine.voices.drive.volume_db - linear_to_db(engine.levels.drive) + 28.0) < .01,"Loaded motor is 28 dB below its original envelope")
-	check(absf(engine.voices.idle.volume_db - linear_to_db(engine.levels.idle) + 26.0) < .01,"Idle bed is reduced by 26 dB")
+	check(absf(engine.voices.drive.volume_db - linear_to_db(engine.levels.drive) - Mix.ENGINE_TRIM_DB.drive) < .01,"Loaded motor uses its mix trim")
+	check(absf(engine.voices.idle.volume_db - linear_to_db(engine.levels.idle) - Mix.ENGINE_TRIM_DB.idle) < .01,"Idle bed uses its mix trim")
 	check(engine.voices.drive.pitch_scale >= .85 and engine.voices.drive.pitch_scale <= 1.4,"High speed stays within a restrained pitch range")
 	var loaded: float = engine.levels.drive
 	p.engine_power = 0.0
 	for i in 120: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.levels.drive < loaded*.3,"Throttle lift changes timbre and power at identical road speed")
 	check(engine.levels.air > .1,"Coasting retains air rush")
-	check(absf(engine.voices.air.volume_db - linear_to_db(engine.levels.air) + 24.0) < .01,"Coasting air rush is reduced by 24 dB")
+	check(absf(engine.voices.air.volume_db - linear_to_db(engine.levels.air) - Mix.ENGINE_TRIM_DB.air) < .01,"Coasting air rush uses its mix trim")
 	p.boost = 1.0
 	for i in 60: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.levels.boost_loop > .4,"Boost has a sustained layer")
-	check(absf(engine.voices.boost_loop.volume_db - linear_to_db(engine.levels.boost_loop) + 26.0) < .01,"Sustained boost is reduced by 26 dB")
+	check(absf(engine.voices.boost_loop.volume_db - linear_to_db(engine.levels.boost_loop) - Mix.ENGINE_TRIM_DB.boost_loop) < .01,"Sustained boost uses its mix trim")
 	p.emp_time = 1.0
 	for i in 60: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.levels.boost_loop < .001 and engine.levels.drive < .001 and engine.levels.idle < .001,"EMP cuts the motor and booster")
 	p.emp_time = 0.0; p.boost = 0.0; p.drone_time = 2.0; p.drone_target = 1
 	for i in 60: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.voices.sentry.playing,"Sentry fire has a bounded loop")
-	check(absf(engine.voices.sentry.volume_db - linear_to_db(engine.levels.sentry)) < .01,"Sentry action cue keeps its existing level")
+	check(absf(engine.voices.sentry.volume_db - linear_to_db(engine.levels.sentry) - Mix.ENGINE_TRIM_DB.sentry) < .01,"Sentry loop uses its mix trim")
 	p.crashed = true
 	for i in 60: engine.update(race,views,true,true,1.0/60.0)
 	check(engine.levels.values().all(func(x): return x < .001),"Destroyed craft has no continuing engine or gun")
@@ -58,7 +59,7 @@ func run() -> void:
 	for i in 120: engine.update(race,four,true,true,1.0/60.0)
 	check(absf(engine.levels.drive-solo)<.001,"Four players do not quadruple engine volume")
 	check(engine.get_child_count()==6,"Continuous voice count stays fixed")
-	check(engine.voices.drive.volume_db < -26.0,"Full split-screen motor remains below -26 dB")
+	check(engine.voices.drive.volume_db <= Mix.ENGINE_TRIM_DB.drive + .01,"Full split-screen motor never exceeds its trim")
 	cues.update(race,views,true,true)
 	var before: int = cues.serial
 	p.flash=.18; p.energy-=8

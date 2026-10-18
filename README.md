@@ -80,11 +80,16 @@ setting changes the primary action to **Restart**. Graphics never resets progres
 The paused track keeps its last rendered frame behind a dark menu gradient until
 resuming or restarting. Back no longer pauses.
 
-In GameNight, **Start** opens the in-game pause menu and resumes the race.
-**Back/Select** returns to the GameNight lobby, including from the pause menu.
-Use the stick or D-pad to select a setting, and A to activate it. **Sound**
-turns game audio on or off. The managed menu keeps the host's player assignments;
-race setup stays with GameNight. Held buttons on launch or return must be released
+In GameNight, every session opens on the start menu over the prepared track:
+pick the **World**, **Level** and **Laps**, turn **Sound** on or off, set
+**Graphics**, then press **Race** (or Start). During the race **Start** opens the
+same menu as a pause menu, with **Resume** and **Restart race**.
+**Back/Select** returns to the GameNight lobby, including from the menu.
+Use the stick or D-pad to select a setting, and A to activate it. World, Level,
+Laps and Graphics are the game's GameNight settings: changing them in the menu
+writes them back, so the party's apps show the same values, and a change in an
+app shows in the open menu. The menu keeps the host's player assignments; Resume
+never rebuilds the race. Held buttons on launch or return must be released
 before they can act again.
 
 Desktop Forward+ also has a **Lighting** row: **Direct** or experimental **SDFGI**.

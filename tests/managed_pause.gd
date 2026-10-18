@@ -3,6 +3,8 @@ extends SceneTree
 class TestBridge:
 	extends "res://src/bridge.gd"
 	var overlay_requests:=0
+	var written:Dictionary={}
+	func set_setting(key:String,value:Variant)->void: written[key]=value
 	func _ready()->void: pass
 	func _process(_dt:float)->void: pass
 	func request_overlay()->void: overlay_requests+=1
@@ -51,7 +53,22 @@ func run()->void:
 	bridge.phase="running"
 	game.bridge=bridge
 	game.add_child(bridge)
-	game.roster=[{"controller":"pad-one","bot":false}]
+	game.roster[0].controller="pad-one"
+	game.managed_start_menu=true
+	game.running=false
+	game.start_managed("")
+	check(game.local_paused and not game.running and row("race").text=="Race" and row("restart")==null,"A GameNight session opens on the start menu")
+	check(row("biome")!=null and row("difficulty")!=null and row("sound")!=null,"The start menu offers world, level and sound")
+	var menu_race:RefCounted=game.race
+	press(7)
+	check(game.running and not game.local_paused and game.race==menu_race,"Start begins the prepared race when nothing changed")
+	press(7)
+	game.managed_start_menu=true
+	game.adjust_menu("difficulty",1)
+	var picked:String=game.difficulty
+	game.start_selected()
+	check(game.running and game.race!=menu_race and game.race.track.difficulty==picked and not game.managed_start_menu,"A changed level builds the race it names")
+	game.managed_buttons.clear() # as after a fresh launch
 	var original:RefCounted=game.race
 	frame(1 << 7)
 	check(game.running and not game.local_paused,"Held Start at launch cannot immediately pause")
@@ -59,9 +76,19 @@ func run()->void:
 	check(game.local_paused and not game.running and bridge.overlay_requests==0,"Host Start pauses inside the game, without opening lobby")
 	check(row("sound")!=null and row("players")==null and row("random_race")==null,"Managed pause offers audio without replacing host player assignments")
 	check(row("race").text=="Resume","Managed pause starts on Resume")
+	check(row("biome")!=null and row("difficulty")!=null and row("laps")!=null and row("restart")!=null,"Managed pause offers the race settings and a restart")
+	var biome_before:String=game.biome
+	game.adjust_menu("biome",1)
+	check(game.biome!=biome_before and bridge.written.get("biome")==game.biome,"Changing the world writes it back to the party")
+	game.adjust_menu("laps",1)
+	check(bridge.written.get("laps")==game.laps,"Changing laps writes it back to the party")
+	game.adjust_menu("biome",-1)
+	game.setting_changed("difficulty","hard")
+	check(row("difficulty").text.ends_with("Hard"),"A setting changed in the app shows in the open menu")
 	frame(0,[0,32767])
 	frame(0)
-	check(root.gui_get_focus_owner()==row("sound"),"Authoritative host stick selects Sound")
+	check(root.gui_get_focus_owner()==row("biome"),"Authoritative host stick moves down to the World setting")
+	row("sound").grab_focus()
 	var enabled:bool=game.sound_enabled
 	press(0)
 	check(game.sound_enabled!=enabled and AudioServer.is_bus_mute(0)==enabled,"Host A toggles the audio mute option")
@@ -102,6 +129,11 @@ func run()->void:
 	game.difficulty="easy" if game.difficulty!="easy" else "hard"
 	game.start_selected()
 	check(game.race==original and game.running,"Changed host settings cannot replace managed controller assignments on Resume")
+	press(7)
+	var roster_before:Array=game.roster.duplicate(true)
+	game.restart_managed_race()
+	check(game.race!=original and game.race.track.difficulty==game.difficulty and game.running and not game.in_menu and game.roster==roster_before,"Restart race uses the new settings with the same roster")
+	original=game.race
 	press(7)
 	frame(0,[0,32767])
 	bridge.frame_at=Time.get_ticks_msec()-300

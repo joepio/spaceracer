@@ -165,6 +165,13 @@ def main():
 
             threading.Thread(target=stream, daemon=True).start()
             host.send("start", session=session)
+            # Every session opens on the start menu; Start begins the race.
+            time.sleep(.3)
+            menu_state = read()
+            assert menu_state["phase"] == "running" and not menu_state["running"] and menu_state["clock"] == 0, menu_state
+            frames[1]["buttons"] = 128
+            wait(read, lambda s: s["running"])
+            frames[1]["buttons"] = 0
             active = wait(read, lambda s: s["clock"] > .8)
             assert active["racers"][0]["x"] < -5 and active["racers"][1]["x"] > 5, active
             assert active["muted"] == (not active["sound_enabled"]) and active["running"]
@@ -241,6 +248,10 @@ def main():
             cell_state = wait(read, lambda s: s["phase"] == "ready" and s["session"] == "spaceracer-session-cell")
             assert cell_state["biome"] == "cell" and cell_state["views"] == 2
             host.send("start", session="spaceracer-session-cell")
+            time.sleep(.3)
+            button_frames(0)
+            button_frames(128)
+            button_frames(0)
             active_cell = wait(read, lambda s: s["clock"] > .3)
             host.send("pause", session="spaceracer-session-cell")
             paused_cell = wait(read, lambda s: s["phase"] == "paused")

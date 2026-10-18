@@ -5,6 +5,7 @@ const World = preload("res://src/world.gd")
 const Hud = preload("res://src/hud.gd")
 const Visor = preload("res://src/visor.gd")
 const SpeedEffects = preload("res://src/speed_effects.gd")
+const MotionBlur = preload("res://src/motion_blur.gd")
 const Bridge = preload("res://src/bridge.gd")
 const KEYS = [
 	[KEY_A,KEY_D,KEY_W,KEY_S,KEY_SPACE,KEY_Q,KEY_E],
@@ -46,6 +47,7 @@ var game_audio: Node
 var missile_sound:Node
 var demo := false
 var capture_path := ""
+var motion_blur_enabled := true
 var capture_frame := 180
 var frame_number := 0
 var frame_times: Array[float] = []
@@ -119,6 +121,7 @@ func _ready() -> void:
 		elif arg=="--dev": cheats.enabled=true;dev_label.visible=true
 		elif arg=="--sdfgi": bounce_lighting=true
 		elif arg=="--direct-lighting": bounce_lighting=false
+		elif arg=="--no-motion-blur": motion_blur_enabled=false
 		elif arg.begins_with("--players="): human_count = clampi(int(arg.get_slice("=",1)),1,4)
 		elif arg.begins_with("--seed="): next_seed = int(arg.get_slice("=",1))
 		elif arg.begins_with("--difficulty=") and arg.get_slice("=",1) in Race.Track.DIFFICULTIES: difficulty=arg.get_slice("=",1)
@@ -273,6 +276,9 @@ func new_race(random_scenery:bool=false) -> void:
 		camera.near = .5
 		viewport.add_child(camera)
 		camera.current = true
+		var motion_blur:=MotionBlur.new()
+		camera.compositor=Compositor.new()
+		camera.compositor.compositor_effects=[motion_blur]
 		var hud := Hud.new()
 		hud.camera=camera
 		hud.race = race
@@ -284,7 +290,7 @@ func new_race(random_scenery:bool=false) -> void:
 		visor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		holder.add_child(visor)
 		visor.setup(hud)
-		views.append({"holder":holder,"viewport":viewport,"camera":camera,"hud":hud,"visor":visor,"index":index,"blur":blur,"speed_effects":speed_effects})
+		views.append({"holder":holder,"viewport":viewport,"camera":camera,"hud":hud,"visor":visor,"index":index,"blur":blur,"motion_blur":motion_blur,"speed_effects":speed_effects})
 		world.update_camera(camera,index,0,true)
 	layout_views()
 
@@ -421,7 +427,12 @@ func update_speed_effects(view:Dictionary,dt:float)->void:
 	var rush:float=view.camera.get_meta("speed_rush",0.)
 	var boost:float=view.camera.get_meta("speed_boost",0.)
 	var surge:float=view.camera.get_meta("speed_surge",0.)
-	var amount:=rush*(.05+boost*.042+surge*.014)
+	# Real motion blur needs Forward+ (velocity buffer); the radial pass keeps
+	# a baseline rush only where it is missing.
+	var motion:bool=motion_blur_enabled and quality>=.8 and RenderingServer.get_current_rendering_method()=="forward_plus"
+	view.motion_blur.strength=(.9+boost*.5) if motion and active else 0.
+	view.motion_blur.frame_time=dt
+	var amount:=rush*((0. if motion else .05)+boost*.042+surge*.014)
 	view.blur.set_shader_parameter("amount",amount if quality>=.8 and active else 0.)
 	view.blur.set_shader_parameter("warp",p.warp_fx if active else 0.)
 	view.blur.set_shader_parameter("emp",minf(1.,p.emp_time*4.) if active else 0.)

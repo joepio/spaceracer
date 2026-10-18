@@ -81,7 +81,7 @@ func run()->void:
 	check(row("difficulty").text.ends_with("Hard"),"A setting changed in the app shows in the open menu")
 	frame(0,[0,32767])
 	frame(0)
-	check(root.gui_get_focus_owner()==row("biome"),"Authoritative host stick moves down to the World setting")
+	check(root.gui_get_focus_owner()==row("restart"),"Authoritative host stick moves down to Restart race, right under Resume")
 	row("sound").grab_focus()
 	var enabled:bool=game.sound_enabled
 	press(0)

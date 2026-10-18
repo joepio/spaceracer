@@ -767,6 +767,11 @@ func make_menu()->void:
 	menu.add_child(content)
 	menu_label(content,"SPACERACER",58,Color("edf7ff"))
 	var start:=menu_button(content,"race","Race",start_selected,true)
+	# Restart sits right under Resume, above the settings.
+	if local_paused and bridge.launched_by_daemon:
+		menu_button(content,"restart","Restart race",restart_managed_race)
+	elif local_paused and not bridge.launched_by_daemon:
+		menu_button(content,"restart","Restart race",func(): finish_seed_edit();next_seed=selected_seed;start_local())
 	if not bridge.launched_by_daemon: menu_button(content,"random_race","New random race",start_random_race)
 	var settings:=["biome","difficulty","laps","bots","sound","graphics"] if bridge.launched_by_daemon else ["players","biome","difficulty","seed","bots","sound","graphics"]
 	if world.advanced_renderer: settings.append("lighting")
@@ -814,10 +819,6 @@ func make_menu()->void:
 			track_character.add_theme_color_override("font_color",Color("7de9d6"))
 			content.add_child(track_character)
 	menu_button(content,"controls","Controls & credits",func(): show_menu_controls=not show_menu_controls;make_menu())
-	if local_paused and bridge.launched_by_daemon:
-		menu_button(content,"restart","Restart race",restart_managed_race)
-	elif local_paused and not bridge.launched_by_daemon:
-		menu_button(content,"restart","Restart race",func(): finish_seed_edit();next_seed=selected_seed;start_local())
 	if show_menu_controls:
 		var reference:=PanelContainer.new()
 		reference.position=Vector2(610,150)

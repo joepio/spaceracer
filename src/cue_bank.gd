@@ -78,7 +78,10 @@ func play_cue(cue: String, strength: float = 1.0) -> void:
 	voice.play()
 
 func _exit_tree() -> void:
+	# A paused playback stays registered with the AudioServer; unpause first
+	# so stop() releases it and the stream is not still in use at quit.
 	for voice in voices:
+		voice.stream_paused = false
 		voice.stop()
 		voice.stream = null
 	streams.clear()

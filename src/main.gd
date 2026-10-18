@@ -86,7 +86,7 @@ func _ready() -> void:
 	bridge.resumed.connect(start_managed)
 	bridge.disposed.connect(dispose_managed)
 	bridge.roster_changed.connect(update_profiles)
-	bridge.daemon_disconnected.connect(func(): get_tree().quit())
+	bridge.daemon_disconnected.connect(silence_audio)
 	bridge.setting_changed.connect(setting_changed)
 	add_child(bridge)
 	bridge.declare_settings(settings.SPECS)
@@ -440,6 +440,17 @@ func capture() -> void:
 		"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"capture":capture_path}))
 	get_tree().quit()
 
+# Stopped voices are released by the audio thread on its next mix, so give it
+# a couple of frames; quitting at once leaves a playing cue "still in use".
+func quit_cleanly()->void:
+	silence_audio()
+	for i in 3: await get_tree().process_frame
+	get_tree().quit()
+
+func silence_audio()->void:
+	if game_audio: game_audio.set_active(false)
+	if engine_sound: engine_sound.silence()
+
 func process_pause(dt:float)->void:
 	if bridge.launched_by_daemon:
 		process_managed_menu()
@@ -541,7 +552,7 @@ func _notification(what:int)->void:
 		if local_paused: start_selected()
 		elif not in_menu: pause_local()
 	elif what==NOTIFICATION_WM_CLOSE_REQUEST:
-		get_tree().quit()
+		quit_cleanly()
 
 func _input(event:InputEvent)->void:
 	# GameNight frames are authoritative, including pause-menu actions. Prevent

@@ -20,7 +20,26 @@ func _process(delta: float) -> void:
 		return
 	super._process(delta)
 	if _socket == null or (not _said_hello and Time.get_ticks_msec() - connected_at > 10000):
-		get_tree().quit()
+		quit_soon()
+
+# Main silences audio on disconnect; stopped voices are only released by the
+# audio thread's next mix, so quitting in the same frame leaves a cue "still in
+# use" at exit. A few frames is enough.
+var _quitting := false
+func quit_soon() -> void:
+	if _quitting: return
+	_quitting = true
+	for i in 3: await get_tree().process_frame
+	get_tree().quit()
+
+func _schedule_reconnect() -> void:
+	if launched_by_daemon:
+		_frames.clear()
+		phase = "idle"
+		auto_reconnect = false
+		quit_soon()
+		return
+	super._schedule_reconnect()
 
 func _unhandled_input(_event: InputEvent) -> void:
 	pass # Main owns a release-gated Back action, including authoritative host input.

@@ -619,7 +619,8 @@ func update_menu_holds(dt:float)->void:
 	if bridge.launched_by_daemon:
 		if is_instance_valid(menu_hold_hint): menu_hold_hint.text=""
 		return
-	if is_instance_valid(menu_hold_hint): menu_hold_hint.text="Hold 1s · X Random race · D-pad ← → Track / ↑ ↓ Level"
+	# No standing button hints in menus (all GameNight games); the label only names an active hold.
+	if is_instance_valid(menu_hold_hint): menu_hold_hint.text=""
 	# Conflicting holds never combine, and each press can act only once.
 	if menu_holds.size()!=1:
 		for state:Dictionary in menu_holds.values(): state.elapsed=0.
@@ -836,7 +837,6 @@ func make_menu()->void:
 		credits.text="\nFOREST ART · [url=https://creativecommons.org/licenses/by/4.0/]CC BY 4.0[/url]\n[url=https://sketchfab.com/3d-models/pine-tree-d45218a3fab349e5b1de040f29e7b6f9]Pine Tree[/url] — evolveduk\n[url=https://sketchfab.com/3d-models/tree-bake-upload-4e78d13152cf4214a256230765f6d6d3]Tree Bake Upload[/url] — restlessmonkey\n[url=https://github.com/GamesNotDeveloped/godot-forest-demo]Godot forest demo[/url] — GamesNotDeveloped\nAdapted materials, textures and scale for SpaceRacer."
 		credits.meta_clicked.connect(func(url:Variant): OS.shell_open(str(url)))
 		help.add_child(credits)
-	menu_label(content,"Stick  Select / adjust     Start  Resume     Back  Lobby" if bridge.launched_by_daemon else "Stick  Select / adjust     Start  Play / resume",14,Color("91a8b7"))
 	menu_hold_hint=Label.new();menu_hold_hint.add_theme_font_size_override("font_size",14)
 	menu_hold_hint.add_theme_color_override("font_color",Color("91a8b7"));content.add_child(menu_hold_hint)
 	menu_hold_bar=ProgressBar.new();menu_hold_bar.max_value=1.;menu_hold_bar.show_percentage=false

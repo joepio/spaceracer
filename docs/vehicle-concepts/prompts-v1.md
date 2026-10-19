@@ -2,9 +2,11 @@
 
 Generated with the built-in ChatGPT image-generation tool. Concept images only; not implemented vehicle meshes. Three views are exploratory references, not dimensionally exact production drawings.
 
+The concept images were moved out of the repository to keep it small; they are kept in the GameNight project archive (`archive/spaceracer/docs/vehicle-concepts/` in the shared project files).
+
 ## 01-twin-engine
 
-![01-twin-engine](01-twin-engine-v1.png)
+Image: `01-twin-engine-v1.png` (archived, see the note at the top).
 
 ### Generation prompt
 
@@ -16,7 +18,7 @@ Design direction 01: muscular twin-engine sprint racer. Deep vermilion painted m
 
 ## 02-flying-wing
 
-![02-flying-wing](02-flying-wing-v1.png)
+Image: `02-flying-wing-v1.png` (archived, see the note at the top).
 
 ### Generation prompt
 
@@ -28,7 +30,7 @@ Design direction 02: elegant broad crescent flying-wing racer. Pearl ivory ceram
 
 ## 03-engine-pods
 
-![03-engine-pods](03-engine-pods-v1.png)
+Image: `03-engine-pods-v1.png` (archived, see the note at the top).
 
 ### Generation prompt
 

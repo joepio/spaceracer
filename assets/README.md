@@ -14,9 +14,11 @@ Original generated PNGs are copied unmodified. No online services are required t
 portrait campaigns: SABLE cybernetics, SOMA neurochemistry, TALLY instant credit,
 VEIL subscription privacy, MONOLITH infrastructure and APERTURE optical implants.
 Created using the built-in OpenAI image generation tool on 2026-09-28.
-Unmodified generated sources and the exact prompt set are in
-[`docs/city-advertising`](../docs/city-advertising/generation-prompts.json).
-`tools/pack_city_ads.gd` only resizes and packs the originals into the mipmapped
+The exact prompt set is in
+[`docs/city-advertising`](../docs/city-advertising/generation-prompts.json); the unmodified
+generated sources are kept in the GameNight project archive
+(`archive/spaceracer/docs/city-advertising/` in the shared project files).
+`tools/pack_city_ads.gd -- --sources=<dir>` only resizes and packs the originals into the mipmapped
 1536x2048 atlas. No external services are used during play. Posters and road
 reflections sample the same full-color artwork with a subtle screen refresh.
 

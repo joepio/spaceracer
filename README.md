@@ -964,7 +964,8 @@ advertisements replace the earlier retro neon storefronts. Panels and backings
 are instanced by district; all six campaigns share one mipmapped color atlas.
 The existing 64-light city budget and four-nearby-sign road reflection budget
 stay fixed. Sign placement preserves the existing artwork billboards and road
-clearance. Poster sources and generation prompts are in `docs/city-advertising`.
+clearance. Generation prompts are in `docs/city-advertising`; the full-size poster sources
+are kept in the GameNight project archive (`archive/spaceracer/docs/city-advertising/`).
 
 The city follows a strict 120-metre Manhattan street grid. Whole-block towers,
 paired buildings and four-building blocks share aligned frontages and low

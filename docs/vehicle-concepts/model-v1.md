@@ -3,9 +3,7 @@
 The first red image concept is implemented in `src/racer_design.gd`, built by `Ship.build` and used for every racer. Player-specific colours and GameNight portrait decals remain dynamic. The physical hull stays inside the existing gameplay width; driving physics are unchanged.
 
 - [Editable GLB](red-racer-v1.glb): geometry, PBR materials, named elevon/rudder/airbrake pivots and `WeaponSocket`. The game animates these pivots from existing inputs. Optical exhaust effects and gameplay shaders remain in Godot; the GLB uses portable standard materials.
-- [Front view](red-racer-front-v1.png)
-- [Rear view](red-racer-rear-v1.png)
-- [Racing camera](red-racer-game-v1.png)
+- Front view, rear view and racing-camera renders (`red-racer-front-v1.png`, `red-racer-rear-v1.png`, `red-racer-game-v1.png`) are kept in the GameNight project archive (`archive/spaceracer/docs/vehicle-concepts/` in the shared project files), not in the repository.
 
 ## Construction and mounting
 

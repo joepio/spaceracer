@@ -1,60 +1,23 @@
 """Real installed host -> persistent local entry -> managed PowerShell -> native game.
 
-Isolated port/profile memory; only warms the game off-screen. Standard library.
+Isolated port/profile memory; only warms the game off-screen. Standard library
+plus the GameNight SDK's HostClient (addons/gamenight/fake_host.py).
 """
-import base64
 import json
 import os
 from pathlib import Path
 import socket
-import struct
 import subprocess
+import sys
 import tempfile
-import threading
 import time
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "addons" / "gamenight"))
+from fake_host import HostClient  # noqa: E402
 
-class Client:
-    def __init__(self, port):
-        self.peer = socket.create_connection(("127.0.0.1", port), timeout=3)
-        key = base64.b64encode(os.urandom(16)).decode()
-        self.peer.sendall(f"GET / HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n".encode())
-        response = b""
-        while b"\r\n\r\n" not in response:
-            response += self.peer.recv(1)
-        assert b"101" in response
-        self.peer.settimeout(None)
-        self.messages = []
-        threading.Thread(target=self.read, daemon=True).start()
 
-    def exact(self, length):
-        data = b""
-        while len(data) < length:
-            chunk = self.peer.recv(length-len(data))
-            if not chunk: raise EOFError
-            data += chunk
-        return data
-
-    def read(self):
-        try:
-            while True:
-                first, second = self.exact(2)
-                length = second & 127
-                if length == 126: length = struct.unpack("!H", self.exact(2))[0]
-                elif length == 127: length = struct.unpack("!Q", self.exact(8))[0]
-                data = self.exact(length)
-                if first & 15 == 1: self.messages.append(json.loads(data))
-        except (OSError, EOFError):
-            pass
-
-    def send(self, kind, **values):
-        data = json.dumps(dict(type=kind, **values)).encode()
-        mask = os.urandom(4)
-        header = bytes([129, 128+len(data)]) if len(data) < 126 else bytes([129,254])+struct.pack("!H", len(data))
-        self.peer.sendall(header+mask+bytes(v ^ mask[i%4] for i,v in enumerate(data)))
-
-    def party(self):
-        return next((m["party"] for m in reversed(self.messages) if "party" in m), {})
+def party(client):
+    return next((m["party"] for m in reversed(client.messages) if "party" in m), {})
 
 
 def wait(fn, timeout=50):
@@ -82,16 +45,16 @@ def main():
         daemon=subprocess.Popen([str(install/"bin/gamenight-daemon.exe")],cwd=install,env=env,stdout=log,stderr=log,creationflags=subprocess.CREATE_NO_WINDOW)
         client=None
         try:
-            client=wait(lambda:Client(port),10)
-            client.send("hello",role="overlay")
-            party=wait(client.party)
-            local=next(g for g in party["library"] if g["id"]=="spaceracer")
+            client=wait(lambda:HostClient(port),10)
+            client.send(dict(type="hello",role="overlay"))
+            lobby=wait(lambda: party(client))
+            local=next(g for g in lobby["library"] if g["id"]=="spaceracer")
             assert local["title"]=="SpaceRacer (Local)"
-            client.send("open_overlay")
-            wait(lambda: client.party().get("overlay_open"))
-            client.send("join_party",name="Local integration pilot",color="#50efcc",library=["spaceracer"])
-            wait(lambda: len(client.party().get("players",[]))==1)
-            client.send("queue_next",game="spaceracer")
+            client.send(dict(type="open_overlay"))
+            wait(lambda: party(client).get("overlay_open"))
+            client.send(dict(type="join_party",name="Local integration pilot",color="#50efcc",library=["spaceracer"]))
+            wait(lambda: len(party(client).get("players",[]))==1)
+            client.send(dict(type="queue_next",game="spaceracer"))
             def ready():
                 if not probe.exists(): return False
                 state=json.loads(probe.read_text(encoding="utf-8"))
@@ -105,12 +68,12 @@ def main():
         except BaseException:
             if client:
                 print(json.dumps([m for m in client.messages if m.get("type")=="error"]))
-                print(json.dumps({k:v for k,v in client.party().items() if k in ["warming","warm_session","active_session","connected_games","playlist"]}))
+                print(json.dumps({k:v for k,v in party(client).items() if k in ["warming","warm_session","active_session","connected_games","playlist"]}))
             print("probe:",probe.read_text(encoding="utf-8")[:900] if probe.exists() else "absent")
             log.flush();log.seek(0);print(log.read())
             raise
         finally:
-            if client: client.peer.close()
+            if client: client.close()
             daemon.terminate();daemon.wait(timeout=8)
             log.close()
         time.sleep(2) # Game's host-disconnect handler releases the managed wrapper.

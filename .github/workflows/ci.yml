@@ -25,27 +25,25 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install pinned Godot
-        shell: pwsh
-        run: |
-          $archive = Join-Path $env:RUNNER_TEMP 'godot.zip'
-          Invoke-WebRequest 'https://github.com/godotengine/godot-builds/releases/download/4.5.2-stable/Godot_v4.5.2-stable_win64.exe.zip' -OutFile $archive
-          if ((Get-FileHash $archive -Algorithm SHA256).Hash -ne '3766090865330AB2A0ED33594520394B711C620B1378F9223904FAEEF60F2F14') { throw 'Godot checksum mismatch' }
-          Expand-Archive $archive "$env:RUNNER_TEMP/godot"
+        id: godot
+        uses: ontola/gamenight/.github/actions/setup-godot@main
+        with:
+          version: 4.5.2
       - name: Import and simulate
         shell: pwsh
         run: |
-          $godot = "$env:RUNNER_TEMP/godot/Godot_v4.5.2-stable_win64_console.exe"
+          $godot = "${{ steps.godot.outputs.godot }}"
           python tools/check.py --godot $godot
           if ($LASTEXITCODE -ne 0) { throw 'Release checks failed' }
       - name: Synthetic host lifecycle
         shell: pwsh
         run: |
-          python tests/integration.py --godot "$env:RUNNER_TEMP/godot/Godot_v4.5.2-stable_win64.exe" --headless
+          python tests/integration.py --godot "${{ steps.godot.outputs.godot-gui }}" --headless
           if ($LASTEXITCODE -ne 0) { throw 'Integration failed' }
       - name: Package and verify portable build
         shell: pwsh
         run: |
-          python tools/package.py --godot "$env:RUNNER_TEMP/godot/Godot_v4.5.2-stable_win64.exe" --output build/windows
+          python tools/package.py --godot "${{ steps.godot.outputs.godot-gui }}" --output build/windows
           if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
           python tests/integration.py --godot "$PWD/build/windows/SpaceRacer.exe" --packed --headless
           if ($LASTEXITCODE -ne 0) { throw 'Packaged integration failed' }

@@ -1,0 +1,20 @@
+{
+  "game": "spaceracer",
+  "generated_on": "2026-10-20",
+  "generator": "Built-in image_gen",
+  "use": "Illustrated promotional cover, not a gameplay screenshot",
+  "prompt": "Use case: stylized-concept. Create a finished premium indie game cover for GameNight. Portrait 3:4 composition, ideally 1536x2048. Full bleed artwork, no frame. The supplied screenshot is a reference for the actual game's identity, not an image to copy or a screenshot to decorate. Reimagine it as beautiful authored key art. A striking clear silhouette and deliberate composition, carefully crafted materials and lighting, rich but controlled detail. A large beautifully designed title occupies the upper quarter, stays entirely inside safe margins and is legible at 180 pixels wide. No subtitle, badge, developer/publisher logos, watermark, UI, scores, or interface text. Do not imitate another game's branding. Title exactly 'SPACERACER', beautiful wide italic retro-futuristic white wordmark with subtle mint edge glow in the upper quarter. Fast antigravity racing through a midnight vertical city. Foreground turquoise twin-pod hover racer with dark open central cockpit and two brilliant cyan thruster exhausts, tightly matching reference vehicle construction; yellow and violet rivals bank around an elevated wet black track behind it. Large curving elevated track arcs upward into distant towers, warm golden windows, thin violet and cyan guardrail lights. Low aggressive three-quarter rear camera, intense perspective and sense of speed, painterly precision over tactile 3D surfaces, cinematic cool teal and warm amber, selective motion streaks, sharp readable hero vehicle. No wheels, no generic fighter jet, no real brands or readable billboards.",
+  "reference": "reference.png",
+  "master": "cover-source.png",
+  "runtime": "../../../assets/gamenight/cover.png",
+  "export": {
+    "width": 360,
+    "height": 480,
+    "format": "indexed PNG",
+    "max_bytes": 262144,
+    "colors": 256,
+    "command": "magick cover-source.png -resize 360x480! -strip -dither FloydSteinberg -colors 256 -define png:compression-level=9 PNG8:cover.png"
+  },
+  "review": "Actual game rendered and inspected; generated master and final 360x480 cover visually reviewed. Promotional illustration, not gameplay.",
+  "source_revision": "d78226ed0b376ded7cd168d955c8219550563473"
+}

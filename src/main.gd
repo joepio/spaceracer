@@ -788,7 +788,13 @@ func make_menu()->void:
 	content.size.x=480
 	content.add_theme_constant_override("separation",10)
 	menu.add_child(content)
-	menu_label(content,"SPACERACER",58,Color("edf7ff"))
+	var logo := TextureRect.new()
+	logo.texture = preload("res://assets/branding/logo.png")
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	logo.custom_minimum_size = Vector2(480, 100)
+	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(logo)
 	var start:=menu_button(content,"race","Race",start_selected,true)
 	# Restart sits right under Resume, above the settings.
 	if local_paused and bridge.launched_by_daemon:

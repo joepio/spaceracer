@@ -75,6 +75,10 @@ func run()->void:
 	check(game.human_count==1,"Left restores solo without A")
 	await stick(0,.9)
 	check(focus_id()=="biome","Down selects world")
+	check(game.biome=="random" and row("biome").text.ends_with("Random"),"World defaults to Random")
+	check(game.race.track.biome in game.Race.Track.BIOMES,"Random draws a real world")
+	await stick(.9,0)
+	check(game.biome=="city" and row("biome").text.ends_with("City"),"Right selects City")
 	await stick(.9,0)
 	check(game.biome=="forest" and focus_id()=="biome","Right immediately selects Forest")
 	await stick(.9,0)
@@ -84,7 +88,7 @@ func run()->void:
 	await stick(.9,0)
 	check(game.biome=="ocean" and row("biome").text.ends_with("Ocean"),"Right selects Ocean")
 	await stick(.9,0)
-	check(game.biome=="city","World selection wraps after Ocean")
+	check(game.biome=="random","World selection wraps after Ocean to Random")
 	await stick(-.9,0)
 	check(game.biome=="ocean","Left wraps back to Ocean")
 	await stick(-.9,0)
@@ -195,14 +199,14 @@ func run()->void:
 	game.biome=game.Race.Track.BIOMES[(game.Race.Track.BIOMES.find(random_world)+1)%3]
 	await hold(JOY_BUTTON_X,1.01)
 	check(game.running and not game.local_paused and game.race!=previous and game.race.track.seed_value!=seed_before,"Full X hold immediately starts a different random track")
-	check(game.human_count==2 and game.race.track.biome==random_world and game.biome==random_world and game.race.track.difficulty=="hard" and game.laps==3,"Quick random race rolls scenery while preserving players, difficulty and laps")
+	check(game.human_count==2 and game.race.track.biome==random_world and game.biome=="random" and game.race.track.difficulty=="hard" and game.laps==3,"Quick random race rolls scenery while preserving players, difficulty and laps")
 	await press(JOY_BUTTON_START)
 	seed_before=game.selected_seed
 	row("random_race").grab_focus();await press(JOY_BUTTON_A)
 	check(game.running and game.race.track.seed_value!=seed_before and game.views.size()==2,"Random-race menu button works with A and preserves player count")
 	seed(91);random_world=game.Race.Track.BIOMES.pick_random();seed(91)
 	await tap_key(KEY_F5)
-	check(game.race.track.biome==random_world and game.biome==random_world,"F5 rolls scenery for the next track")
+	check(game.race.track.biome==random_world and game.biome=="random","F5 rolls scenery for the next track")
 	await press(JOY_BUTTON_START)
 	var restart_world:String=game.race.track.biome
 	var restart_seed:int=game.race.track.seed_value
@@ -212,6 +216,10 @@ func run()->void:
 	game.race.over=true;game.results_clock=8.
 	game._physics_process(0.)
 	check(game.race.track.biome==random_world and game.race.track.difficulty=="hard" and game.human_count==2,"Automatic next race rolls scenery and keeps race settings")
+	game.biome="desert"
+	game.race.over=true;game.results_clock=8.
+	game._physics_process(0.)
+	check(game.race.track.biome=="desert" and game.biome=="desert","Automatic next race keeps a chosen world")
 	print("MENU_TESTS ",failures," failures")
 	game.queue_free()
 	await process_frame

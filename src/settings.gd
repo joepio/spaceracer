@@ -32,8 +32,9 @@ const SPECS = [
     "key": "biome",
     "label": "World (next race)",
     "kind": "choice",
-    "default": "city",
+    "default": "random",
     "options": [
+      "random",
       "city",
       "forest",
       "cell",

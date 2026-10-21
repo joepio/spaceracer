@@ -35,7 +35,8 @@ var seed_input:LineEdit
 var track_character:Label
 var laps := 3
 var difficulty := "normal"
-var biome := "city"
+var biome := "random" # World choice: "random" or one of Race.Track.BIOMES.
+var rolled_world := "" # The world drawn for "random"; kept for restarts and previews.
 var quality := 1.0
 var bounce_lighting:=false
 var results_clock := 0.0
@@ -125,7 +126,7 @@ func _ready() -> void:
 		elif arg.begins_with("--players="): human_count = clampi(int(arg.get_slice("=",1)),1,4)
 		elif arg.begins_with("--seed="): next_seed = int(arg.get_slice("=",1))
 		elif arg.begins_with("--difficulty=") and arg.get_slice("=",1) in Race.Track.DIFFICULTIES: difficulty=arg.get_slice("=",1)
-		elif arg.begins_with("--biome=") and arg.get_slice("=",1) in Race.Track.BIOMES: biome=arg.get_slice("=",1)
+		elif arg.begins_with("--biome=") and arg.get_slice("=",1) in worlds(): biome=arg.get_slice("=",1)
 		elif arg.begins_with("--capture="): capture_path = arg.trim_prefix("--capture=")
 		elif arg.begins_with("--capture-frame="): capture_frame = int(arg.get_slice("=",1))
 		elif arg.begins_with("--preview-u="): preview_u = clampf(float(arg.get_slice("=",1)),0,.99)
@@ -221,12 +222,22 @@ func start_local() -> void:
 	running = true
 	new_race()
 
-func randomize_scenery()->void:
-	# Independent rolls allow repeats, while giving all three settings equal odds.
-	biome=Race.Track.BIOMES.pick_random()
+func worlds()->Array:
+	return ["random"]+Race.Track.BIOMES
 
-func new_race(random_scenery:bool=false) -> void:
-	if random_scenery: randomize_scenery()
+func randomize_scenery()->void:
+	# Independent rolls allow repeats, while giving every world equal odds.
+	biome="random"
+	rolled_world=Race.Track.BIOMES.pick_random()
+
+func race_world()->String:
+	if biome in Race.Track.BIOMES: return biome
+	if rolled_world.is_empty(): rolled_world=Race.Track.BIOMES.pick_random()
+	return rolled_world
+
+func new_race(next_round:bool=false) -> void:
+	# A finished race or F5 draws a new world when the choice is Random; a fixed world stays.
+	if next_round: rolled_world=""
 	if is_instance_valid(world):
 		if world.get_parent() == self: remove_child(world)
 		world.queue_free()
@@ -238,7 +249,7 @@ func new_race(random_scenery:bool=false) -> void:
 	roster=fit_bots(roster)
 	if next_seed == 0: next_seed = randi_range(1,MAX_SEED)
 	next_seed=clampi(next_seed,1,MAX_SEED)
-	race = Race.new(roster,next_seed,laps,difficulty,biome,randi_range(1,10000000))
+	race = Race.new(roster,next_seed,laps,difficulty,race_world(),randi_range(1,10000000))
 	settings.apply_live(race)
 	if not settings.values.weapon_pickups: race.weapons.pickups.clear()
 	next_seed = next_seed%MAX_SEED+1
@@ -533,7 +544,7 @@ func pause_local()->void:
 	menu_holds.clear()
 	if is_instance_valid(touch_controls): touch_controls.clear_input()
 	selected_seed=race.track.seed_value
-	pause_settings={"players":human_count,"bots":settings.values.bots,"biome":race.track.biome,"difficulty":race.track.difficulty,"seed":selected_seed}
+	pause_settings={"players":human_count,"bots":settings.values.bots,"biome":biome,"difficulty":race.track.difficulty,"seed":selected_seed}
 	make_menu()
 
 func menu_race_changed()->bool:
@@ -684,7 +695,9 @@ func adjust_menu(id:String,step:int)->void:
 			sound_enabled=not sound_enabled
 			AudioServer.set_bus_mute(0,not sound_enabled)
 		"players": human_count=posmod(human_count-1+step,4)+1
-		"biome": biome=Race.Track.BIOMES[posmod(Race.Track.BIOMES.find(biome)+step,Race.Track.BIOMES.size())]
+		"biome":
+			biome=worlds()[posmod(worlds().find(biome)+step,worlds().size())]
+			rolled_world=""
 		"difficulty": difficulty=Race.Track.DIFFICULTIES[posmod(Race.Track.DIFFICULTIES.find(difficulty)+step,3)]
 		"seed": selected_seed=posmod(selected_seed-1+step,MAX_SEED)+1;finish_seed_edit()
 		"laps": laps=posmod(laps-1+step,5)+1
@@ -721,7 +734,7 @@ func refresh_menu_values()->void:
 			"sound": row.text="Sound                            %s"%("On" if sound_enabled else "Off")
 			"race": row.text=("Restart" if menu_race_changed() else "Resume") if local_paused else "Race"
 			"players": row.text="Players                         %d"%human_count
-			"biome": row.text="World                           %s"%("The Cell" if biome=="cell" else biome.capitalize())
+			"biome": row.text="World                           %s"%{"cell":"The Cell"}.get(biome,biome.capitalize())
 			"difficulty": row.text="Level                            %s"%difficulty.capitalize()
 			"laps": row.text="Laps                             %d"%laps
 			"bots": row.text="AI racers                     %d"%settings.values.bots
@@ -735,7 +748,7 @@ func _unhandled_input(event:InputEvent)->void:
 		elif event.keycode==KEY_F2 and in_menu:
 			human_count=human_count%4+1
 			make_menu()
-		elif event.keycode==KEY_F5 and not in_menu: new_race(true)
+		elif event.keycode==KEY_F5 and not in_menu: randomize_scenery();new_race()
 
 func menu_style(fill:Color,border:Color=Color.TRANSPARENT)->StyleBoxFlat:
 	var style:=StyleBoxFlat.new()
@@ -1036,7 +1049,7 @@ func setting_changed(key:String,value:Variant)->void:
 	if race != null: settings.apply_live(race)
 	if key=="laps": laps=clampi(int(value),1,5)
 	elif key=="difficulty" and str(value) in Race.Track.DIFFICULTIES: difficulty=str(value)
-	elif key=="biome" and str(value) in Race.Track.BIOMES: biome=str(value)
+	elif key=="biome" and str(value) in worlds(): biome=str(value);rolled_world=""
 	elif key=="seed": next_seed=clampi(int(value),0,MAX_SEED)
 	elif key=="quality":
 		quality={"performance":.6,"balanced":.8,"high":1.0}.get(str(value),1.0)

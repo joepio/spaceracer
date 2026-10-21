@@ -98,6 +98,8 @@ func _handle(msg: Variant) -> void:
 				frames.clear()
 			"party_updated":
 				roster_changed.emit(msg.get("seats", []), msg.get("players", []), msg.get("presence", []))
+			"players_updated":
+				super._handle(msg) # emits players_updated
 
 func ready_for_session(value: String) -> void:
 	if session != value or phase != "preparing":

@@ -89,6 +89,7 @@ func _ready() -> void:
 	bridge.resumed.connect(start_managed)
 	bridge.disposed.connect(dispose_managed)
 	bridge.roster_changed.connect(update_profiles)
+	bridge.players_updated.connect(update_details)
 	bridge.daemon_disconnected.connect(silence_audio)
 	bridge.setting_changed.connect(setting_changed)
 	add_child(bridge)
@@ -1043,6 +1044,16 @@ func update_profiles(seats:Array,players:Array,presence:Array)->void:
 		p.sleeping=not matched
 		for status in presence:
 			if status.get("player_id","")==p.get("id",""): p.sleeping=status.get("state","")=="sleeping"
+
+## Someone picked up a profile in the lobby: same racer, new name, colour and
+## face. The race goes on.
+func update_details(players:Array)->void:
+	var racers:Array=roster+(race.racers if race!=null else [])
+	for p in racers:
+		for identity in players:
+			if not str(p.get("id","")).is_empty() and p.id==identity.get("id",""):
+				for field in ["name","color","skin_color","avatar"]:
+					if identity.has(field): p[field]=identity[field]
 
 func setting_changed(key:String,value:Variant)->void:
 	if not settings.change(key,value): return

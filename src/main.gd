@@ -310,11 +310,12 @@ func layout_views() -> void:
 	var dimensions := get_viewport().get_visible_rect().size
 	var count := views.size()
 	if is_instance_valid(world): world.set_quality(quality,count)
+	var places:=view_places()
 	for i in range(count):
 		var columns := 2 if count>2 else 1
 		var rows := 2 if count>1 else 1
 		var cell := dimensions/Vector2(columns,rows)
-		views[i].holder.position = Vector2(i%columns,i/columns)*cell
+		views[i].holder.position = Vector2(places[i]%columns,places[i]/columns)*cell
 		views[i].holder.size = cell-Vector2.ONE*2
 		# UI uses logical coordinates; 3D must use actual output pixels in fullscreen.
 		var output_pixels:=Vector2(get_window().size)
@@ -327,6 +328,20 @@ func layout_views() -> void:
 		views[i].viewport.positional_shadow_atlas_size=(2048 if count==1 and quality>=1. else 1024) if quality>=.8 else 0
 		views[i].viewport.render_target_update_mode=SubViewport.UPDATE_ONCE if local_paused else SubViewport.UPDATE_ALWAYS
 	if bridge.launched_by_daemon and bridge.phase in ["ready","paused"]: managed_rendering(false)
+
+## Screen place of each view: couch order (picked in the lobby's Start menu),
+## then seat. The leftmost player on the couch gets the top or top-left view.
+func view_places()->Array:
+	var keys:=[]
+	for i in views.size():
+		var p:Dictionary=race.racers[views[i].index] if race!=null and views[i].index<race.racers.size() else {}
+		var couch:Variant=p.get("couch")
+		keys.append([int(couch) if couch!=null else 99,int(p.get("slot",i)),i])
+	keys.sort_custom(func(a,b): return a[0]<b[0] or (a[0]==b[0] and (a[1]<b[1] or (a[1]==b[1] and a[2]<b[2]))))
+	var places:=[]
+	places.resize(views.size())
+	for k in keys.size(): places[keys[k][2]]=k
+	return places
 
 func _physics_process(dt: float) -> void:
 	if local_paused: return
@@ -1034,6 +1049,7 @@ func update_profiles(seats:Array,players:Array,presence:Array)->void:
 	var incoming:=managed_roster(seats,players)
 	roster=incoming
 	if race==null: return
+	var before:=view_places()
 	for p in race.racers:
 		var matched:=false
 		for identity in incoming:
@@ -1041,19 +1057,24 @@ func update_profiles(seats:Array,players:Array,presence:Array)->void:
 				matched=true
 				for field in ["name","color","skin_color","avatar","controller","slot"]:
 					p[field]=identity.get(field,"" if field!="slot" else 0)
+				p.couch=identity.get("couch")
 		p.sleeping=not matched
 		for status in presence:
 			if status.get("player_id","")==p.get("id",""): p.sleeping=status.get("state","")=="sleeping"
+	if view_places()!=before: layout_views()
 
 ## Someone picked up a profile in the lobby: same racer, new name, colour and
 ## face. The race goes on.
 func update_details(players:Array)->void:
 	var racers:Array=roster+(race.racers if race!=null else [])
+	var before:=view_places()
 	for p in racers:
 		for identity in players:
 			if not str(p.get("id","")).is_empty() and p.id==identity.get("id",""):
-				for field in ["name","color","skin_color","avatar"]:
+				for field in ["name","color","skin_color","avatar","couch"]:
 					if identity.has(field): p[field]=identity[field]
+	# Someone moved on the couch: the views slide over, the race goes on.
+	if view_places()!=before: layout_views()
 
 func setting_changed(key:String,value:Variant)->void:
 	if not settings.change(key,value): return

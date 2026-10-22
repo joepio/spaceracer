@@ -6,6 +6,7 @@ const Hud = preload("res://src/hud.gd")
 const Visor = preload("res://src/visor.gd")
 const SpeedEffects = preload("res://src/speed_effects.gd")
 const MotionBlur = preload("res://src/motion_blur.gd")
+const RenderWarmup = preload("res://src/render_warmup.gd")
 const Bridge = preload("res://src/bridge.gd")
 const KEYS = [
 	[KEY_A,KEY_D,KEY_W,KEY_S,KEY_SPACE,KEY_Q,KEY_E],
@@ -49,6 +50,7 @@ var missile_sound:Node
 var demo := false
 var capture_path := ""
 var motion_blur_enabled := true
+var render_warmup:=true
 var capture_frame := 180
 var frame_number := 0
 var frame_times: Array[float] = []
@@ -124,6 +126,7 @@ func _ready() -> void:
 		elif arg=="--sdfgi": bounce_lighting=true
 		elif arg=="--direct-lighting": bounce_lighting=false
 		elif arg=="--no-motion-blur": motion_blur_enabled=false
+		elif arg=="--no-warmup": render_warmup=false
 		elif arg.begins_with("--players="): human_count = clampi(int(arg.get_slice("=",1)),1,4)
 		elif arg.begins_with("--seed="): next_seed = int(arg.get_slice("=",1))
 		elif arg.begins_with("--difficulty=") and arg.get_slice("=",1) in Race.Track.DIFFICULTIES: difficulty=arg.get_slice("=",1)
@@ -251,6 +254,8 @@ func new_race(next_round:bool=false) -> void:
 	if next_seed == 0: next_seed = randi_range(1,MAX_SEED)
 	next_seed=clampi(next_seed,1,MAX_SEED)
 	race = Race.new(roster,next_seed,laps,difficulty,race_world(),randi_range(1,10000000))
+	World.deal_designs(race.racers)
+	World.assign_tints(race.racers)
 	settings.apply_live(race)
 	if not settings.values.weapon_pickups: race.weapons.pickups.clear()
 	next_seed = next_seed%MAX_SEED+1
@@ -305,6 +310,8 @@ func new_race(next_round:bool=false) -> void:
 		views.append({"holder":holder,"viewport":viewport,"camera":camera,"hud":hud,"visor":visor,"index":index,"blur":blur,"motion_blur":motion_blur,"speed_effects":speed_effects})
 		world.update_camera(camera,index,0,true)
 	layout_views()
+	# Build every shader and pipeline now, not in the frame the first missile flies.
+	if render_warmup and not headless and not views.is_empty(): RenderWarmup.run(world,views[0].viewport,views[0].camera)
 
 func layout_views() -> void:
 	var dimensions := get_viewport().get_visible_rect().size
@@ -1061,6 +1068,7 @@ func update_profiles(seats:Array,players:Array,presence:Array)->void:
 		p.sleeping=not matched
 		for status in presence:
 			if status.get("player_id","")==p.get("id",""): p.sleeping=status.get("state","")=="sleeping"
+	World.assign_tints(race.racers)
 	if view_places()!=before: layout_views()
 
 ## Someone picked up a profile in the lobby: same racer, new name, colour and
@@ -1073,6 +1081,7 @@ func update_details(players:Array)->void:
 			if not str(p.get("id","")).is_empty() and p.id==identity.get("id",""):
 				for field in ["name","color","skin_color","avatar","couch"]:
 					if identity.has(field): p[field]=identity[field]
+	if race!=null: World.assign_tints(race.racers)
 	# Someone moved on the couch: the views slide over, the race goes on.
 	if view_places()!=before: layout_views()
 

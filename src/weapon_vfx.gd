@@ -7,6 +7,10 @@ const EmpSparks=preload("res://src/emp_sparks.gd")
 var race:RefCounted
 var cores:MultiMesh
 var missile_nodes:Dictionary={}
+## Built during loading and reused: a missile's lofted hull is too heavy to
+## build in the frame it launches.
+var missile_pool:Array[Node3D]=[]
+const SPARE_MISSILES:=6
 var fading_trails:Array[Dictionary]=[]
 var bomb_nodes:Dictionary={}
 var rail_effects:Array[Node3D]=[]
@@ -136,6 +140,8 @@ func configure(state:RefCounted)->void:
 	for i in range(12): rail_effects.append(make_rail_effect())
 	for i in range(24):
 		var blast:=Blast.new();add_child(blast);explosions.append(blast);blast_lights.append(blast.flash)
+	for i in range(SPARE_MISSILES):
+		var spare:=make_missile();spare.get_meta("trail").visible=false;release_missile(spare)
 	update()
 
 func make_railgun()->Node3D:
@@ -358,11 +364,31 @@ static func missile_trail_mesh()->ArrayMesh:
 			surface.set_uv(Vector2(uv.x,(i+uv.y)/47.));surface.set_normal(Vector3.UP);surface.add_vertex(Vector3(uv.x,0,i+uv.y))
 	trail_shape=surface.commit();return trail_shape
 
-func make_missile()->Node3D:
-	var root:=Node3D.new();add_child(root);missile_hull(root)
+func make_missile_trail()->MeshInstance3D:
 	var trail_material:=ShaderMaterial.new();trail_material.shader=load("res://src/missile_trail.gdshader")
 	trail_material.set_shader_parameter("daylight",race.track.biome in ["forest","desert"])
-	var trail:=mesh(self,missile_trail_mesh(),trail_material);root.set_meta("trail",trail)
+	return mesh(self,missile_trail_mesh(),trail_material)
+
+func take_missile()->Node3D:
+	if missile_pool.is_empty(): return make_missile()
+	var root:Node3D=missile_pool.pop_back()
+	root.transform=Transform3D(Basis.IDENTITY.scaled(Vector3.ONE*.42),Vector3.ZERO)
+	root.visible=true
+	return root
+
+func release_missile(root:Node3D)->void:
+	# A visible trail fades out on its own; the pooled missile gets a fresh one.
+	var trail:MeshInstance3D=root.get_meta("trail")
+	if trail.visible:
+		fading_trails.append({"mesh":trail,"until":race.vfx_clock+.65})
+		trail=make_missile_trail();trail.visible=false;root.set_meta("trail",trail)
+	for part in ["laser","contact","contact_light"]: root.get_meta(part).visible=false
+	root.visible=false
+	missile_pool.append(root)
+
+func make_missile()->Node3D:
+	var root:=Node3D.new();add_child(root);missile_hull(root)
+	root.set_meta("trail",make_missile_trail())
 	root.scale=Vector3.ONE*.42
 	var engine:=Node3D.new();root.add_child(engine);root.set_meta("engine",engine)
 	engine.position.z=-4.2
@@ -428,7 +454,7 @@ func update()->void:
 	for m in race.weapons.missiles:
 		var tail_fade:float=clampf(m.fade/1.1,0.,1.) if m.get("disabled",false) else 1.
 		active[m.id]=true
-		if not missile_nodes.has(m.id): missile_nodes[m.id]=make_missile()
+		if not missile_nodes.has(m.id): missile_nodes[m.id]=take_missile()
 		var node:Node3D=missile_nodes[m.id]
 		var ignition:=smoothstep(.18,.65,m.age)
 		var motor_power:float=ignition*(.95+.05*sin(time*71.+m.id)) if not m.get("disabled",false) else 0.
@@ -496,13 +522,7 @@ func update()->void:
 		if not live_bombs.has(id): bomb_nodes[id].queue_free();bomb_nodes.erase(id)
 	for id in missile_nodes.keys():
 		if active.has(id): continue
-		var trail:MeshInstance3D=missile_nodes[id].get_meta("trail")
-		if trail.visible: fading_trails.append({"mesh":trail,"until":time+.65})
-		else: trail.queue_free()
-		missile_nodes[id].get_meta("laser").queue_free()
-		missile_nodes[id].get_meta("contact").queue_free()
-		missile_nodes[id].get_meta("contact_light").queue_free()
-		missile_nodes[id].queue_free();missile_nodes.erase(id)
+		release_missile(missile_nodes[id]);missile_nodes.erase(id)
 	for tail in fading_trails.duplicate():
 		if time>=tail.until:
 			tail.mesh.queue_free();fading_trails.erase(tail)

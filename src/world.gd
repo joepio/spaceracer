@@ -41,8 +41,74 @@ var ship_colors: Array[Color] = []
 var forest_sun:DirectionalLight3D
 const PALETTE = [Color("53ffe0"), Color("ff617b"), Color("ffd16b"), Color("ac8cff"), Color("68baff"), Color("ff9f58"), Color("aaff78"), Color("f8aaff")]
 
+## Humans may change colour mid-race; GameNight already keeps their colours apart.
+const SAME_HUMAN_COLOR:=.05
+## An AI keeps its slot colour only when it is clearly apart from everyone else.
+const SAME_AI_COLOR:=.1
+
 static func color_for(p: Dictionary) -> Color:
+	if p.has("tint"): return p.tint
+	return preferred_color(p)
+
+static func preferred_color(p: Dictionary) -> Color:
 	return Color.from_string(str(p.get("color", "")), PALETTE[int(p.slot) % PALETTE.size()])
+
+## Each race deals airframes from a shuffled deck: models are random, and
+## repeat only when there are more racers than models.
+static func deal_designs(racers: Array) -> void:
+	var deck: Array = []
+	for p in racers:
+		if deck.is_empty():
+			deck = range(Ship.Design.VARIANTS.size())
+			deck.shuffle()
+		p.design = deck.pop_back()
+
+## No two racers share a colour. Humans keep their profile colour (in seat
+## order); an AI, or a human whose colour an earlier racer already wears,
+## takes the palette colour furthest from every colour in use.
+static func assign_tints(racers: Array) -> void:
+	var order: Array = racers.duplicate()
+	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return (not a.get("bot", false) and b.get("bot", false)) or (a.get("bot", false) == b.get("bot", false) and int(a.slot) < int(b.slot)))
+	var used: Array[Color] = []
+	for p in order:
+		var tint := preferred_color(p)
+		if color_gap(tint, used) < (SAME_AI_COLOR if p.get("bot", false) else SAME_HUMAN_COLOR):
+			tint = free_color(used)
+		p.tint = tint
+		used.append(tint)
+
+static func free_color(used: Array[Color]) -> Color:
+	var best: Color = PALETTE[0]
+	var best_gap := -1.0
+	for candidate in PALETTE:
+		var gap := color_gap(candidate, used)
+		if gap > best_gap: best = candidate; best_gap = gap
+	# More racers than palette colours: walk the hue wheel for a free spot.
+	var hue := best.h
+	for i in range(24):
+		if best_gap >= SAME_AI_COLOR: break
+		hue = fposmod(hue + .618034, 1.)
+		var candidate := Color.from_hsv(hue, .62, 1.)
+		var gap := color_gap(candidate, used)
+		if gap > best_gap: best = candidate; best_gap = gap
+	return best
+
+## Smallest perceptual (Oklab) distance from `color` to any of `others`.
+static func color_gap(color: Color, others: Array[Color]) -> float:
+	var gap := INF
+	var lab := oklab(color)
+	for other in others: gap = minf(gap, lab.distance_to(oklab(other)))
+	return gap
+
+static func oklab(color: Color) -> Vector3:
+	var c := color.srgb_to_linear()
+	var l := pow(.4122214708*c.r + .5363325363*c.g + .0514459929*c.b, 1./3.)
+	var m := pow(.2119034982*c.r + .6806995451*c.g + .1073969566*c.b, 1./3.)
+	var s := pow(.0883024619*c.r + .2817188376*c.g + .6299787005*c.b, 1./3.)
+	return Vector3(.2104542553*l + .7936177850*m - .0040720468*s,
+		1.9779984951*l - 2.4285922050*m + .4505937099*s,
+		.0259040371*l + .7827717662*m - .8086757660*s)
 
 static func material(color: Color, glow: float = 0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()

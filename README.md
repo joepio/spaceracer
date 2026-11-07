@@ -1,6 +1,6 @@
 # SpaceRacer
 
-A small, original, F-Zero GX-inspired hover racer for GameNight. Godot 4.5.2;
+A small, original, F-Zero GX-inspired hover racer for Gamepad Party. Godot 4.5.2;
 native 3D with 1–4 local split-screen players. Bundled AI-generated city textures; no online services required.
 This is a playable prototype, not an exact recreation of GX physics.
 
@@ -9,8 +9,8 @@ This is a playable prototype, not an exact recreation of GX physics.
 GitHub: [joepio/spaceracer](https://github.com/joepio/spaceracer).
 
 This is a self-contained Godot project: source, procedural geometry and bundled artwork, the vendored
-GameNight transport, tests and packaging tools are included. It does not need a
-GameNight checkout to build or run. Development requires Godot 4.5.2; Python 3.12+
+Gamepad Party transport, tests and packaging tools are included. It does not need a
+Gamepad Party checkout to build or run. Development requires Godot 4.5.2; Python 3.12+
 with only its standard library runs the packaging and integration tools.
 
 ## Downloads and releases
@@ -20,7 +20,7 @@ Extract it and run `SpaceRacer.exe`; Godot does not need to be installed.
 
 [Build and release](https://github.com/joepio/spaceracer/actions/workflows/ci.yml)
 runs the simulation, menu, flight, effects, city, EMP, recharge and source/packaged
-GameNight protocol checks on GitHub's Windows runners. Push a version tag such as
+Gamepad Party protocol checks on GitHub's Windows runners. Push a version tag such as
 `v0.4.2` to build and publish a new release, or choose **Run workflow** on `main`
 and enter a new `release_tag`. Leave that field empty for a test build only.
 Pull requests and ordinary pushes to `main` produce downloadable build artifacts.
@@ -28,10 +28,10 @@ Release publication requires all checks to pass, and existing release assets are
 never overwritten. Android is not built by this workflow.
 
 Each release includes `release-sha256.txt` and `spaceracer.catalog.json`. Copy only
-its `downloads` block into GameNight's `catalog/games/spaceracer.json` to update the
+its `downloads` block into Gamepad Party's `catalog/games/spaceracer.json` to update the
 pinned download URL and checksum together. The game's metadata and store artwork live
-in `gamenight.json` and `assets/gamenight/` here; GameNight's catalog sync copies them.
-The GameNight protocol ID is `spaceracer`.
+in `gamenight.json` and `assets/gamenight/` here; Gamepad Party's catalog sync copies them.
+The Gamepad Party protocol ID is `spaceracer`.
 
 ## Play
 
@@ -80,13 +80,13 @@ setting changes the primary action to **Restart**. Graphics never resets progres
 The paused track keeps its last rendered frame behind a dark menu gradient until
 resuming or restarting. Back no longer pauses.
 
-In GameNight, a session starts straight in the race, without a start menu.
+In Gamepad Party, a session starts straight in the race, without a start menu.
 During the race **Start** opens the pause menu: pick the **World**, **Level**,
 **Laps** and **AI racers**, turn **Sound** on or off, set **Graphics**, then
 **Resume** or **Restart race** to race with the new settings.
-**Back/Select** returns to the GameNight lobby, including from the menu.
+**Back/Select** returns to the Gamepad Party lobby, including from the menu.
 Use the stick or D-pad to select a setting, and A to activate it. World, Level,
-Laps, AI racers and Graphics are the game's GameNight settings: changing them in the menu
+Laps, AI racers and Graphics are the game's Gamepad Party settings: changing them in the menu
 writes them back, so the party's apps show the same values, and a change in an
 app shows in the open menu. The menu keeps the host's player assignments; Resume
 never rebuilds the race. Held buttons on launch or return must be released
@@ -202,7 +202,7 @@ toward the course. Marine snow and bubble columns fill the water. Creatures are
 spectacle only and keep clear of the racing line; rock, plants and the octopus
 bodies collide. See [ocean notes](docs/ocean-biome.md).
 
-GameNight exposes **World (next race)**, and standalone accepts `--biome=forest`,
+Gamepad Party exposes **World (next race)**, and standalone accepts `--biome=forest`,
 `--biome=city`, `--biome=cell`, `--biome=desert` or `--biome=ocean` after `--`.
 
 Adjust **Level** with left/right in either menu:
@@ -247,7 +247,7 @@ firm touchdown with a speed/energy penalty; steep or misaligned impacts crash.
 After a missed jump, recovery returns 260 metres before the lip, leaving room to accelerate again.
 Buildings and ambient traffic leave an expanded corridor around these sections.
 
-The same difficulty is available as a GameNight **Track difficulty (next race)**
+The same difficulty is available as a Gamepad Party **Track difficulty (next race)**
 setting, or `--difficulty=easy|normal|hard` after Godot's `--` argument separator.
 
 The title screen keeps player selection and Race upfront; Controls expands the
@@ -286,7 +286,7 @@ about 1,134 to 1,318 km/h. It builds over half a second and fades when pulling o
 to pass; braking remains fully effective. Boost gains a smaller 12% drag reduction.
 The visor shows `SLIPSTREAM` while active. Flying, warp, crashed/recovering and
 EMP-disabled craft cannot draft or provide a wake. The same rules apply to bots,
-local controllers, touch and GameNight players.
+local controllers, touch and Gamepad Party players.
 
 Shared mint-green recharge strips replace floating batteries, including airborne ones.
 Two or three strips per lap are chosen on broad, gentle stretches, with guardrails
@@ -488,7 +488,7 @@ wreck and automatic recovery after two seconds. Respawning grants two seconds of
 
 `build/android/SpaceRacer.apk` is a debug-signed APK for direct installation. Copy it
 to the tablet, open it in Files and allow that app to install it when Android asks.
-This is an offline standalone build; GameNight's desktop host remains on Windows.
+This is an offline standalone build; Gamepad Party's desktop host remains on Windows.
 The APK includes ARM64 (Galaxy Tab S9+) and x86-64. It locks to landscape.
 
 Pair a controller through Android Bluetooth or connect it by USB. The same sticks,
@@ -701,7 +701,7 @@ flares and nearby lighting; normal throttle retains a steadier exhaust.
 HDR bloom complements the localized engine halos in Forward+. The OpenGL fallback
 retains the local halos. Road panels, metallic shading,
 shoulder chevrons and animated energy strips communicate speed and curvature.
-All city traffic, tunnel lighting and effects freeze with GameNight pause.
+All city traffic, tunnel lighting and effects freeze with Gamepad Party pause.
 
 ## Graphics and performance
 
@@ -771,9 +771,9 @@ loop entrance, `.211` for the inverted section, or `.49` for a skyline dive.
 This flag only affects standalone demo mode; it does not skip progress in normal
 or managed races. Short captures show layout; use longer runs for frame timings.
 
-## GameNight
+## Gamepad Party
 
-Game id: `spaceracer`. `src/bridge.gd` subclasses the vendored GameNight Godot SDK
+Game id: `spaceracer`. `src/bridge.gd` subclasses the vendored Gamepad Party Godot SDK
 transport (`addons/gamenight/gamenight.gd`) and adapts it to the current contract.
 The old SDK's automatic screen helper and local controller enumeration are not
 used. Managed games consume opaque controller tokens from `controller_frame`;
@@ -791,7 +791,7 @@ preserved by ID. Roster changes take effect on the next race; instant join is
 false. `laps`, `difficulty` and `biome` apply next race and `quality` applies immediately.
 
 The packaging tool emits a `shelf.json` with absolute local launch paths. Merge
-that entry into your local GameNight shelf; no public catalog release or
+that entry into your local Gamepad Party shelf; no public catalog release or
 certification is claimed. Managed launch arguments include `--position
 -20000,-20000` to prevent a visible window at process startup.
 
@@ -805,7 +805,7 @@ release builds install Godot export templates and export the provided Windows
 Desktop preset. Code and geometric artwork are original, under this repository’s
 [MIT license](LICENSE). Authored forest models use CC BY 4.0 (see credits above). Godot's license and bundled dependency notices are in `third_party`.
 
-To launch through a local Windows GameNight host, point the daemon at the shelf
+To launch through a local Windows Gamepad Party host, point the daemon at the shelf
 emitted for this build (keep that build directory in place):
 
 ```powershell
@@ -815,9 +815,9 @@ $env:GAMENIGHT_LIBRARY = (Resolve-Path ./build/windows/shelf.json).Path
 
 If you already have a library, merge the SpaceRacer object into its JSON array
 instead of replacing the other entries. The daemon supplies the authenticated
-launch environment; players and controllers are assigned in GameNight. Rebuild
+launch environment; players and controllers are assigned in Gamepad Party. Rebuild
 to regenerate absolute paths after moving the package. For development with a
-GameNight checkout, its `scripts/run-local.py --shelf <absolute shelf.json>` also
+Gamepad Party checkout, its `scripts/run-local.py --shelf <absolute shelf.json>` also
 loads this game and the lobby together.
 
 ## Verification
@@ -901,9 +901,9 @@ active human and AI racer. It only equips the item: players still press **X** to
 use it, and glide bombs still require flight. Existing active effects keep running;
 finished/crashed racers are skipped. Each press replaces the carried item only.
 These letters stop controlling keyboard driving until F8 is turned off;
-controllers continue normally. Cheats stay off by default, including GameNight.
+controllers continue normally. Cheats stay off by default, including Gamepad Party.
 
-## Local GameNight registration
+## Local Gamepad Party registration
 
 `tools/register_gamenight.ps1` adds **SpaceRacer (Local)** to
 `%LOCALAPPDATA%/GameNight/local-games.json`, preserving other local entries.
@@ -911,7 +911,7 @@ The desktop launcher merges that file into its regenerated shelf on every start;
 local IDs take priority over catalogue builds. The managed launch script takes
 an immutable snapshot of the latest staged Windows executable and PCK and waits for the game,
 so the host owns the entire process lifetime. Rebuild the staged PCK and the next
-GameNight launch uses it automatically.
+Gamepad Party launch uses it automatically.
 
 The executable loads its sibling `SpaceRacer.pck` normally. Do not use
 `--main-pack`: official export templates may disable path overrides. Test the
@@ -933,7 +933,7 @@ also exposes a five-digit seed setting (zero selects a random seed).
 The local Windows launcher, daemon and lobby must use the current host-controller
 protocol. The installed preview was updated locally for this integration; backups
 sit alongside its binaries. A future upstream app update can replace those local
-binaries; the registration file remains in user data. The GameNight checkout
+binaries; the registration file remains in user data. The Gamepad Party checkout
 contains the persistent local-shelf support for future builds.
 
 `tests/local_gamenight.py` checks the installed host, local registration, managed
@@ -965,7 +965,7 @@ are instanced by district; all six campaigns share one mipmapped color atlas.
 The existing 64-light city budget and four-nearby-sign road reflection budget
 stay fixed. Sign placement preserves the existing artwork billboards and road
 clearance. Generation prompts are in `docs/city-advertising`; the full-size poster sources
-are kept in the GameNight project archive (`archive/spaceracer/docs/city-advertising/`).
+are kept in the Gamepad Party project archive (`archive/spaceracer/docs/city-advertising/`).
 
 The city follows a strict 120-metre Manhattan street grid. Whole-block towers,
 paired buildings and four-building blocks share aligned frontages and low
@@ -985,7 +985,7 @@ Crashes shed the actual hull, wings and engine housings, with current vehicle co
 
 ## Assistant controls
 
-See [GameNight settings](docs/gamenight-settings.md) for all supported tweaks, their ranges and when they apply. The phone and lobby assistant discover these controls automatically from the running game.
+See [Gamepad Party settings](docs/gamenight-settings.md) for all supported tweaks, their ranges and when they apply. The phone and lobby assistant discover these controls automatically from the running game.
 
 
 ## SpaceRacer audio (6 October 2026)
@@ -1007,6 +1007,6 @@ Focused checks: `tests/racer_audio.gd`, `tests/audio_bank.gd`, `tests/missiles.g
 `tests/audio_capture.gd` captures a 21-second runtime comparison (add `-- --before`
 for the previous engine). Use an actual audio driver for capture; Master is muted.
 
-The installed GameNight and Start menu launchers use `build/warp-balance` in this
+The installed Gamepad Party and Start menu launchers use `build/warp-balance` in this
 Windows checkout. The source probe includes `audio_version` so a running build
 can be checked against the installed pack.

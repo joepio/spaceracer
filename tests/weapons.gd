@@ -162,7 +162,7 @@ func run()->void:
 	var bridge:=Bridge.new()
 	bridge.frames={"ordinal:7":{"axes":[0,0,0,0,16384,0],"buttons":4}}
 	bridge.frame_at=Time.get_ticks_msec()
-	check(bridge.controls("ordinal:7").fire and bridge.controls("ordinal:7").brake>.45,"GameNight maps X to use and LT to brake independently")
+	check(bridge.controls("ordinal:7").fire and bridge.controls("ordinal:7").brake>.45,"Gamepad Party maps X to use and LT to brake independently")
 	check(not bridge.controls("ordinal:2").fire,"Fire remains owned by the correct sparse controller token")
 	bridge.frame_at-=1000
 	check(not bridge.controls("ordinal:7").fire,"Stale network input cannot hold fire")

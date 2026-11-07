@@ -1,9 +1,9 @@
 # Red twin-engine racer
 
-The first red image concept is implemented in `src/racer_design.gd`, built by `Ship.build` and used for every racer. Player-specific colours and GameNight portrait decals remain dynamic. The physical hull stays inside the existing gameplay width; driving physics are unchanged.
+The first red image concept is implemented in `src/racer_design.gd`, built by `Ship.build` and used for every racer. Player-specific colours and Gamepad Party portrait decals remain dynamic. The physical hull stays inside the existing gameplay width; driving physics are unchanged.
 
 - [Editable GLB](red-racer-v1.glb): geometry, PBR materials, named elevon/rudder/airbrake pivots and `WeaponSocket`. The game animates these pivots from existing inputs. Optical exhaust effects and gameplay shaders remain in Godot; the GLB uses portable standard materials.
-- Front view, rear view and racing-camera renders (`red-racer-front-v1.png`, `red-racer-rear-v1.png`, `red-racer-game-v1.png`) are kept in the GameNight project archive (`archive/spaceracer/docs/vehicle-concepts/` in the shared project files), not in the repository.
+- Front view, rear view and racing-camera renders (`red-racer-front-v1.png`, `red-racer-rear-v1.png`, `red-racer-game-v1.png`) are kept in the Gamepad Party project archive (`archive/spaceracer/docs/vehicle-concepts/` in the shared project files), not in the repository.
 
 ## Construction and mounting
 
@@ -15,7 +15,7 @@ Crashes use the revised body sections and decorated wing/engine parts, retaining
 
 ## Validation
 
-Native front/rear/top/control-pose renders and all six mounted modules were inspected. GameNight faces remain visible on both outer nacelle sides. Native racing-camera views were inspected at one and two players.
+Native front/rear/top/control-pose renders and all six mounted modules were inspected. Gamepad Party faces remain visible on both outer nacelle sides. Native racing-camera views were inspected at one and two players.
 
 On this machine's RTX 5070 Ti, the frozen city scene at 1280×720 measured median viewport GPU time of 0.831 ms (one view) and 1.114 ms (two 1280×360 views, summed). These exclude CPU simulation and final UI composition and are not Steam Deck or Android performance claims.
 

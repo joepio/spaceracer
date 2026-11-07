@@ -1,7 +1,7 @@
 # Forest biome — September 26, 2026
 
 World in the start menu selects City or Forest (Verdant Reach), with an immediate
-preview and controller navigation. GameNight exposes the same choice for the
+preview and controller navigation. Gamepad Party exposes the same choice for the
 next race. Standalone accepts `--biome=forest` after `--`. Replay identity is now
 seed, difficulty and world; all three appear in the HUD and results.
 
@@ -30,7 +30,7 @@ All forest geometry and materials are procedural, with no new downloaded assets.
   road-clearance samples, animation clocks and water recovery.
 - All 72 AI racers finished across twelve seed/difficulty combinations.
 - Controller menu and 43 flight checks passed.
-- Source and packaged native GameNight integration passed, including Forest
+- Source and packaged native Gamepad Party integration passed, including Forest
   preparation, deferred world changes and City re-preparation.
 - Native Forward+ renders were inspected and foliage/fog refined in two passes.
 

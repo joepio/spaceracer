@@ -8,7 +8,7 @@ Previously almost every seed arranged the same components in the same order.
 The existing seeded radius, hills, stretch, corner dimensions, feature offsets and
 sizes still vary within a family. Adjacent seeds cycle families, making the existing
 left/right seed control useful for browsing. Biome and difficulty do not change the
-family. GameNight uses the same seed path and needs no extra protocol setting.
+family. Gamepad Party uses the same seed path and needs no extra protocol setting.
 
 ## Geometry
 

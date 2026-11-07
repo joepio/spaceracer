@@ -15,9 +15,9 @@ Driving, race rules and controller mappings are unchanged.
 - City audit: 17,790 checks, eight layout seeds and additional dense road-surface
   sampling against streetlight envelopes on three seeds; no failures.
 - Startup, throttle, braking and dynamic engine illumination: 18 checks passed.
-- Source headless GameNight protocol integration passed, including hidden prepare,
+- Source headless Gamepad Party protocol integration passed, including hidden prepare,
   sparse controller ownership, pause/resume, stale input and dispose/reprepare.
-- Packaged native Forward+ GameNight integration passed, including the new
+- Packaged native Forward+ Gamepad Party integration passed, including the new
   reflection warmup before Ready, hidden preparation and dispose/reprepare.
 - Controller menu regression passed.
 - Solo review captures inspected at four positions in the opening district.

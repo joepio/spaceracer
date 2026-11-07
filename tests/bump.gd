@@ -59,8 +59,8 @@ func run()->void:
 	var bridge=load("res://src/bridge.gd").new()
 	bridge.frame_at=Time.get_ticks_msec();bridge.frames["pad"]={"buttons":1<<4,"axes":[0,0,32767,0,0,0]}
 	var c:Dictionary=bridge.controls("pad")
-	check(c.left and not c.right and c.strafe==1.,"GameNight LB and right stick retain independent actions")
+	check(c.left and not c.right and c.strafe==1.,"Gamepad Party LB and right stick retain independent actions")
 	bridge.frames["pad"].buttons=1<<5;c=bridge.controls("pad")
-	check(c.right and not c.left,"GameNight RB maps right bump")
+	check(c.right and not c.left,"Gamepad Party RB maps right bump")
 	bridge.free()
 	print("BUMP_TESTS %d checks, %d failures"%[checks,failures]);quit(1 if failures else 0)

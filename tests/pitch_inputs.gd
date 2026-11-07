@@ -28,7 +28,7 @@ func run()->void:
 			var event:=InputEventJoypadMotion.new();event.device=device;event.axis=axis;event.axis_value=axes[0 if axis==JOY_AXIS_LEFT_Y else 1]
 			Input.parse_input_event(event)
 		Input.flush_buffered_events()
-		check(game.controls(pilot).trim==Bridge.pitch_axis(axes[0],axes[1]),"Native controller matches GameNight pitch routing")
+		check(game.controls(pilot).trim==Bridge.pitch_axis(axes[0],axes[1]),"Native controller matches Gamepad Party pitch routing")
 	if device>=0:
 		for axis in [JOY_AXIS_LEFT_Y,JOY_AXIS_RIGHT_Y]:
 			var neutral:=InputEventJoypadMotion.new();neutral.device=device;neutral.axis=axis;neutral.axis_value=0.

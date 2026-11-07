@@ -12,7 +12,7 @@ Seed 00031, circuit fraction 0.055, six racers, normal chase camera, 1920×1080.
 These are native game screenshots, with no compositing or image enhancement.
 
 The before and after screenshots (`before.png`, `after.png`, 1920×1080) were moved out
-of the repository to keep it small; they are kept in the GameNight project archive (`archive/spaceracer/docs/lighting-images/` in the shared project files).
+of the repository to keep it small; they are kept in the Gamepad Party project archive (`archive/spaceracer/docs/lighting-images/` in the shared project files).
 
 ## Method and results
 

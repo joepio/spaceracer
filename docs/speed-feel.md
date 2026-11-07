@@ -21,7 +21,7 @@ states suppress these effects; managed pause freezes both animation clocks.
 - 612 targeted checks passed: acceleration response/settling, boost lens bounds,
   vibration displacement, orientation stability, pause and independent views.
 - Existing 43 flight/camera checks and controller menu tests passed.
-- Source and packaged native GameNight integration passed, including new particle/camera-clock
+- Source and packaged native Gamepad Party integration passed, including new particle/camera-clock
   pause assertions. Native Forward+ renders were reviewed at 1080p solo and
   four-player, including maximum boost.
 

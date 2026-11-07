@@ -47,7 +47,7 @@ before and after; window textures now remain coherent behind the wreck.
 - Forest: 2,339 checks, 72/72 race finishers; city layout: 17,267 checks.
 - Feature geometry: 8,373 checks; effects: 25; speed presentation: 612.
 - Controller menu/pause tests, native crash/explosion render, and packaged
-  GameNight integration are part of the release check.
+  Gamepad Party integration are part of the release check.
 
 Four-player Forest/Hard moving benchmark, seed 31, 1920×1080 total output
 (four 960×540 views), RTX 5070 Ti / Ryzen 9 5900X, 1,200 sampled frames:

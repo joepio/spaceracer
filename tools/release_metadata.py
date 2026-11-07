@@ -1,4 +1,4 @@
-"""Write checksums and a GameNight entry for a versioned Windows release."""
+"""Write checksums and a Gamepad Party entry for a versioned Windows release."""
 import argparse
 import base64
 import hashlib

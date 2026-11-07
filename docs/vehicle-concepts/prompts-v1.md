@@ -2,7 +2,7 @@
 
 Generated with the built-in ChatGPT image-generation tool. Concept images only; not implemented vehicle meshes. Three views are exploratory references, not dimensionally exact production drawings.
 
-The concept images were moved out of the repository to keep it small; they are kept in the GameNight project archive (`archive/spaceracer/docs/vehicle-concepts/` in the shared project files).
+The concept images were moved out of the repository to keep it small; they are kept in the Gamepad Party project archive (`archive/spaceracer/docs/vehicle-concepts/` in the shared project files).
 
 ## 01-twin-engine
 

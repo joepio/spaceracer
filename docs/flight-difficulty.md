@@ -1,8 +1,8 @@
 # Flight sections and course difficulty
 
-The menu, command line and GameNight settings now select Easy, Normal or Hard.
+The menu, command line and Gamepad Party settings now select Easy, Normal or Hard.
 A replay is identified by the five-digit seed **and** difficulty within this
-game version. Changing difficulty in GameNight takes effect on the next race.
+game version. Changing difficulty in Gamepad Party takes effect on the next race.
 
 Easy adds nine metres to each side of the base road, broadens the sharp corner
 complexes, uses a shallower half-pipe and protects open edges. It has no mandatory
@@ -42,7 +42,7 @@ introduced for the runway markers.
 - Flight 43, track features 8,412, city 17,430, lighting 60 and effects 25 checks
   passed. Menu navigation verifies analog/A/Start, seed preservation and the
   selected difficulty. Native screenshots cover both Hard flight sections.
-- GameNight source and packaged native integration passed: difficulty applies next race, along with
+- Gamepad Party source and packaged native integration passed: difficulty applies next race, along with
   authentication, sparse controller ownership, pause/resume, profile updates,
   dispose/reprepare and disconnect cleanup.
 

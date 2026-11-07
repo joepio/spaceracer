@@ -1,7 +1,7 @@
 # Desert — Scorched Dunes
 
 Fourth world setting, selected with left/right in the shared start/pause menu,
-GameNight's `biome=desert` setting, or `-- --biome=desert` on the standalone
+Gamepad Party's `biome=desert` setting, or `-- --biome=desert` on the standalone
 executable. All geometry and materials are procedural; no new assets.
 The course uses the existing layout generator (with a lower, forest-like
 altitude profile); scenery uses its own seed offsets.

@@ -260,7 +260,7 @@ func run()->void:
 	var input_bridge=load("res://src/bridge.gd").new()
 	input_bridge.frames={"owned":{"buttons":8},"other":{"buttons":0}}
 	input_bridge.frame_at=Time.get_ticks_msec()
-	check(input_bridge.controls("owned").reset and not input_bridge.controls("other").reset,"GameNight Y reset belongs only to its controller owner")
+	check(input_bridge.controls("owned").reset and not input_bridge.controls("other").reset,"Gamepad Party Y reset belongs only to its controller owner")
 	input_bridge.frame_at=-10000
 	check(not input_bridge.controls("owned").reset,"Stale controller frames release reset")
 	input_bridge.free()

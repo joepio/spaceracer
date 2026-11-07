@@ -22,7 +22,7 @@ in three of the original stations remains, with three lanes at each. Collecting
 a lane hides it globally for two seconds; other lanes stay available. A 450 ms
 mint flash illuminates the collector and nearby road, with expanding world-space
 rings at the pickup and craft. The pickup scales back in over approximately
-170 ms. Each player can collect once per row per lap, including sparse GameNight
+170 ms. Each player can collect once per row per lap, including sparse Gamepad Party
 slots. X activates; LT remains brake. Keyboard defaults are X, slash, P and C.
 Touch shows a Use button when carrying an item.
 
@@ -71,11 +71,11 @@ Earlier results below describe the implementation at the time of measurement.
   add `--pickup-respawn` to verify their removal and the item's reappearance.
   Pickup flashes use one brief shadowless light per collecting racer, with
   pooled ring meshes. No light remains active after the flash ends.
-  Packaged GameNight integration passes when run separately; the first run
+  Packaged Gamepad Party integration passes when run separately; the first run
   alongside Android export/render capture exceeded its 15-second reprepare timeout.
 - Jammer: seeded, smoothly interpolated eight-Hz control noise uses simulation
   time and controller slot. Inputs are copied before applying interference,
-  preserving GameNight frames and local controls. `tests/jammer.gd` checks cone
+  preserving Gamepad Party frames and local controls. `tests/jammer.gd` checks cone
   orientation, distance/angle falloff, expiry, owner exclusion, input bounds,
   reproducibility, EMP/warp/respawn interactions and actual race input routing.
   `tests/weapon_render.gd -- --jammer-showcase` captures three-player output:
@@ -114,7 +114,7 @@ Earlier results below describe the implementation at the time of measurement.
 - `tests/world_jumps.gd`: 40 checks, zero failures.
 - `tests/forest.gd`: 2,730 checks, zero failures; 72/72 simulated racers finished
   with combat enabled (before the final odds and warp exit-speed refinements).
-- Touch input and native menu checks pass. GameNight activation is covered by
+- Touch input and native menu checks pass. Gamepad Party activation is covered by
   both sparse controller-frame unit checks and the native integration suite.
 
 `tests/weapon_render.gd` holds a repeatable three-player scene with all three

@@ -16,7 +16,7 @@ VEIL subscription privacy, MONOLITH infrastructure and APERTURE optical implants
 Created using the built-in OpenAI image generation tool on 2026-09-28.
 The exact prompt set is in
 [`docs/city-advertising`](../docs/city-advertising/generation-prompts.json); the unmodified
-generated sources are kept in the GameNight project archive
+generated sources are kept in the Gamepad Party project archive
 (`archive/spaceracer/docs/city-advertising/` in the shared project files).
 `tools/pack_city_ads.gd -- --sources=<dir>` only resizes and packs the originals into the mipmapped
 1536x2048 atlas. No external services are used during play. Posters and road

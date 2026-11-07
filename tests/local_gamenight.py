@@ -28,7 +28,7 @@ def wait(fn, timeout=50):
             if result: return result
         except (OSError, ValueError): pass
         time.sleep(.1)
-    raise AssertionError("Timed out waiting for real GameNight integration")
+    raise AssertionError("Timed out waiting for real Gamepad Party integration")
 
 
 def main():

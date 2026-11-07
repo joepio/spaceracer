@@ -1,7 +1,7 @@
 # The Cell
 
 Third world setting, selected with left/right in the shared start/pause menu,
-GameNight's `biome=cell` setting, or `-- --biome=cell` on the standalone executable.
+Gamepad Party's `biome=cell` setting, or `-- --biome=cell` on the standalone executable.
 Procedural geometry and materials require no new downloads or licensed assets.
 The course uses the existing difficulty-dependent layout generator; scenery uses
 its own seed offset and cannot perturb gameplay randomness.

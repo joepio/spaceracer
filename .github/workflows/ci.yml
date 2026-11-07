@@ -15,7 +15,7 @@ permissions:
   contents: read
 jobs:
   gamenight-sdk:
-    uses: ontola/gamenight/.github/workflows/godot-sdk-check.yml@main
+    uses: ontola/gamepad-party/.github/workflows/godot-sdk-check.yml@main
   simulation-and-integration:
     runs-on: windows-latest
     timeout-minutes: 25
@@ -26,7 +26,7 @@ jobs:
           python-version: '3.12'
       - name: Install pinned Godot
         id: godot
-        uses: ontola/gamenight/.github/actions/setup-godot@main
+        uses: ontola/gamepad-party/.github/actions/setup-godot@main
         with:
           version: 4.5.2
       - name: Import and simulate

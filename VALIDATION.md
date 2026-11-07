@@ -1,7 +1,7 @@
 # Development validation — 2026-09-24
 
 Godot 4.5.2 stable, native Windows, NVIDIA RTX 5070 Ti (driver 610.74).
-These are local development checks, not GameNight release certification.
+These are local development checks, not Gamepad Party release certification.
 
 Neon city environment revision:
 
@@ -13,7 +13,7 @@ Neon city environment revision:
   building/type coverage, sign/airlane availability, independent brute-force
   swept-road clearance, building/sign/traffic separation, and actual rendered
   architecture bounds. The reserved ribbon includes width, banking and loops.
-- Source and packaged synthetic GameNight lifecycle passed, including frozen
+- Source and packaged synthetic Gamepad Party lifecycle passed, including frozen
   city animation, traffic transforms and tunnel shader time. Menu tests passed.
 - Native 1920x1080 renders inspected the avenue, legible floating signage, enclosed
   tunnel, moving light patterns, and inverted track view. Existing capture-harness
@@ -31,7 +31,7 @@ Brake tap / engine startup revision:
   checks cover level parked pose, staged rise, pre-GO throttle/socket/halo response,
   identical launch acceleration for early and late throttle, acceleration-dependent
   jet length, opening airbrakes and correctly directed reverse jets.
-- Source and packaged GameNight lifecycle checks passed; effects time is now
+- Source and packaged Gamepad Party lifecycle checks passed; effects time is now
   explicitly checked to remain frozen while paused.
 - Native renders inspected idle, staggered ignition, charged sockets, dorsal
   airbrakes and reverse plumes. A packaged 1920x1080 four-player capture verifies
@@ -61,7 +61,7 @@ Fighter handling and smooth takeoff revision:
 - Native off-screen images reviewed warning, release and banking with the actual
   chase rig running continuously. Muted output confirmed. The known pair of sky
   texture cleanup errors remains at capture-harness exit; no script/shader errors.
-- Packaged synthetic GameNight lifecycle and menu input checks passed. The menu
+- Packaged synthetic Gamepad Party lifecycle and menu input checks passed. The menu
   test still reports its existing ObjectDB cleanup warning. Controller feel needs
   the user's next playtest; these are development checks, not certification.
 
@@ -76,7 +76,7 @@ Standalone repository verification:
   lifecycle tests: authentication, hidden preparation, controller ownership,
   pause/resume, stale inputs, profiles, Back gating, dispose/reprepare and exit.
 - Portable ZIP integrity, executable/PCK SHA-256 checksums, license inclusion,
-  and the generated GameNight shelf's launch paths were verified.
+  and the generated Gamepad Party shelf's launch paths were verified.
 - The existing solo, muted game was brought to the foreground and visually
   confirmed running. It was left open during repository and headless checks.
 - The new CI workflow is committed but has not run on a remote service.

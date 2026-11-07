@@ -56,7 +56,7 @@ func run()->void:
 	game.roster[0].controller="pad-one"
 	game.running=false
 	game.start_managed("")
-	check(game.running and not game.local_paused and not game.in_menu,"A GameNight session starts straight in the race, without a start menu")
+	check(game.running and not game.local_paused and not game.in_menu,"A Gamepad Party session starts straight in the race, without a start menu")
 	press(7)
 	game.adjust_menu("bots",1)
 	check(row("bots")!=null and bridge.written.get("bots")==game.settings.values.bots,"Changing the AI racers writes it back to the party")

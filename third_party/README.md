@@ -1,8 +1,8 @@
 # Third-party notices
 
 `addons/gamenight` is the MIT-licensed Godot transport vendored from
-[Gamepad Party](https://github.com/ontola/gamepad-party), `sdk/godot/addons/gamenight`,
-kept identical to Gamepad Party `main` by `sdk/godot/sync.py`; CI checks it.
+[Splitscreen Club](https://github.com/ontola/gamepad-party), `sdk/godot/addons/gamenight`,
+kept identical to Splitscreen Club `main` by `sdk/godot/sync.py`; CI checks it.
 Its license is `GameNight-LICENSE.txt`. `src/bridge.gd` implements SpaceRacer’s
 host lifecycle and controller adapter on top of that transport.
 
